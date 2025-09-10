@@ -7,12 +7,13 @@ import { PaymentForm } from "@/components/PaymentForm";
 import { MobileApp } from "@/components/MobileApp";
 import { AdminPanel } from "@/components/AdminPanel";
 import { MatchResults } from "@/components/MatchResults";
+import { CompanionBuilder } from "@/components/CompanionBuilder";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { CompanionMatchingService } from "@/services/companionMatching";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type AppState = 'landing' | 'questionnaire' | 'matches' | 'companions' | 'auth' | 'payment' | 'app' | 'admin';
+type AppState = 'landing' | 'questionnaire' | 'matches' | 'companions' | 'builder' | 'auth' | 'payment' | 'app' | 'admin';
 
 interface QuestionnaireData {
   companionType: string;
@@ -73,6 +74,10 @@ const AppContent = () => {
 
   const handleBrowseCompanions = () => {
     setCurrentState('companions');
+  };
+
+  const handleBuildCompanion = () => {
+    setCurrentState('builder');
   };
 
   const handleQuestionnaireComplete = async (data: QuestionnaireData) => {
@@ -145,6 +150,11 @@ const AppContent = () => {
     setCurrentState('landing');
   };
 
+  const handleCompanionCreated = (companion: Companion) => {
+    setSelectedCompanion(companion);
+    setCurrentState('auth');
+  };
+
   if (currentState === 'questionnaire') {
     return (
       <Questionnaire
@@ -171,6 +181,15 @@ const AppContent = () => {
       <CompanionBrowser
         onBack={handleBackToLanding}
         onSelectCompanion={handleCompanionSelect}
+      />
+    );
+  }
+
+  if (currentState === 'builder') {
+    return (
+      <CompanionBuilder
+        onBack={handleBackToLanding}
+        onCompanionCreated={handleCompanionCreated}
       />
     );
   }
@@ -202,6 +221,7 @@ const AppContent = () => {
       <LandingPage
         onStartQuestionnaire={handleStartQuestionnaire}
         onBrowseCompanions={handleBrowseCompanions}
+        onBuildCompanion={handleBuildCompanion}
       />
       {/* Temporary admin access - remove in production */}
       <div className="fixed bottom-4 right-4">

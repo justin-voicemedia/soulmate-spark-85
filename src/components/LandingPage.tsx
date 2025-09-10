@@ -6,9 +6,10 @@ import { useState } from "react";
 interface LandingPageProps {
   onStartQuestionnaire: () => void;
   onBrowseCompanions: () => void;
+  onBuildCompanion: () => void;
 }
 
-export const LandingPage = ({ onStartQuestionnaire, onBrowseCompanions }: LandingPageProps) => {
+export const LandingPage = ({ onStartQuestionnaire, onBrowseCompanions, onBuildCompanion }: LandingPageProps) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary">
       {/* Header */}
@@ -39,6 +40,9 @@ export const LandingPage = ({ onStartQuestionnaire, onBrowseCompanions }: Landin
             </Button>
             <Button size="lg" variant="outline" onClick={onBrowseCompanions} className="text-lg px-8 py-6">
               Browse Prebuilt Companions
+            </Button>
+            <Button size="lg" variant="secondary" onClick={onBuildCompanion} className="text-lg px-8 py-6">
+              Build Your Own
             </Button>
           </div>
         </div>
