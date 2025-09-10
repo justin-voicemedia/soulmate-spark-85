@@ -2,8 +2,12 @@ import { useState } from "react";
 import { LandingPage } from "@/components/LandingPage";
 import { Questionnaire } from "@/components/Questionnaire";
 import { CompanionBrowser } from "@/components/CompanionBrowser";
+import { AuthForm } from "@/components/AuthForm";
+import { PaymentForm } from "@/components/PaymentForm";
+import { MobileApp } from "@/components/MobileApp";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
 
-type AppState = 'landing' | 'questionnaire' | 'companions' | 'signup';
+type AppState = 'landing' | 'questionnaire' | 'companions' | 'auth' | 'payment' | 'app';
 
 interface QuestionnaireData {
   companionType: string;
@@ -29,10 +33,27 @@ interface Companion {
   location: string;
 }
 
-const Index = () => {
+const AppContent = () => {
+  const { user, loading } = useAuth();
   const [currentState, setCurrentState] = useState<AppState>('landing');
   const [questionnaireData, setQuestionnaireData] = useState<QuestionnaireData | null>(null);
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-secondary flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is authenticated and has selected a companion, show the mobile app
+  if (user && selectedCompanion) {
+    return <MobileApp companion={selectedCompanion} onBack={() => setCurrentState('landing')} />;
+  }
 
   const handleStartQuestionnaire = () => {
     setCurrentState('questionnaire');
@@ -44,13 +65,40 @@ const Index = () => {
 
   const handleQuestionnaireComplete = (data: QuestionnaireData) => {
     setQuestionnaireData(data);
-    // For now, just go to signup. Later this will generate a custom companion
-    setCurrentState('signup');
+    setCurrentState('auth');
   };
 
   const handleCompanionSelect = (companion: Companion) => {
     setSelectedCompanion(companion);
-    setCurrentState('signup');
+    setCurrentState('auth');
+  };
+
+  const handleAuthSuccess = () => {
+    setCurrentState('payment');
+  };
+
+  const handlePaymentSuccess = () => {
+    // If we have a selected companion, go to app
+    // Otherwise we need to generate one from questionnaire data
+    if (selectedCompanion) {
+      // User will see the mobile app since they're authenticated
+    } else if (questionnaireData) {
+      // Generate companion from questionnaire data
+      const generatedCompanion: Companion = {
+        id: 'custom-' + Date.now(),
+        name: 'Alex', // Could use AI to generate based on preferences
+        age: 28,
+        gender: questionnaireData.gender,
+        bio: `I'm Alex, created just for you based on your preferences. I love ${questionnaireData.hobbies.slice(0, 2).join(' and ')}.`,
+        hobbies: questionnaireData.hobbies,
+        personality: questionnaireData.personality,
+        likes: ['Deep conversations', 'Meaningful connections'],
+        dislikes: ['Superficial talk', 'Negativity'],
+        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
+        location: 'Virtual'
+      };
+      setSelectedCompanion(generatedCompanion);
+    }
   };
 
   const handleBackToLanding = () => {
@@ -75,29 +123,20 @@ const Index = () => {
     );
   }
 
-  if (currentState === 'signup') {
+  if (currentState === 'auth') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-secondary flex items-center justify-center p-6">
-        <div className="bg-card p-8 rounded-lg shadow-lg max-w-md w-full text-center">
-          <h2 className="text-2xl font-bold mb-4">Ready to Connect!</h2>
-          {selectedCompanion && (
-            <p className="text-muted-foreground mb-4">
-              You've selected {selectedCompanion.name} as your companion.
-            </p>
-          )}
-          {questionnaireData && (
-            <p className="text-muted-foreground mb-4">
-              We'll create a perfect companion based on your preferences.
-            </p>
-          )}
-          <p className="text-muted-foreground mb-6">
-            Sign up now to start chatting and unlock the full LoveCalls.ai experience!
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Authentication and payment integration coming next...
-          </p>
-        </div>
-      </div>
+      <AuthForm
+        onBack={handleBackToLanding}
+        onSuccess={handleAuthSuccess}
+      />
+    );
+  }
+
+  if (currentState === 'payment') {
+    return (
+      <PaymentForm
+        onSuccess={handlePaymentSuccess}
+      />
     );
   }
 
@@ -106,6 +145,14 @@ const Index = () => {
       onStartQuestionnaire={handleStartQuestionnaire}
       onBrowseCompanions={handleBrowseCompanions}
     />
+  );
+};
+
+const Index = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 };
 

@@ -14,7 +14,164 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      companions: {
+        Row: {
+          age: number
+          bio: string
+          created_at: string
+          dislikes: string[] | null
+          gender: string
+          hobbies: string[] | null
+          id: string
+          image_url: string | null
+          is_prebuilt: boolean | null
+          likes: string[] | null
+          location: string | null
+          name: string
+          personality: string[] | null
+        }
+        Insert: {
+          age: number
+          bio: string
+          created_at?: string
+          dislikes?: string[] | null
+          gender: string
+          hobbies?: string[] | null
+          id?: string
+          image_url?: string | null
+          is_prebuilt?: boolean | null
+          likes?: string[] | null
+          location?: string | null
+          name: string
+          personality?: string[] | null
+        }
+        Update: {
+          age?: number
+          bio?: string
+          created_at?: string
+          dislikes?: string[] | null
+          gender?: string
+          hobbies?: string[] | null
+          id?: string
+          image_url?: string | null
+          is_prebuilt?: boolean | null
+          likes?: string[] | null
+          location?: string | null
+          name?: string
+          personality?: string[] | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          plan_type: string
+          spicy_unlocked: boolean | null
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_type?: string
+          spicy_unlocked?: boolean | null
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_type?: string
+          spicy_unlocked?: boolean | null
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_companions: {
+        Row: {
+          companion_id: string
+          conversation_history: Json | null
+          created_at: string
+          custom_memories: Json | null
+          id: string
+          is_active: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          companion_id: string
+          conversation_history?: Json | null
+          created_at?: string
+          custom_memories?: Json | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          companion_id?: string
+          conversation_history?: Json | null
+          created_at?: string
+          custom_memories?: Json | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_companions_companion_id_fkey"
+            columns: ["companion_id"]
+            isOneToOne: false
+            referencedRelation: "companions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
