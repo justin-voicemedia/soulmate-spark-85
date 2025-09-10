@@ -20,8 +20,9 @@ export const PaymentForm = ({ onSuccess }: PaymentFormProps) => {
       price: "$19",
       period: "/month",
       features: [
-        "Unlimited text conversations",
-        "Voice calls (limited)",
+        "500 conversation minutes/month",
+        "Text conversations",
+        "Voice calls included",
         "Basic companion profiles",
         "Mobile app access",
         "Email support"
@@ -33,12 +34,12 @@ export const PaymentForm = ({ onSuccess }: PaymentFormProps) => {
       period: "/month",
       popular: true,
       features: [
+        "1500 conversation minutes/month",
         "Everything in Basic",
-        "Unlimited voice calls",
         "Premium companion profiles",
-        "Intimate mode unlock",
+        "Advanced customization",
         "Priority support",
-        "Advanced customization"
+        "Additional minutes available"
       ]
     }
   };
@@ -161,6 +162,7 @@ export const PaymentForm = ({ onSuccess }: PaymentFormProps) => {
                 <div className="text-center text-sm text-muted-foreground">
                   <p>Your payment information is encrypted and secure.</p>
                   <p>Cancel anytime • No long-term contracts • 7-day free trial</p>
+                  <p>Billing by Voicemedia.ai Inc</p>
                 </div>
               </CardContent>
             </Card>
