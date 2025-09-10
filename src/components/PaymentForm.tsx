@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Check, CreditCard, Heart, Shield, Zap } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PaymentFormProps {
   onSuccess: () => void;
@@ -49,11 +50,24 @@ export const PaymentForm = ({ onSuccess }: PaymentFormProps) => {
     
     setLoading(true);
     
-    // Simulate payment processing - replace with actual Stripe integration
-    setTimeout(() => {
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { planType }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.url) {
+        // Open Stripe checkout in a new tab
+        window.open(data.url, '_blank');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+    } finally {
       setLoading(false);
-      onSuccess();
-    }, 2000);
+    }
   };
 
   return (
