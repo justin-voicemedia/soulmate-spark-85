@@ -28,11 +28,13 @@ serve(async (req) => {
     const { name, age, gender, bio, personality, hobbies }: CompanionImageRequest = await req.json();
 
     // Create a detailed prompt for ultra-realistic AI companion image
-    const imagePrompt = `Ultra-realistic professional portrait photograph of a ${age}-year-old ${gender.toLowerCase()} with ${personality.slice(0, 2).join(' and ')} personality. 
-    Real human face, photorealistic skin texture, natural facial features, ${hobbies.slice(0, 2).join(' and ')} interests. 
-    Professional studio photography, natural lighting, attractive features, warm friendly expression, direct eye contact with camera, 
-    modern casual attire, high-end portrait style. 8K resolution, hyperrealistic, detailed facial structure, 
-    natural skin tone, realistic hair texture. No cartoon, anime, or illustrated style. Real human photography only.`;
+    const imagePrompt = `Ultra-photorealistic human portrait: ${age}-year-old ${gender.toLowerCase()}, genuine human photography, not AI-generated looking. 
+    Personality: ${personality.slice(0, 2).join(', ')}. Interests: ${hobbies.slice(0, 2).join(', ')}. 
+    CRITICAL: Must look like real human photography - natural skin imperfections, realistic lighting, authentic facial expressions.
+    Professional headshot style, natural studio lighting, direct eye contact, genuine smile, modern casual clothing.
+    Shot with high-end camera, shallow depth of field, perfect focus on eyes, natural skin texture with pores visible.
+    Absolutely NO: cartoon style, anime, illustration, digital art, CGI look, artificial appearance, perfect skin.
+    Must appear as authentic human photography, indistinguishable from real person photo. Hyperrealistic human only.`;
 
     console.log('Generating image with prompt:', imagePrompt);
 
