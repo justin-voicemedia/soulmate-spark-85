@@ -4,7 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useImageGeneration } from '@/hooks/useImageGeneration';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { RefreshCw, Image as ImageIcon } from 'lucide-react';
+import { RefreshCw, Image as ImageIcon, LogOut } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { AuthForm } from '@/components/AuthForm';
 
 interface Companion {
   id: string;
@@ -18,13 +20,33 @@ interface Companion {
 }
 
 export const AdminPanel = () => {
+  const { user, signOut, loading } = useAuth();
   const [companions, setCompanions] = useState<Companion[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [companionsLoading, setCompanionsLoading] = useState(false);
   const [generatingImages, setGeneratingImages] = useState(false);
   const { generateCompanionImage } = useImageGeneration();
 
+  // Show login form if not authenticated
+  if (!user && !loading) {
+    return (
+      <AuthForm 
+        onBack={() => window.history.back()} 
+        onSuccess={() => window.location.reload()} 
+      />
+    );
+  }
+
+  // Show loading while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   const loadCompanions = async () => {
-    setLoading(true);
+    setCompanionsLoading(true);
     try {
       const { data, error } = await supabase
         .from('companions')
@@ -37,7 +59,7 @@ export const AdminPanel = () => {
       console.error('Error loading companions:', error);
       toast.error('Failed to load companions');
     } finally {
-      setLoading(false);
+      setCompanionsLoading(false);
     }
   };
 
@@ -100,22 +122,30 @@ export const AdminPanel = () => {
     <div className="p-6 max-w-4xl mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ImageIcon className="w-6 h-6" />
-            Admin Panel - Companion Management
-          </CardTitle>
-          <CardDescription>
-            Generate AI images for prebuilt companions using Grok.ai
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ImageIcon className="w-6 h-6" />
+              <div>
+                <CardTitle>Admin Panel - Companion Management</CardTitle>
+                <CardDescription>
+                  Generate AI images for prebuilt companions using Grok.ai
+                </CardDescription>
+              </div>
+            </div>
+            <Button variant="outline" onClick={signOut}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
             <Button 
               onClick={loadCompanions} 
-              disabled={loading}
+              disabled={companionsLoading}
               variant="outline"
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 mr-2 ${companionsLoading ? 'animate-spin' : ''}`} />
               Load Companions ({companions.length})
             </Button>
             
