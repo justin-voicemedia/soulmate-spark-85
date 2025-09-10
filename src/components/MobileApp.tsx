@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Phone, 
   MessageCircle, 
@@ -17,9 +18,14 @@ import {
   Mic,
   MicOff,
   Video,
-  MoreVertical
+  MoreVertical,
+  Clock,
+  AlertCircle,
+  Crown
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useTrialStatus } from "@/hooks/useTrialStatus";
+import { toast } from "sonner";
 
 interface MobileAppProps {
   companion: {
@@ -36,6 +42,7 @@ interface MobileAppProps {
     location: string;
   };
   onBack: () => void;
+  onUpgrade?: () => void;
 }
 
 interface Message {
@@ -45,8 +52,9 @@ interface Message {
   timestamp: Date;
 }
 
-export const MobileApp = ({ companion, onBack }: MobileAppProps) => {
+export const MobileApp = ({ companion, onBack, onUpgrade }: MobileAppProps) => {
   const { user, signOut } = useAuth();
+  const { trialStatus, trackUsage, getRemainingMinutes, getRemainingDays, canUseService } = useTrialStatus();
   const [activeTab, setActiveTab] = useState<'chat' | 'profile' | 'settings'>('profile');
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -58,17 +66,68 @@ export const MobileApp = ({ companion, onBack }: MobileAppProps) => {
   ]);
   const [newMessage, setNewMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    // Start tracking session time when chat tab is opened
+    if (activeTab === 'chat' && !sessionStartTime) {
+      setSessionStartTime(new Date());
+    }
+  }, [activeTab]);
+
+  // Track usage when leaving chat or component unmounts
+  useEffect(() => {
+    return () => {
+      if (sessionStartTime) {
+        const sessionDurationMs = new Date().getTime() - sessionStartTime.getTime();
+        const sessionDurationMinutes = sessionDurationMs / (1000 * 60);
+        if (sessionDurationMinutes > 0.1) { // Only track if more than 6 seconds
+          trackUsage(companion.id, sessionDurationMinutes);
+        }
+      }
+    };
+  }, [sessionStartTime, companion.id, trackUsage]);
+
+  const handleTabChange = (newTab: 'chat' | 'profile' | 'settings') => {
+    // Track usage when leaving chat tab
+    if (activeTab === 'chat' && sessionStartTime && newTab !== 'chat') {
+      const sessionDurationMs = new Date().getTime() - sessionStartTime.getTime();
+      const sessionDurationMinutes = sessionDurationMs / (1000 * 60);
+      if (sessionDurationMinutes > 0.1) {
+        trackUsage(companion.id, sessionDurationMinutes);
+      }
+      setSessionStartTime(null);
+    }
+    
+    // Start new session if switching to chat
+    if (newTab === 'chat' && activeTab !== 'chat') {
+      if (!canUseService()) {
+        toast.error("Trial expired or out of minutes. Please upgrade to continue.");
+        onUpgrade?.();
+        return;
+      }
+      setSessionStartTime(new Date());
+    }
+    
+    setActiveTab(newTab);
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const handleSendMessage = () => {
+    if (!canUseService()) {
+      toast.error("Trial expired or out of minutes. Please upgrade to continue.");
+      onUpgrade?.();
+      return;
+    }
+    
     if (newMessage.trim()) {
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -103,6 +162,11 @@ export const MobileApp = ({ companion, onBack }: MobileAppProps) => {
   };
 
   const handleVoiceCall = () => {
+    if (!canUseService()) {
+      toast.error("Trial expired or out of minutes. Please upgrade to continue.");
+      onUpgrade?.();
+      return;
+    }
     // Simulate voice call - would integrate with Twilio/Vapi.ai
     alert(`Calling ${companion.name}... This would connect to voice AI via Twilio/Vapi.ai`);
   };
@@ -141,8 +205,9 @@ export const MobileApp = ({ companion, onBack }: MobileAppProps) => {
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-4">
           <Button 
-            onClick={() => setActiveTab('chat')} 
+            onClick={() => handleTabChange('chat')} 
             className="flex items-center justify-center h-16"
+            disabled={!canUseService()}
           >
             <MessageCircle className="w-5 h-5 mr-2" />
             Start Chat
@@ -151,11 +216,37 @@ export const MobileApp = ({ companion, onBack }: MobileAppProps) => {
             onClick={handleVoiceCall}
             variant="outline" 
             className="flex items-center justify-center h-16"
+            disabled={!canUseService()}
           >
             <Phone className="w-5 h-5 mr-2" />
             Voice Call
           </Button>
         </div>
+
+        {/* Trial Status Alert */}
+        {trialStatus && !trialStatus.subscribed && (
+          <Alert className={getRemainingMinutes() < 50 ? "border-orange-200 bg-orange-50" : ""}>
+            <Clock className="h-4 w-4" />
+            <AlertDescription>
+              <div className="space-y-1">
+                <div className="font-semibold">Free Trial Active</div>
+                <div className="text-sm">
+                  {Math.floor(getRemainingDays())} days, {getRemainingMinutes()} minutes remaining
+                </div>
+                {getRemainingMinutes() < 50 && (
+                  <Button 
+                    size="sm" 
+                    onClick={onUpgrade}
+                    className="mt-2"
+                  >
+                    <Crown className="w-4 h-4 mr-1" />
+                    Upgrade Now
+                  </Button>
+                )}
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Bio */}
         <Card>
@@ -347,10 +438,40 @@ export const MobileApp = ({ companion, onBack }: MobileAppProps) => {
       <Card>
         <CardHeader>
           <CardTitle>Subscription</CardTitle>
-          <CardDescription>Premium Plan - Active</CardDescription>
+          {trialStatus?.subscribed ? (
+            <CardDescription>
+              {trialStatus.subscription_tier || 'Premium'} Plan - Active
+            </CardDescription>
+          ) : (
+            <CardDescription>
+              Free Trial - {Math.floor(getRemainingDays())} days, {getRemainingMinutes()} minutes remaining
+            </CardDescription>
+          )}
         </CardHeader>
-        <CardContent>
-          <Badge className="bg-green-100 text-green-800">Active</Badge>
+        <CardContent className="space-y-3">
+          {trialStatus?.subscribed ? (
+            <Badge className="bg-green-100 text-green-800">Active Subscription</Badge>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Badge variant="outline" className="text-blue-700 border-blue-200">
+                  Free Trial
+                </Badge>
+                <div className="text-sm text-muted-foreground">
+                  <div>Days left: {Math.floor(getRemainingDays())}</div>
+                  <div>Minutes left: {getRemainingMinutes()}</div>
+                </div>
+              </div>
+              <Button 
+                onClick={onUpgrade}
+                className="w-full"
+                variant={getRemainingMinutes() < 50 ? "default" : "outline"}
+              >
+                <Crown className="w-4 h-4 mr-2" />
+                Upgrade to Premium
+              </Button>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -408,7 +529,7 @@ export const MobileApp = ({ companion, onBack }: MobileAppProps) => {
           <Button
             variant={activeTab === 'profile' ? 'default' : 'ghost'}
             size="sm"
-            onClick={() => setActiveTab('profile')}
+            onClick={() => handleTabChange('profile')}
             className="flex flex-col items-center py-3"
           >
             <User className="w-4 h-4 mb-1" />
@@ -417,8 +538,9 @@ export const MobileApp = ({ companion, onBack }: MobileAppProps) => {
           <Button
             variant={activeTab === 'chat' ? 'default' : 'ghost'}
             size="sm"
-            onClick={() => setActiveTab('chat')}
+            onClick={() => handleTabChange('chat')}
             className="flex flex-col items-center py-3"
+            disabled={!canUseService()}
           >
             <MessageCircle className="w-4 h-4 mb-1" />
             <span className="text-xs">Chat</span>
@@ -426,7 +548,7 @@ export const MobileApp = ({ companion, onBack }: MobileAppProps) => {
           <Button
             variant={activeTab === 'settings' ? 'default' : 'ghost'}
             size="sm"
-            onClick={() => setActiveTab('settings')}
+            onClick={() => handleTabChange('settings')}
             className="flex flex-col items-center py-3"
           >
             <Settings className="w-4 h-4 mb-1" />

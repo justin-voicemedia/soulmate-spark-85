@@ -65,6 +65,36 @@ export type Database = {
         }
         Relationships: []
       }
+      conversation_usage: {
+        Row: {
+          companion_id: string
+          created_at: string
+          id: string
+          minutes_used: number | null
+          session_end: string | null
+          session_start: string
+          user_id: string
+        }
+        Insert: {
+          companion_id: string
+          created_at?: string
+          id?: string
+          minutes_used?: number | null
+          session_end?: string | null
+          session_start?: string
+          user_id: string
+        }
+        Update: {
+          companion_id?: string
+          created_at?: string
+          id?: string
+          minutes_used?: number | null
+          session_end?: string | null
+          session_start?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -101,6 +131,9 @@ export type Database = {
           subscribed: boolean
           subscription_end: string | null
           subscription_tier: string | null
+          trial_minutes_limit: number | null
+          trial_minutes_used: number | null
+          trial_start: string | null
           updated_at: string
           user_id: string | null
         }
@@ -112,6 +145,9 @@ export type Database = {
           subscribed?: boolean
           subscription_end?: string | null
           subscription_tier?: string | null
+          trial_minutes_limit?: number | null
+          trial_minutes_used?: number | null
+          trial_start?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -123,6 +159,9 @@ export type Database = {
           subscribed?: boolean
           subscription_end?: string | null
           subscription_tier?: string | null
+          trial_minutes_limit?: number | null
+          trial_minutes_used?: number | null
+          trial_start?: string | null
           updated_at?: string
           user_id?: string | null
         }

@@ -65,7 +65,13 @@ const AppContent = () => {
 
   // If user is authenticated and has selected a companion, show the mobile app
   if (user && selectedCompanion && currentState === 'app') {
-      return <MobileApp companion={selectedCompanion} onBack={() => setCurrentState('landing')} />;
+      return (
+        <MobileApp 
+          companion={selectedCompanion} 
+          onBack={() => setCurrentState('landing')}
+          onUpgrade={() => setCurrentState('payment')}
+        />
+      );
   }
 
   const handleStartQuestionnaire = () => {
@@ -127,7 +133,12 @@ const AppContent = () => {
   };
 
   const handleAuthSuccess = () => {
-    setCurrentState('payment');
+    // After auth, go directly to app if we have a companion, otherwise to payment
+    if (selectedCompanion) {
+      setCurrentState('app');
+    } else {
+      setCurrentState('payment');
+    }
   };
 
   const handlePaymentSuccess = () => {
@@ -160,9 +171,9 @@ const AppContent = () => {
 
   const handleCompanionCreated = (companion: Companion) => {
     setSelectedCompanion(companion);
-    // If user is already logged in, skip auth and go to payment
+    // Go directly to app - users can try before they pay
     if (user) {
-      setCurrentState('payment');
+      setCurrentState('app');
     } else {
       setCurrentState('auth');
     }

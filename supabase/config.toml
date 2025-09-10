@@ -1,1 +1,16 @@
 project_id = "rugoqenajhbjqcmrplac"
+
+[functions.check-subscription]
+verify_jwt = false
+
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.customer-portal]
+verify_jwt = false
+
+[functions.generate-companion-image]
+verify_jwt = false
+
+[functions.track-usage]
+verify_jwt = false

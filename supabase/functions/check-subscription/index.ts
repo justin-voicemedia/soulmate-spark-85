@@ -47,7 +47,9 @@ serve(async (req) => {
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     
     if (customers.data.length === 0) {
-      logStep("No customer found, updating unsubscribed state");
+      logStep("No customer found, creating subscriber with trial");
+      // Create subscriber record with trial for new users
+      const trialStart = new Date().toISOString();
       await supabaseClient.from("subscribers").upsert({
         email: user.email,
         user_id: user.id,
@@ -55,9 +57,19 @@ serve(async (req) => {
         subscribed: false,
         subscription_tier: null,
         subscription_end: null,
+        trial_start: trialStart,
+        trial_minutes_used: 0,
+        trial_minutes_limit: 500,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'email' });
-      return new Response(JSON.stringify({ subscribed: false }), {
+      
+      return new Response(JSON.stringify({ 
+        subscribed: false, 
+        trial_active: true,
+        trial_start: trialStart,
+        trial_minutes_used: 0,
+        trial_minutes_limit: 500
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
@@ -93,6 +105,41 @@ serve(async (req) => {
       logStep("No active subscription found");
     }
 
+    // Get existing subscriber data to preserve trial info
+    const { data: existingSubscriber } = await supabaseClient
+      .from("subscribers")
+      .select("trial_start, trial_minutes_used, trial_minutes_limit")
+      .eq("user_id", user.id)
+      .single();
+    
+    logStep("Existing subscriber data", { existingSubscriber });
+
+    // Calculate trial status
+    let trialActive = false;
+    let trialExpired = false;
+    const trialStart = existingSubscriber?.trial_start;
+    const trialMinutesUsed = existingSubscriber?.trial_minutes_used || 0;
+    const trialMinutesLimit = existingSubscriber?.trial_minutes_limit || 500;
+    
+    if (trialStart && !hasActiveSub) {
+      const trialStartDate = new Date(trialStart);
+      const now = new Date();
+      const daysSinceTrialStart = (now.getTime() - trialStartDate.getTime()) / (1000 * 60 * 60 * 24);
+      
+      if (daysSinceTrialStart <= 7 && trialMinutesUsed < trialMinutesLimit) {
+        trialActive = true;
+      } else {
+        trialExpired = true;
+      }
+    }
+    
+    logStep("Trial status calculated", { 
+      trialActive, 
+      trialExpired, 
+      trialMinutesUsed, 
+      trialMinutesLimit 
+    });
+
     await supabaseClient.from("subscribers").upsert({
       email: user.email,
       user_id: user.id,
@@ -100,14 +147,28 @@ serve(async (req) => {
       subscribed: hasActiveSub,
       subscription_tier: subscriptionTier,
       subscription_end: subscriptionEnd,
+      trial_start: existingSubscriber?.trial_start || null,
+      trial_minutes_used: trialMinutesUsed,
+      trial_minutes_limit: trialMinutesLimit,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'email' });
 
-    logStep("Updated database with subscription info", { subscribed: hasActiveSub, subscriptionTier });
+    logStep("Updated database with subscription info", { 
+      subscribed: hasActiveSub, 
+      subscriptionTier,
+      trialActive,
+      trialExpired
+    });
+    
     return new Response(JSON.stringify({
       subscribed: hasActiveSub,
       subscription_tier: subscriptionTier,
-      subscription_end: subscriptionEnd
+      subscription_end: subscriptionEnd,
+      trial_active: trialActive,
+      trial_expired: trialExpired,
+      trial_start: trialStart,
+      trial_minutes_used: trialMinutesUsed,
+      trial_minutes_limit: trialMinutesLimit
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
