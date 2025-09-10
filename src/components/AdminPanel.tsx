@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useImageGeneration } from '@/hooks/useImageGeneration';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { RefreshCw, Image as ImageIcon } from 'lucide-react';
+import { RefreshCw, Image as ImageIcon, Sparkles } from 'lucide-react';
 
 interface Companion {
   id: string;
@@ -21,6 +22,7 @@ export const AdminPanel = () => {
   const [companions, setCompanions] = useState<Companion[]>([]);
   const [companionsLoading, setCompanionsLoading] = useState(false);
   const [generatingImages, setGeneratingImages] = useState(false);
+  const [selectedCompanions, setSelectedCompanions] = useState<string[]>([]);
   const { generateCompanionImage } = useImageGeneration();
 
   const loadCompanions = async () => {
@@ -41,16 +43,39 @@ export const AdminPanel = () => {
     }
   };
 
-  const generateAllImages = async () => {
-    if (companions.length === 0) {
-      toast.error('Please load companions first');
+  // Check if companion has a placeholder image (Unsplash default)
+  const hasPlaceholderImage = (companion: Companion) => {
+    return companion.image_url.includes('unsplash.com') || 
+           companion.image_url.includes('placeholder') ||
+           !companion.image_url;
+  };
+
+  const generateNewImagesOnly = async () => {
+    const companionsWithoutImages = companions.filter(hasPlaceholderImage);
+    
+    if (companionsWithoutImages.length === 0) {
+      toast.info('All companions already have AI-generated images');
       return;
     }
 
+    await generateImagesForCompanions(companionsWithoutImages);
+  };
+
+  const generateSelectedImages = async () => {
+    if (selectedCompanions.length === 0) {
+      toast.error('Please select companions to generate images for');
+      return;
+    }
+
+    const companionsToGenerate = companions.filter(c => selectedCompanions.includes(c.id));
+    await generateImagesForCompanions(companionsToGenerate);
+  };
+
+  const generateImagesForCompanions = async (companionsToGenerate: Companion[]) => {
     setGeneratingImages(true);
     let successCount = 0;
     
-    for (const companion of companions) {
+    for (const companion of companionsToGenerate) {
       try {
         toast.info(`Generating image for ${companion.name}...`);
         
@@ -93,7 +118,24 @@ export const AdminPanel = () => {
     }
 
     setGeneratingImages(false);
-    toast.success(`Generated ${successCount} out of ${companions.length} images`);
+    setSelectedCompanions([]); // Clear selections after generation
+    toast.success(`Generated ${successCount} out of ${companionsToGenerate.length} images`);
+  };
+
+  const toggleCompanionSelection = (companionId: string) => {
+    setSelectedCompanions(prev => 
+      prev.includes(companionId) 
+        ? prev.filter(id => id !== companionId)
+        : [...prev, companionId]
+    );
+  };
+
+  const selectAllCompanions = () => {
+    if (selectedCompanions.length === companions.length) {
+      setSelectedCompanions([]);
+    } else {
+      setSelectedCompanions(companions.map(c => c.id));
+    }
   };
 
   return (
@@ -111,32 +153,77 @@ export const AdminPanel = () => {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Button 
-              onClick={loadCompanions} 
-              disabled={companionsLoading}
-              variant="outline"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${companionsLoading ? 'animate-spin' : ''}`} />
-              Load Companions ({companions.length})
-            </Button>
-            
-            <Button 
-              onClick={generateAllImages}
-              disabled={generatingImages || companions.length === 0}
-              className="bg-primary hover:bg-primary/90"
-            >
-              <ImageIcon className={`w-4 h-4 mr-2 ${generatingImages ? 'animate-pulse' : ''}`} />
-              Generate All Images
-            </Button>
+          <div className="space-y-3">
+            <div className="flex gap-2 flex-wrap">
+              <Button 
+                onClick={loadCompanions} 
+                disabled={companionsLoading}
+                variant="outline"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${companionsLoading ? 'animate-spin' : ''}`} />
+                Load Companions ({companions.length})
+              </Button>
+              
+              <Button 
+                onClick={generateNewImagesOnly}
+                disabled={generatingImages || companions.length === 0}
+                variant="secondary"
+              >
+                <Sparkles className={`w-4 h-4 mr-2 ${generatingImages ? 'animate-pulse' : ''}`} />
+                Generate New Images Only ({companions.filter(hasPlaceholderImage).length})
+              </Button>
+            </div>
+
+            {companions.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                <Button 
+                  onClick={selectAllCompanions}
+                  variant="outline"
+                  size="sm"
+                >
+                  {selectedCompanions.length === companions.length ? 'Deselect All' : 'Select All'}
+                </Button>
+                
+                <Button 
+                  onClick={generateSelectedImages}
+                  disabled={generatingImages || selectedCompanions.length === 0}
+                  className="bg-primary hover:bg-primary/90"
+                  size="sm"
+                >
+                  <ImageIcon className={`w-4 h-4 mr-2 ${generatingImages ? 'animate-pulse' : ''}`} />
+                  Generate Selected ({selectedCompanions.length})
+                </Button>
+              </div>
+            )}
           </div>
 
           {companions.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
               {companions.map((companion) => (
-                <Card key={companion.id} className="border">
+                <Card key={companion.id} className={`border cursor-pointer transition-colors ${selectedCompanions.includes(companion.id) ? 'ring-2 ring-primary bg-primary/5' : ''}`}>
                   <CardContent className="p-4">
-                    <div className="aspect-square bg-muted rounded-lg mb-3 overflow-hidden">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Checkbox
+                        checked={selectedCompanions.includes(companion.id)}
+                        onCheckedChange={() => toggleCompanionSelection(companion.id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div className="flex-1">
+                        <h3 className="font-semibold">{companion.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {companion.age} • {companion.gender}
+                        </p>
+                      </div>
+                      {hasPlaceholderImage(companion) && (
+                        <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">
+                          Needs Image
+                        </span>
+                      )}
+                    </div>
+                    <div 
+                      className="aspect-square bg-muted rounded-lg mb-3 overflow-hidden"
+                      onClick={() => toggleCompanionSelection(companion.id)}
+                    >
                       <img 
                         src={companion.image_url} 
                         alt={companion.name}
@@ -147,10 +234,6 @@ export const AdminPanel = () => {
                         }}
                       />
                     </div>
-                    <h3 className="font-semibold">{companion.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {companion.age} • {companion.gender}
-                    </p>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                       {companion.bio}
                     </p>
