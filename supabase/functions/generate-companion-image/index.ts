@@ -37,9 +37,8 @@ serve(async (req) => {
 
     console.log('Generating image with prompt:', imagePrompt);
 
-    // Note: This is a placeholder for Grok.ai API call
-    // We need the actual Grok.ai image generation API endpoint and format
-    const grokResponse = await fetch('https://api.grok.ai/v1/images/generate', {
+    // Generate image using Grok.ai (xAI) API
+    const grokResponse = await fetch('https://api.x.ai/v1/images/generations', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${grokApiKey}`,
@@ -47,10 +46,9 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         prompt: imagePrompt,
-        model: 'grok-vision-beta', // Placeholder model name
-        size: '1024x1024',
-        quality: 'hd',
+        model: 'grok-2-image',
         n: 1,
+        response_format: 'url',
       }),
     });
 
@@ -63,8 +61,7 @@ serve(async (req) => {
     console.log('Grok API response:', grokData);
 
     // Extract image URL from Grok response
-    // Note: This structure may need adjustment based on actual Grok.ai API response format
-    const imageUrl = grokData.data?.[0]?.url || grokData.url || grokData.image_url;
+    const imageUrl = grokData.data?.[0]?.url;
 
     if (!imageUrl) {
       throw new Error('No image URL returned from Grok API');
