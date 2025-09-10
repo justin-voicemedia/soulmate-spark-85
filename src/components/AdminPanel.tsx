@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useImageGeneration } from '@/hooks/useImageGeneration';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { RefreshCw, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { RefreshCw, Image as ImageIcon, Sparkles, Upload } from 'lucide-react';
 
 interface Companion {
   id: string;
@@ -23,7 +23,9 @@ export const AdminPanel = () => {
   const [companionsLoading, setCompanionsLoading] = useState(false);
   const [generatingImages, setGeneratingImages] = useState(false);
   const [selectedCompanions, setSelectedCompanions] = useState<string[]>([]);
+  const [uploadingImages, setUploadingImages] = useState<string[]>([]);
   const { generateCompanionImage } = useImageGeneration();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadCompanions = async () => {
     setCompanionsLoading(true);
@@ -138,6 +140,84 @@ export const AdminPanel = () => {
     }
   };
 
+  const handleImageUpload = async (companionId: string, file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    setUploadingImages(prev => [...prev, companionId]);
+    
+    try {
+      const companion = companions.find(c => c.id === companionId);
+      if (!companion) {
+        throw new Error('Companion not found');
+      }
+
+      // Create a unique filename
+      const fileExtension = file.name.split('.').pop();
+      const fileName = `${companionId}-${Date.now()}.${fileExtension}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('companion-images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('companion-images')
+        .getPublicUrl(fileName);
+
+      // Update the companion with the new image URL
+      const { error: updateError } = await supabase
+        .from('companions')
+        .update({ image_url: publicUrl })
+        .eq('id', companionId);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setCompanions(prev => 
+        prev.map(c => 
+          c.id === companionId 
+            ? { ...c, image_url: publicUrl }
+            : c
+        )
+      );
+
+      toast.success(`Image uploaded for ${companion.name}`);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('Failed to upload image');
+    } finally {
+      setUploadingImages(prev => prev.filter(id => id !== companionId));
+    }
+  };
+
+  const triggerFileUpload = (companionId: string) => {
+    if (fileInputRef.current) {
+      fileInputRef.current.setAttribute('data-companion-id', companionId);
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    const companionId = event.target.getAttribute('data-companion-id');
+    
+    if (file && companionId) {
+      handleImageUpload(companionId, file);
+    }
+    
+    // Reset the input
+    event.target.value = '';
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <Card>
@@ -202,24 +282,42 @@ export const AdminPanel = () => {
               {companions.map((companion) => (
                 <Card key={companion.id} className={`border cursor-pointer transition-colors ${selectedCompanions.includes(companion.id) ? 'ring-2 ring-primary bg-primary/5' : ''}`}>
                   <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Checkbox
-                        checked={selectedCompanions.includes(companion.id)}
-                        onCheckedChange={() => toggleCompanionSelection(companion.id)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <div className="flex-1">
-                        <h3 className="font-semibold">{companion.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {companion.age} • {companion.gender}
-                        </p>
-                      </div>
-                      {hasPlaceholderImage(companion) && (
-                        <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">
-                          Needs Image
-                        </span>
-                      )}
-                    </div>
+                     <div className="flex items-center gap-2 mb-3">
+                       <Checkbox
+                         checked={selectedCompanions.includes(companion.id)}
+                         onCheckedChange={() => toggleCompanionSelection(companion.id)}
+                         onClick={(e) => e.stopPropagation()}
+                       />
+                       <div className="flex-1">
+                         <h3 className="font-semibold">{companion.name}</h3>
+                         <p className="text-sm text-muted-foreground">
+                           {companion.age} • {companion.gender}
+                         </p>
+                       </div>
+                       <div className="flex gap-1">
+                         {hasPlaceholderImage(companion) && (
+                           <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">
+                             Needs Image
+                           </span>
+                         )}
+                         <Button
+                           size="sm"
+                           variant="outline"
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             triggerFileUpload(companion.id);
+                           }}
+                           disabled={uploadingImages.includes(companion.id)}
+                           className="h-6 px-2 text-xs"
+                         >
+                           {uploadingImages.includes(companion.id) ? (
+                             <RefreshCw className="w-3 h-3 animate-spin" />
+                           ) : (
+                             <Upload className="w-3 h-3" />
+                           )}
+                         </Button>
+                       </div>
+                     </div>
                     <div 
                       className="aspect-square bg-muted rounded-lg mb-3 overflow-hidden"
                       onClick={() => toggleCompanionSelection(companion.id)}
@@ -251,6 +349,15 @@ export const AdminPanel = () => {
           )}
         </CardContent>
       </Card>
+      
+      {/* Hidden file input for image uploads */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileInputChange}
+        style={{ display: 'none' }}
+      />
     </div>
   );
 };
