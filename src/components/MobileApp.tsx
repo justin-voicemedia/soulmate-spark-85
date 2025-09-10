@@ -32,7 +32,7 @@ interface MobileAppProps {
     personality: string[];
     likes: string[];
     dislikes: string[];
-    image: string;
+    image_url: string;
     location: string;
   };
   onBack: () => void;
@@ -116,7 +116,7 @@ export const MobileApp = ({ companion, onBack }: MobileAppProps) => {
       {/* Companion Profile Header */}
       <div className="relative">
         <img 
-          src={companion.image}
+          src={companion.image_url}
           alt={companion.name}
           className="w-full h-80 object-cover"
         />
@@ -238,7 +238,7 @@ export const MobileApp = ({ companion, onBack }: MobileAppProps) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Avatar>
-              <AvatarImage src={companion.image} />
+              <AvatarImage src={companion.image_url} />
               <AvatarFallback>{companion.name[0]}</AvatarFallback>
             </Avatar>
             <div>
@@ -269,7 +269,7 @@ export const MobileApp = ({ companion, onBack }: MobileAppProps) => {
             }`}>
               {message.sender === 'companion' && (
                 <Avatar className="w-8 h-8">
-                  <AvatarImage src={companion.image} />
+                  <AvatarImage src={companion.image_url} />
                   <AvatarFallback>{companion.name[0]}</AvatarFallback>
                 </Avatar>
               )}

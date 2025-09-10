@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Heart, MapPin, Calendar } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Heart, MapPin, Calendar, Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useImageGeneration } from "@/hooks/useImageGeneration";
+import { toast } from "sonner";
 
 interface Companion {
   id: string;
@@ -14,7 +17,7 @@ interface Companion {
   personality: string[];
   likes: string[];
   dislikes: string[];
-  image: string;
+  image_url: string;
   location: string;
 }
 
@@ -23,89 +26,92 @@ interface CompanionBrowserProps {
   onSelectCompanion: (companion: Companion) => void;
 }
 
-const prebuiltCompanions: Companion[] = [
-  {
-    id: "1",
-    name: "Emma",
-    age: 28,
-    gender: "Female",
-    bio: "Hi, I'm Emma! I'm passionate about art, literature, and deep conversations. I love exploring new ideas and helping others discover their creative side.",
-    hobbies: ["Painting", "Reading", "Yoga", "Cooking"],
-    personality: ["Creative", "Thoughtful", "Caring", "Intelligent"],
-    likes: ["Poetry", "Museums", "Coffee shops", "Nature walks"],
-    dislikes: ["Loud crowds", "Negativity", "Rush"],
-    image: "https://images.unsplash.com/photo-1494790108755-2616c14952f4?w=400&h=400&fit=crop&crop=face",
-    location: "San Francisco, CA"
-  },
-  {
-    id: "2",
-    name: "Alex",
-    age: 32,
-    gender: "Male",
-    bio: "Adventure seeker and tech enthusiast. I'm Alex, and I believe life is about experiencing new things and pushing boundaries. Let's explore together!",
-    hobbies: ["Hiking", "Photography", "Gaming", "Travel"],
-    personality: ["Adventurous", "Confident", "Funny", "Energetic"],
-    likes: ["Mountain climbing", "New technologies", "Good coffee", "Road trips"],
-    dislikes: ["Boring routines", "Closed minds", "Pessimism"],
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
-    location: "Denver, CO"
-  },
-  {
-    id: "3",
-    name: "Sophie",
-    age: 26,
-    gender: "Female",
-    bio: "Wellness coach and mindfulness advocate. I'm Sophie, here to help you find balance and inner peace through our conversations.",
-    hobbies: ["Meditation", "Yoga", "Reading", "Dancing"],
-    personality: ["Calm", "Caring", "Gentle", "Thoughtful"],
-    likes: ["Sunrise meditation", "Herbal tea", "Self-improvement", "Nature"],
-    dislikes: ["Stress", "Negativity", "Chaos"],
-    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop&crop=face",
-    location: "Portland, OR"
-  },
-  {
-    id: "4",
-    name: "Marcus",
-    age: 35,
-    gender: "Male",
-    bio: "Intellectual with a passion for philosophy and deep discussions. I'm Marcus, and I enjoy exploring life's big questions and meaningful connections.",
-    hobbies: ["Reading", "Chess", "Writing", "Classical music"],
-    personality: ["Intelligent", "Thoughtful", "Loyal", "Gentle"],
-    likes: ["Philosophy books", "Quiet evenings", "Deep conversations", "Museums"],
-    dislikes: ["Small talk", "Dishonesty", "Superficiality"],
-    image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
-    location: "Boston, MA"
-  },
-  {
-    id: "5",
-    name: "Zoe",
-    age: 24,
-    gender: "Female",
-    bio: "Creative soul with a love for music and spontaneous adventures. I'm Zoe, and I believe every day should have a little magic in it!",
-    hobbies: ["Music", "Art", "Dancing", "Travel"],
-    personality: ["Creative", "Spontaneous", "Energetic", "Funny"],
-    likes: ["Live concerts", "Street art", "Vintage shops", "Late night conversations"],
-    dislikes: ["Rigid schedules", "Judgmental people", "Boredom"],
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face",
-    location: "Austin, TX"
-  },
-  {
-    id: "6",
-    name: "David",
-    age: 29,
-    gender: "Male",
-    bio: "Fitness enthusiast and motivational spirit. I'm David, here to inspire and support you in achieving your goals, whatever they may be.",
-    hobbies: ["Fitness", "Cooking", "Sports", "Hiking"],
-    personality: ["Energetic", "Confident", "Caring", "Loyal"],
-    likes: ["Morning workouts", "Healthy cooking", "Team sports", "Personal growth"],
-    dislikes: ["Excuses", "Unhealthy habits", "Negativity"],
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop&crop=face",
-    location: "Miami, FL"
-  }
-];
-
 export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowserProps) => {
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
+  const [companions, setCompanions] = useState<Companion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { generateCompanionImage, loading: imageGenerating } = useImageGeneration();
+
+  useEffect(() => {
+    loadCompanions();
+  }, []);
+
+  const loadCompanions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('companions')
+        .select('*')
+        .eq('is_prebuilt', true)
+        .order('created_at');
+
+      if (error) {
+        throw error;
+      }
+
+      const formattedCompanions: Companion[] = (data || []).map(companion => ({
+        id: companion.id,
+        name: companion.name,
+        age: companion.age,
+        gender: companion.gender,
+        bio: companion.bio,
+        hobbies: companion.hobbies || [],
+        personality: companion.personality || [],
+        likes: companion.likes || [],
+        dislikes: companion.dislikes || [],
+        image_url: companion.image_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${companion.name}`,
+        location: companion.location || 'Virtual'
+      }));
+
+      setCompanions(formattedCompanions);
+    } catch (error) {
+      console.error('Error loading companions:', error);
+      toast.error('Failed to load companions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGenerateNewImage = async (companion: Companion) => {
+    try {
+      toast.info('Generating new AI image...');
+      
+      const newImageUrl = await generateCompanionImage({
+        name: companion.name,
+        age: companion.age,
+        gender: companion.gender,
+        bio: companion.bio,
+        personality: companion.personality,
+        hobbies: companion.hobbies
+      });
+
+      // Update the companion's image in the database
+      const { error } = await supabase
+        .from('companions')
+        .update({ image_url: newImageUrl })
+        .eq('id', companion.id);
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      setCompanions(prev => 
+        prev.map(c => 
+          c.id === companion.id 
+            ? { ...c, image_url: newImageUrl }
+            : c
+        )
+      );
+
+      if (selectedCompanion?.id === companion.id) {
+        setSelectedCompanion({ ...selectedCompanion, image_url: newImageUrl });
+      }
+
+    } catch (error) {
+      console.error('Error generating new image:', error);
+      toast.error('Failed to generate new image');
+    }
+  };
 
   const handleSelectCompanion = (companion: Companion) => {
     setSelectedCompanion(companion);
@@ -116,6 +122,17 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
       onSelectCompanion(selectedCompanion);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-secondary flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading companions...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (selectedCompanion) {
     return (
@@ -137,12 +154,21 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
               <CardContent className="p-0">
                 <div className="md:flex">
                   {/* Image Section */}
-                  <div className="md:w-1/2">
+                  <div className="md:w-1/2 relative">
                     <img 
-                      src={selectedCompanion.image}
+                      src={selectedCompanion.image_url}
                       alt={selectedCompanion.name}
                       className="w-full h-96 md:h-full object-cover rounded-t-lg md:rounded-l-lg md:rounded-t-none"
                     />
+                    <Button
+                      onClick={() => handleGenerateNewImage(selectedCompanion)}
+                      disabled={imageGenerating}
+                      className="absolute top-4 right-4 bg-primary/80 hover:bg-primary"
+                      size="sm"
+                    >
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      {imageGenerating ? 'Generating...' : 'New AI Image'}
+                    </Button>
                   </div>
 
                   {/* Details Section */}
@@ -254,18 +280,31 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
 
           {/* Companions Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {prebuiltCompanions.map(companion => (
+            {companions.map(companion => (
               <Card 
                 key={companion.id}
                 className="cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
                 onClick={() => handleSelectCompanion(companion)}
               >
                 <CardContent className="p-0">
-                  <img 
-                    src={companion.image}
-                    alt={companion.name}
-                    className="w-full h-64 object-cover rounded-t-lg"
-                  />
+                  <div className="relative">
+                    <img 
+                      src={companion.image_url}
+                      alt={companion.name}
+                      className="w-full h-64 object-cover rounded-t-lg"
+                    />
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleGenerateNewImage(companion);
+                      }}
+                      disabled={imageGenerating}
+                      className="absolute top-2 right-2 bg-primary/80 hover:bg-primary"
+                      size="sm"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                    </Button>
+                  </div>
                   <div className="p-6">
                     <div className="flex items-center justify-between mb-2">
                       <CardTitle className="text-xl">{companion.name}</CardTitle>

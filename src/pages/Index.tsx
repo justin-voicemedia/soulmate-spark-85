@@ -29,7 +29,7 @@ interface Companion {
   personality: string[];
   likes: string[];
   dislikes: string[];
-  image: string;
+  image_url: string;
   location: string;
 }
 
@@ -52,7 +52,7 @@ const AppContent = () => {
 
   // If user is authenticated and has selected a companion, show the mobile app
   if (user && selectedCompanion) {
-    return <MobileApp companion={selectedCompanion} onBack={() => setCurrentState('landing')} />;
+      return <MobileApp companion={selectedCompanion} onBack={() => setCurrentState('landing')} />;
   }
 
   const handleStartQuestionnaire = () => {
@@ -94,7 +94,7 @@ const AppContent = () => {
         personality: questionnaireData.personality,
         likes: ['Deep conversations', 'Meaningful connections'],
         dislikes: ['Superficial talk', 'Negativity'],
-        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
+        image_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
         location: 'Virtual'
       };
       setSelectedCompanion(generatedCompanion);
