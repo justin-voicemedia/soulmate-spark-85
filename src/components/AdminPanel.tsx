@@ -141,7 +141,7 @@ export const AdminPanel = () => {
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
-                          target.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${companion.name}`;
+                          target.src = `https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face`;
                         }}
                       />
                     </div>

@@ -27,13 +27,12 @@ serve(async (req) => {
 
     const { name, age, gender, bio, personality, hobbies }: CompanionImageRequest = await req.json();
 
-    // Create a detailed prompt for the AI companion image
-    const imagePrompt = `Professional portrait photo of ${name}, a ${age}-year-old ${gender.toLowerCase()}. ${bio.split('.')[0]}. 
-    Personality traits: ${personality.slice(0, 3).join(', ')}. 
-    Interests: ${hobbies.slice(0, 3).join(', ')}. 
-    High quality, realistic, friendly expression, warm lighting, professional headshot style, 
-    attractive, approachable, well-groomed, modern casual attire. 
-    Ultra high resolution, photorealistic, detailed facial features.`;
+    // Create a detailed prompt for ultra-realistic AI companion image
+    const imagePrompt = `Ultra-realistic professional portrait photograph of a ${age}-year-old ${gender.toLowerCase()} with ${personality.slice(0, 2).join(' and ')} personality. 
+    Real human face, photorealistic skin texture, natural facial features, ${hobbies.slice(0, 2).join(' and ')} interests. 
+    Professional studio photography, natural lighting, attractive features, warm friendly expression, direct eye contact with camera, 
+    modern casual attire, high-end portrait style. 8K resolution, hyperrealistic, detailed facial structure, 
+    natural skin tone, realistic hair texture. No cartoon, anime, or illustrated style. Real human photography only.`;
 
     console.log('Generating image with prompt:', imagePrompt);
 
@@ -78,8 +77,9 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error generating companion image:', error);
     
-    // Fallback to a placeholder service if Grok fails
-    const fallbackUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${Date.now()}`;
+    // Fallback to realistic human placeholder if Grok fails
+    const genderParam = gender.toLowerCase() === 'female' ? 'women' : 'men';
+    const fallbackUrl = `https://images.unsplash.com/photo-${Math.random() > 0.5 ? '1494790108755-2616b612b786' : '1507003211169-0a1dd7228f2d'}?w=400&h=400&fit=crop&crop=face`;
     
     return new Response(JSON.stringify({ 
       imageUrl: fallbackUrl,

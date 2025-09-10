@@ -52,8 +52,9 @@ export const useImageGeneration = () => {
       console.error('Failed to generate companion image:', error);
       toast.error('Failed to generate AI image');
       
-      // Return a fallback URL
-      return `https://api.dicebear.com/7.x/avataaars/svg?seed=${companionData.name}`;
+      // Return a realistic human fallback URL instead of cartoon
+      const genderSeed = companionData.gender.toLowerCase() === 'female' ? 'women' : 'men';  
+      return `https://images.unsplash.com/photo-${companionData.gender === 'female' ? '1494790108755-2616b612b786' : '1507003211169-0a1dd7228f2d'}?w=400&h=400&fit=crop&crop=face`;
     } finally {
       setLoading(false);
     }
@@ -80,7 +81,7 @@ export const useImageGeneration = () => {
       
     } catch (error) {
       console.error('Failed to generate custom image:', error);
-      return `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`;
+      return `https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face`;
     } finally {
       setLoading(false);
     }
