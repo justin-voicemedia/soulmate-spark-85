@@ -77,7 +77,15 @@ const AppContent = () => {
   };
 
   const handleBuildCompanion = () => {
-    setCurrentState('builder');
+    if (user) {
+      setCurrentState('builder');
+    } else {
+      setCurrentState('auth');
+    }
+  };
+
+  const handleSignIn = () => {
+    setCurrentState('auth');
   };
 
   const handleQuestionnaireComplete = async (data: QuestionnaireData) => {
@@ -227,6 +235,7 @@ const AppContent = () => {
         onStartQuestionnaire={handleStartQuestionnaire}
         onBrowseCompanions={handleBrowseCompanions}
         onBuildCompanion={handleBuildCompanion}
+        onSignIn={handleSignIn}
       />
       {/* Temporary admin access - remove in production */}
       <div className="fixed bottom-4 right-4">

@@ -7,9 +7,10 @@ interface LandingPageProps {
   onStartQuestionnaire: () => void;
   onBrowseCompanions: () => void;
   onBuildCompanion: () => void;
+  onSignIn: () => void;
 }
 
-export const LandingPage = ({ onStartQuestionnaire, onBrowseCompanions, onBuildCompanion }: LandingPageProps) => {
+export const LandingPage = ({ onStartQuestionnaire, onBrowseCompanions, onBuildCompanion, onSignIn }: LandingPageProps) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary">
       {/* Header */}
@@ -19,7 +20,7 @@ export const LandingPage = ({ onStartQuestionnaire, onBrowseCompanions, onBuildC
             <Heart className="w-8 h-8 text-primary" />
             <span className="text-2xl font-bold">LoveCalls.ai</span>
           </div>
-          <Button variant="outline">Sign In</Button>
+          <Button variant="outline" onClick={onSignIn}>Sign In</Button>
         </div>
       </header>
 
