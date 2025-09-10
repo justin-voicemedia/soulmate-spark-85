@@ -4,9 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useImageGeneration } from '@/hooks/useImageGeneration';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { RefreshCw, Image as ImageIcon, LogOut } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
-import { AuthForm } from '@/components/AuthForm';
+import { RefreshCw, Image as ImageIcon } from 'lucide-react';
 
 interface Companion {
   id: string;
@@ -20,30 +18,10 @@ interface Companion {
 }
 
 export const AdminPanel = () => {
-  const { user, signOut, loading } = useAuth();
   const [companions, setCompanions] = useState<Companion[]>([]);
   const [companionsLoading, setCompanionsLoading] = useState(false);
   const [generatingImages, setGeneratingImages] = useState(false);
   const { generateCompanionImage } = useImageGeneration();
-
-  // Show login form if not authenticated
-  if (!user && !loading) {
-    return (
-      <AuthForm 
-        onBack={() => window.history.back()} 
-        onSuccess={() => window.location.reload()} 
-      />
-    );
-  }
-
-  // Show loading while checking auth
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
 
   const loadCompanions = async () => {
     setCompanionsLoading(true);
@@ -122,20 +100,14 @@ export const AdminPanel = () => {
     <div className="p-6 max-w-4xl mx-auto">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ImageIcon className="w-6 h-6" />
-              <div>
-                <CardTitle>Admin Panel - Companion Management</CardTitle>
-                <CardDescription>
-                  Generate AI images for prebuilt companions using Grok.ai
-                </CardDescription>
-              </div>
+          <div className="flex items-center gap-2">
+            <ImageIcon className="w-6 h-6" />
+            <div>
+              <CardTitle>Admin Panel - Companion Management</CardTitle>
+              <CardDescription>
+                Generate AI images for prebuilt companions using Grok.ai
+              </CardDescription>
             </div>
-            <Button variant="outline" onClick={signOut}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
