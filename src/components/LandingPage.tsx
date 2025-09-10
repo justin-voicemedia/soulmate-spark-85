@@ -30,10 +30,15 @@ export const LandingPage = ({ onStartQuestionnaire, onBrowseCompanions, onBuildC
           <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-6">
             Find Your Perfect AI Companion
           </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+          <p className="text-xl text-muted-foreground mb-6 max-w-2xl mx-auto">
             Connect with personalized AI companions through text, voice, and video. 
             Experience meaningful conversations tailored just for you.
           </p>
+          
+          {/* Free Trial Badge */}
+          <div className="bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-full px-6 py-3 inline-block mb-8 text-lg font-semibold">
+            🎉 7-Day Free Trial • 500 Minutes Included
+          </div>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" onClick={onStartQuestionnaire} className="text-lg px-8 py-6">
@@ -140,9 +145,17 @@ export const LandingPage = ({ onStartQuestionnaire, onBrowseCompanions, onBuildC
       <section className="px-6 py-16 bg-secondary">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold mb-6">Simple Pricing</h2>
-          <p className="text-xl text-muted-foreground mb-8">
+          <p className="text-xl text-muted-foreground mb-4">
             Start with our basic plan and unlock premium features as you explore.
           </p>
+          <div className="bg-accent/20 border border-accent rounded-lg p-4 mb-8">
+            <p className="text-lg font-semibold text-accent">
+              🚀 Start with a 7-day free trial including 500 conversational minutes!
+            </p>
+            <p className="text-muted-foreground mt-2">
+              No credit card required • Cancel anytime during trial
+            </p>
+          </div>
           
           <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
             <Card className="shadow-lg">
