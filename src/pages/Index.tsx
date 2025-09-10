@@ -5,9 +5,14 @@ import { CompanionBrowser } from "@/components/CompanionBrowser";
 import { AuthForm } from "@/components/AuthForm";
 import { PaymentForm } from "@/components/PaymentForm";
 import { MobileApp } from "@/components/MobileApp";
+import { AdminPanel } from "@/components/AdminPanel";
+import { MatchResults } from "@/components/MatchResults";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { CompanionMatchingService } from "@/services/companionMatching";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-type AppState = 'landing' | 'questionnaire' | 'companions' | 'auth' | 'payment' | 'app';
+type AppState = 'landing' | 'questionnaire' | 'matches' | 'companions' | 'auth' | 'payment' | 'app' | 'admin';
 
 interface QuestionnaireData {
   companionType: string;
@@ -33,11 +38,18 @@ interface Companion {
   location: string;
 }
 
+interface CompanionMatch extends Companion {
+  compatibilityScore: number;
+  matchReasons: string[];
+}
+
 const AppContent = () => {
   const { user, loading } = useAuth();
   const [currentState, setCurrentState] = useState<AppState>('landing');
   const [questionnaireData, setQuestionnaireData] = useState<QuestionnaireData | null>(null);
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
+  const [matches, setMatches] = useState<CompanionMatch[]>([]);
+  const [matchingSummary, setMatchingSummary] = useState<string>('');
 
   if (loading) {
     return (
@@ -63,9 +75,37 @@ const AppContent = () => {
     setCurrentState('companions');
   };
 
-  const handleQuestionnaireComplete = (data: QuestionnaireData) => {
+  const handleQuestionnaireComplete = async (data: QuestionnaireData) => {
     setQuestionnaireData(data);
-    setCurrentState('auth');
+    
+    try {
+      // Fetch all prebuilt companions
+      const { data: companions, error } = await supabase
+        .from('companions')
+        .select('*')
+        .eq('is_prebuilt', true);
+
+      if (error) {
+        console.error('Error fetching companions:', error);
+        toast.error('Failed to load companions');
+        setCurrentState('companions');
+        return;
+      }
+
+      // Use matching service to find compatible companions
+      const matchingService = new CompanionMatchingService();
+      const compatibleMatches = matchingService.findMatches(data, companions || []);
+      const summary = matchingService.getRecommendationSummary(data, compatibleMatches);
+
+      setMatches(compatibleMatches);
+      setMatchingSummary(summary);
+      setCurrentState('matches');
+      
+    } catch (error) {
+      console.error('Error during matching:', error);
+      toast.error('Something went wrong. Let\'s browse all companions instead.');
+      setCurrentState('companions');
+    }
   };
 
   const handleCompanionSelect = (companion: Companion) => {
@@ -114,6 +154,18 @@ const AppContent = () => {
     );
   }
 
+  if (currentState === 'matches') {
+    return (
+      <MatchResults
+        matches={matches}
+        userData={questionnaireData!}
+        onSelectCompanion={handleCompanionSelect}
+        onBack={() => setCurrentState('questionnaire')}
+        recommendationSummary={matchingSummary}
+      />
+    );
+  }
+
   if (currentState === 'companions') {
     return (
       <CompanionBrowser
@@ -140,11 +192,27 @@ const AppContent = () => {
     );
   }
 
+  // Temporary admin mode - remove this in production  
+  if (currentState === 'admin') {
+    return <AdminPanel />;
+  }
+
   return (
-    <LandingPage
-      onStartQuestionnaire={handleStartQuestionnaire}
-      onBrowseCompanions={handleBrowseCompanions}
-    />
+    <div>
+      <LandingPage
+        onStartQuestionnaire={handleStartQuestionnaire}
+        onBrowseCompanions={handleBrowseCompanions}
+      />
+      {/* Temporary admin access - remove in production */}
+      <div className="fixed bottom-4 right-4">
+        <button 
+          onClick={() => setCurrentState('admin')}
+          className="bg-red-500 text-white px-3 py-1 rounded text-xs opacity-50 hover:opacity-100"
+        >
+          Admin
+        </button>
+      </div>
+    </div>
   );
 };
 
