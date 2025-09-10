@@ -158,7 +158,7 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
                     <img 
                       src={selectedCompanion.image_url}
                       alt={selectedCompanion.name}
-                      className="w-full h-96 md:h-full object-cover rounded-t-lg md:rounded-l-lg md:rounded-t-none"
+                      className="w-full h-96 md:h-full object-contain bg-muted/20 rounded-t-lg md:rounded-l-lg md:rounded-t-none"
                     />
                     <Button
                       onClick={() => handleGenerateNewImage(selectedCompanion)}
@@ -291,7 +291,7 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
                     <img 
                       src={companion.image_url}
                       alt={companion.name}
-                      className="w-full h-64 object-cover rounded-t-lg"
+                      className="w-full h-64 object-contain bg-muted/20 rounded-t-lg"
                     />
                     <Button
                       onClick={(e) => {
