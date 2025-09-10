@@ -29,6 +29,7 @@ export type Database = {
           location: string | null
           name: string
           personality: string[] | null
+          user_id: string | null
         }
         Insert: {
           age: number
@@ -44,6 +45,7 @@ export type Database = {
           location?: string | null
           name: string
           personality?: string[] | null
+          user_id?: string | null
         }
         Update: {
           age?: number
@@ -59,6 +61,7 @@ export type Database = {
           location?: string | null
           name?: string
           personality?: string[] | null
+          user_id?: string | null
         }
         Relationships: []
       }

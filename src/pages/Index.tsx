@@ -64,7 +64,7 @@ const AppContent = () => {
   }
 
   // If user is authenticated and has selected a companion, show the mobile app
-  if (user && selectedCompanion) {
+  if (user && selectedCompanion && currentState === 'app') {
       return <MobileApp companion={selectedCompanion} onBack={() => setCurrentState('landing')} />;
   }
 
@@ -126,7 +126,7 @@ const AppContent = () => {
     // If we have a selected companion, go to app
     // Otherwise we need to generate one from questionnaire data
     if (selectedCompanion) {
-      // User will see the mobile app since they're authenticated
+      setCurrentState('app');
     } else if (questionnaireData) {
       // Generate companion from questionnaire data
       const generatedCompanion: Companion = {
@@ -152,7 +152,12 @@ const AppContent = () => {
 
   const handleCompanionCreated = (companion: Companion) => {
     setSelectedCompanion(companion);
-    setCurrentState('auth');
+    // If user is already logged in, skip auth and go to payment
+    if (user) {
+      setCurrentState('payment');
+    } else {
+      setCurrentState('auth');
+    }
   };
 
   if (currentState === 'questionnaire') {
