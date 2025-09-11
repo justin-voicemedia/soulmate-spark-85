@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Sparkles, Trash2, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Sparkles, Trash2, Image as ImageIcon, Upload } from 'lucide-react';
 import { useImageGeneration } from '@/hooks/useImageGeneration';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -31,6 +31,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
   const { user } = useAuth();
   const { generateCompanionImage, loading: imageLoading } = useImageGeneration();
   const [creating, setCreating] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
@@ -90,6 +91,65 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
   const handleDeleteImage = () => {
     setGeneratedImageUrl(null);
     toast.success('Image deleted successfully');
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be smaller than 5MB');
+      return;
+    }
+
+    if (!user) {
+      toast.error('You must be logged in to upload images');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `companion-${user.id}-${Date.now()}.${fileExt}`;
+      
+      // Upload to Supabase storage
+      const { data, error } = await supabase.storage
+        .from('companion-images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('companion-images')
+        .getPublicUrl(fileName);
+
+      setGeneratedImageUrl(publicUrl);
+      toast.success('Image uploaded successfully!');
+      
+      // Reset the file input
+      event.target.value = '';
+      
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('Failed to upload image. Please try again.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -312,24 +372,56 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
                 <div className="flex items-center justify-between">
                   <Label>Companion Image</Label>
                   {!generatedImageUrl && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleGenerateImage}
-                      disabled={imageLoading || !formData.name || !formData.sex || !formData.race}
-                    >
-                      {imageLoading ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <ImageIcon className="h-4 w-4 mr-2" />
-                          Generate Image
-                        </>
-                      )}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleGenerateImage}
+                        disabled={imageLoading || uploading || !formData.name || !formData.sex || !formData.race}
+                      >
+                        {imageLoading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <ImageIcon className="h-4 w-4 mr-2" />
+                            Generate AI Image
+                          </>
+                        )}
+                      </Button>
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileUpload}
+                          disabled={imageLoading || uploading}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          id="image-upload"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={imageLoading || uploading}
+                          asChild
+                        >
+                          <label htmlFor="image-upload" className="cursor-pointer">
+                            {uploading ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                                Uploading...
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="h-4 w-4 mr-2" />
+                                Upload Photo
+                              </>
+                            )}
+                          </label>
+                        </Button>
+                      </div>
+                    </div>
                   )}
                 </div>
 
@@ -342,25 +434,55 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
                         className="w-48 h-48 object-cover rounded-lg border shadow-sm"
                       />
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleGenerateImage}
-                        disabled={imageLoading}
-                      >
-                        {imageLoading ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-                            Generating...
-                          </>
-                        ) : (
-                          <>
-                            <ImageIcon className="h-4 w-4 mr-2" />
-                            Generate New Image
-                          </>
-                        )}
-                      </Button>
+                     <div className="flex gap-2 flex-wrap">
+                       <Button
+                         type="button"
+                         variant="outline"
+                         onClick={handleGenerateImage}
+                         disabled={imageLoading || uploading}
+                       >
+                         {imageLoading ? (
+                           <>
+                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                             Generating...
+                           </>
+                         ) : (
+                           <>
+                             <ImageIcon className="h-4 w-4 mr-2" />
+                             Generate New AI Image
+                           </>
+                         )}
+                       </Button>
+                       <div className="relative">
+                         <input
+                           type="file"
+                           accept="image/*"
+                           onChange={handleFileUpload}
+                           disabled={imageLoading || uploading}
+                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                           id="replace-image-upload"
+                         />
+                         <Button
+                           type="button"
+                           variant="outline"
+                           disabled={imageLoading || uploading}
+                           asChild
+                         >
+                           <label htmlFor="replace-image-upload" className="cursor-pointer">
+                             {uploading ? (
+                               <>
+                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                                 Uploading...
+                               </>
+                             ) : (
+                               <>
+                                 <Upload className="h-4 w-4 mr-2" />
+                                 Upload New Photo
+                               </>
+                             )}
+                           </label>
+                         </Button>
+                       </div>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="outline" size="sm">
@@ -390,7 +512,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
 
               <Button 
                 type="submit" 
-                disabled={creating || imageLoading || !formData.name || !formData.sex || !formData.race}
+                disabled={creating || imageLoading || uploading || !formData.name || !formData.sex || !formData.race}
                 className="w-full"
               >
                 {creating ? (
