@@ -29,9 +29,17 @@ serve(async (req) => {
     const { name, age, gender, bio, physicalDescription, personality, hobbies }: CompanionImageRequest = await req.json();
 
     // Create a detailed prompt for ultra-realistic AI companion image
-    const physicalDetails = physicalDescription ? `Physical attributes: ${physicalDescription}. ` : '';
+    let enhancedPhysicalDescription = '';
+    if (physicalDescription && physicalDescription.trim()) {
+      // Always add "ultra realistic" to user's physical description
+      enhancedPhysicalDescription = physicalDescription.toLowerCase().includes('ultra realistic') 
+        ? physicalDescription 
+        : `Ultra realistic ${physicalDescription}`;
+      enhancedPhysicalDescription = `PHYSICAL DESCRIPTION: ${enhancedPhysicalDescription}. `;
+    }
+    
     const imagePrompt = `Ultra-photorealistic human portrait: ${age}-year-old ${gender.toLowerCase()}, genuine human photography, not AI-generated looking. 
-    ${physicalDetails}Personality: ${personality.slice(0, 2).join(', ')}. Interests: ${hobbies.slice(0, 2).join(', ')}. 
+    ${enhancedPhysicalDescription}Personality: ${personality.slice(0, 2).join(', ')}. Interests: ${hobbies.slice(0, 2).join(', ')}. 
     CRITICAL: Must look like real human photography - natural skin imperfections, realistic lighting, authentic facial expressions.
     Professional headshot style, natural studio lighting, direct eye contact, genuine smile, modern casual clothing.
     Shot with high-end camera, shallow depth of field, perfect focus on eyes, natural skin texture with pores visible.
