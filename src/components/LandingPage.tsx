@@ -82,7 +82,12 @@ export const LandingPage = ({ onStartQuestionnaire, onBrowseCompanions, onBuildC
               <span className="text-xs text-muted-foreground">powered by voicemedia.ai</span>
             </div>
           </div>
-          <Button variant="outline" onClick={onSignIn}>Sign In</Button>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" onClick={() => window.location.href = '/admin'}>
+              Admin
+            </Button>
+            <Button variant="outline" onClick={onSignIn}>Sign In</Button>
+          </div>
         </div>
       </header>
 
