@@ -140,12 +140,28 @@ const AppContent = () => {
   };
 
   const handleAuthSuccess = () => {
-    // After auth, go directly to app if we have a companion, otherwise to payment
+    // After auth, go directly to app. If no companion yet, create a lightweight default so users can access account/settings immediately
     if (selectedCompanion) {
       setCurrentState('app');
-    } else {
-      setCurrentState('payment');
+      return;
     }
+
+    const fallbackCompanion: Companion = {
+      id: 'default',
+      name: 'Alex',
+      age: 28,
+      gender: 'Female',
+      bio: 'Your AI companion. You can customize or choose another later.',
+      hobbies: ['Chatting', 'Listening'],
+      personality: ['Empathetic', 'Supportive'],
+      likes: ['Meaningful talks'],
+      dislikes: ['Negativity'],
+      image_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
+      location: 'Virtual'
+    };
+
+    setSelectedCompanion(fallbackCompanion);
+    setCurrentState('app');
   };
 
   const handlePaymentSuccess = () => {
