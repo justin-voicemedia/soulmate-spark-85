@@ -152,26 +152,17 @@ export const VoiceWidget: React.FC<VoiceWidgetProps> = ({
     setIsLoading(true);
     
     try {
-      // Create assistant configuration
-      const assistant = {
-        model: {
-          provider: "openai",
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content: `You are ${companionName}, a virtual companion. Be engaging, empathetic, and maintain character consistency. Keep responses conversational and natural.`
-            }
-          ]
-        },
-        voice: {
-          provider: "11labs",
-          voiceId: "21m00Tcm4TlvDq8ikWAM" // Rachel voice
-        },
-        firstMessage: `Hi! I'm ${companionName}. I'm so excited to talk with you today. How are you feeling?`
-      };
+      // Get or create Vapi agent for this user-companion pair
+      const { data: agentData, error: agentError } = await supabase.functions.invoke('create-vapi-agent', {
+        body: { companionId }
+      });
       
-      await vapiInstance.current.start(assistant);
+      if (agentError || !agentData?.agentId) {
+        throw new Error('Failed to get companion agent');
+      }
+
+      // Start call with the specific agent ID
+      await vapiInstance.current.start(agentData.agentId);
       
     } catch (error) {
       console.error('Failed to start call:', error);

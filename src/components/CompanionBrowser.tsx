@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Heart, MapPin, Calendar, Sparkles, Search, Filter } from "lucide-react";
+import { ArrowLeft, Heart, MapPin, Calendar, Sparkles, Search, Filter, Loader2 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useImageGeneration } from "@/hooks/useImageGeneration";
+import { useCompanionSelection } from "@/hooks/useCompanionSelection";
 import { toast } from "sonner";
 
 interface Companion {
@@ -36,6 +37,7 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const { generateCompanionImage, loading: imageGenerating } = useImageGeneration();
+  const { selectedCompanion: userSelectedCompanion, selectCompanion, isCreatingAgent } = useCompanionSelection();
 
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -195,8 +197,9 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
     setSelectedCompanion(companion);
   };
 
-  const handleConfirmSelection = () => {
+  const handleConfirmSelection = async () => {
     if (selectedCompanion) {
+      await selectCompanion(selectedCompanion.id);
       onSelectCompanion(selectedCompanion);
     }
   };
@@ -349,9 +352,18 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
                 Back to Browse
               </Button>
               
-              <Button size="lg" onClick={handleConfirmSelection}>
-                Choose {selectedCompanion.name}
-                <Heart className="w-4 h-4 ml-2" />
+              <Button size="lg" onClick={handleConfirmSelection} disabled={isCreatingAgent}>
+                {isCreatingAgent ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Setting up {selectedCompanion.name}...
+                  </>
+                ) : (
+                  <>
+                    Choose {selectedCompanion.name}
+                    <Heart className="w-4 h-4 ml-2" />
+                  </>
+                )}
               </Button>
             </div>
           </div>
