@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AvatarCustomizer } from "@/components/AvatarCustomizer";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Phone, 
   MessageCircle, 
@@ -60,6 +62,7 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
   const { user, signOut } = useAuth();
   const { trialStatus, trackUsage, getRemainingMinutes, getRemainingDays, canUseService } = useTrialStatus();
   const [activeTab, setActiveTab] = useState<'chat' | 'profile' | 'settings' | 'voice'>('profile');
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -76,6 +79,23 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Fetch user profile
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      setUserProfile(data);
+    };
+
+    fetchProfile();
+  }, [user]);
 
   useEffect(() => {
     // Start tracking session time when chat tab is opened
@@ -429,10 +449,16 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
   const renderSettings = () => (
     <div className="p-4 space-y-6">
       <div className="text-center">
-        <Avatar className="w-20 h-20 mx-auto mb-4">
-          <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} />
-          <AvatarFallback><User className="w-8 h-8" /></AvatarFallback>
-        </Avatar>
+        <div className="relative inline-block">
+          <Avatar className="w-20 h-20 mx-auto mb-4">
+            <AvatarImage src={userProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} />
+            <AvatarFallback><User className="w-8 h-8" /></AvatarFallback>
+          </Avatar>
+          <AvatarCustomizer 
+            currentAvatarUrl={userProfile?.avatar_url}
+            onAvatarUpdate={(avatarUrl) => setUserProfile({...userProfile, avatar_url: avatarUrl})}
+          />
+        </div>
         <h3 className="font-semibold">{user?.user_metadata?.name || 'User'}</h3>
         <p className="text-muted-foreground text-sm">{user?.email}</p>
       </div>
