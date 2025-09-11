@@ -37,6 +37,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
     race: '',
     age: 25,
     description: '',
+    physicalDescription: '',
     personality: [] as string[],
     hobbies: [] as string[]
   });
@@ -81,6 +82,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
         age: formData.age,
         gender: formData.sex,
         bio: formData.description,
+        physicalDescription: formData.physicalDescription,
         personality: formData.personality,
         hobbies: formData.hobbies
       });
@@ -201,9 +203,21 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
                 </div>
               </div>
 
-              {/* Description */}
+              {/* Physical Description */}
               <div>
-                <Label htmlFor="description">Description (Optional)</Label>
+                <Label htmlFor="physicalDescription">Physical Description (Optional)</Label>
+                <Textarea
+                  id="physicalDescription"
+                  value={formData.physicalDescription}
+                  onChange={(e) => setFormData(prev => ({ ...prev, physicalDescription: e.target.value }))}
+                  placeholder="Describe your ideal companion's physical attributes and attire (height, build, hair, style, etc.)..."
+                  rows={3}
+                />
+              </div>
+
+              {/* Personality Description */}
+              <div>
+                <Label htmlFor="description">Personality Description (Optional)</Label>
                 <Textarea
                   id="description"
                   value={formData.description}

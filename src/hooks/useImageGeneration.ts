@@ -7,6 +7,7 @@ interface CompanionImageRequest {
   age: number;
   gender: string;
   bio: string;
+  physicalDescription?: string;
   personality: string[];
   hobbies: string[];
 }

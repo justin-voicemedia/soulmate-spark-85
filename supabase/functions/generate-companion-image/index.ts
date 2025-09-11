@@ -10,6 +10,7 @@ interface CompanionImageRequest {
   age: number;
   gender: string;
   bio: string;
+  physicalDescription?: string;
   personality: string[];
   hobbies: string[];
 }
@@ -25,11 +26,12 @@ serve(async (req) => {
       throw new Error('GROK_API_KEY not found in environment variables');
     }
 
-    const { name, age, gender, bio, personality, hobbies }: CompanionImageRequest = await req.json();
+    const { name, age, gender, bio, physicalDescription, personality, hobbies }: CompanionImageRequest = await req.json();
 
     // Create a detailed prompt for ultra-realistic AI companion image
+    const physicalDetails = physicalDescription ? `Physical attributes: ${physicalDescription}. ` : '';
     const imagePrompt = `Ultra-photorealistic human portrait: ${age}-year-old ${gender.toLowerCase()}, genuine human photography, not AI-generated looking. 
-    Personality: ${personality.slice(0, 2).join(', ')}. Interests: ${hobbies.slice(0, 2).join(', ')}. 
+    ${physicalDetails}Personality: ${personality.slice(0, 2).join(', ')}. Interests: ${hobbies.slice(0, 2).join(', ')}. 
     CRITICAL: Must look like real human photography - natural skin imperfections, realistic lighting, authentic facial expressions.
     Professional headshot style, natural studio lighting, direct eye contact, genuine smile, modern casual clothing.
     Shot with high-end camera, shallow depth of field, perfect focus on eyes, natural skin texture with pores visible.
