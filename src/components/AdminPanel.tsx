@@ -3,10 +3,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useImageGeneration } from '@/hooks/useImageGeneration';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { RefreshCw, Image as ImageIcon, Sparkles, Upload, Settings, Home } from 'lucide-react';
+import { RefreshCw, Image as ImageIcon, Sparkles, Upload, Settings, Home, Edit3, Save, X } from 'lucide-react';
 import { CompanionImageManager } from './CompanionImageManager';
 import { useNavigate } from 'react-router-dom';
 
@@ -18,6 +20,8 @@ interface Companion {
   bio: string;
   hobbies: string[];
   personality: string[];
+  likes: string[];
+  dislikes: string[];
   image_url: string;
 }
 
@@ -27,6 +31,9 @@ export const AdminPanel = () => {
   const [generatingImages, setGeneratingImages] = useState(false);
   const [selectedCompanions, setSelectedCompanions] = useState<string[]>([]);
   const [uploadingImages, setUploadingImages] = useState<string[]>([]);
+  const [editingCompanions, setEditingCompanions] = useState<string[]>([]);
+  const [savingCompanions, setSavingCompanions] = useState<string[]>([]);
+  const [editFormData, setEditFormData] = useState<Record<string, Partial<Companion>>>({});
   const { generateCompanionImage } = useImageGeneration();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -47,6 +54,89 @@ export const AdminPanel = () => {
     } finally {
       setCompanionsLoading(false);
     }
+  };
+
+  const toggleEdit = (companionId: string) => {
+    const companion = companions.find(c => c.id === companionId);
+    if (!companion) return;
+
+    if (editingCompanions.includes(companionId)) {
+      // Cancel editing
+      setEditingCompanions(prev => prev.filter(id => id !== companionId));
+      setEditFormData(prev => {
+        const newData = { ...prev };
+        delete newData[companionId];
+        return newData;
+      });
+    } else {
+      // Start editing
+      setEditingCompanions(prev => [...prev, companionId]);
+      setEditFormData(prev => ({
+        ...prev,
+        [companionId]: {
+          name: companion.name,
+          age: companion.age,
+          bio: companion.bio,
+          likes: companion.likes || [],
+          dislikes: companion.dislikes || []
+        }
+      }));
+    }
+  };
+
+  const saveCompanion = async (companionId: string) => {
+    const formData = editFormData[companionId];
+    if (!formData) return;
+
+    setSavingCompanions(prev => [...prev, companionId]);
+    try {
+      const { error } = await supabase
+        .from('companions')
+        .update({
+          name: formData.name,
+          age: formData.age,
+          bio: formData.bio,
+          likes: formData.likes,
+          dislikes: formData.dislikes
+        })
+        .eq('id', companionId);
+
+      if (error) throw error;
+
+      // Update local state
+      setCompanions(prev =>
+        prev.map(c =>
+          c.id === companionId
+            ? { ...c, ...formData }
+            : c
+        )
+      );
+
+      // Exit edit mode
+      setEditingCompanions(prev => prev.filter(id => id !== companionId));
+      setEditFormData(prev => {
+        const newData = { ...prev };
+        delete newData[companionId];
+        return newData;
+      });
+
+      toast.success('Companion updated successfully');
+    } catch (error) {
+      console.error('Error saving companion:', error);
+      toast.error('Failed to save companion');
+    } finally {
+      setSavingCompanions(prev => prev.filter(id => id !== companionId));
+    }
+  };
+
+  const updateFormData = (companionId: string, field: keyof Companion, value: any) => {
+    setEditFormData(prev => ({
+      ...prev,
+      [companionId]: {
+        ...prev[companionId],
+        [field]: value
+      }
+    }));
   };
 
   // Check if companion has a placeholder image (Unsplash default)
@@ -314,66 +404,167 @@ export const AdminPanel = () => {
               </div>
 
               {companions.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                  {companions.map((companion) => (
-                    <Card key={companion.id} className={`border cursor-pointer transition-colors ${selectedCompanions.includes(companion.id) ? 'ring-2 ring-primary bg-primary/5' : ''}`}>
-                      <CardContent className="p-4">
-                         <div className="flex items-center gap-2 mb-3">
-                           <Checkbox
-                             checked={selectedCompanions.includes(companion.id)}
-                             onCheckedChange={() => toggleCompanionSelection(companion.id)}
-                             onClick={(e) => e.stopPropagation()}
-                           />
-                           <div className="flex-1">
-                             <h3 className="font-semibold">{companion.name}</h3>
-                             <p className="text-sm text-muted-foreground">
-                               {companion.age} • {companion.gender}
-                             </p>
-                           </div>
-                           <div className="flex gap-1">
-                             {hasPlaceholderImage(companion) && (
-                               <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">
-                                 Needs Image
-                               </span>
-                             )}
-                             <Button
-                               size="sm"
-                               variant="outline"
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 triggerFileUpload(companion.id);
-                               }}
-                               disabled={uploadingImages.includes(companion.id)}
-                               className="h-6 px-2 text-xs"
-                             >
-                               {uploadingImages.includes(companion.id) ? (
-                                 <RefreshCw className="w-3 h-3 animate-spin" />
-                               ) : (
-                                 <Upload className="w-3 h-3" />
-                               )}
-                             </Button>
-                           </div>
-                         </div>
-                        <div 
-                          className="aspect-square bg-muted rounded-lg mb-3 overflow-hidden"
-                          onClick={() => toggleCompanionSelection(companion.id)}
-                        >
-                          <img 
-                            src={companion.image_url} 
-                            alt={companion.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = `https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face`;
-                            }}
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                          {companion.bio}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  {companions.map((companion) => {
+                    const isEditing = editingCompanions.includes(companion.id);
+                    const isSaving = savingCompanions.includes(companion.id);
+                    const formData = editFormData[companion.id] || {};
+                    
+                    return (
+                      <Card key={companion.id} className={`border transition-colors ${selectedCompanions.includes(companion.id) ? 'ring-2 ring-primary bg-primary/5' : ''}`}>
+                        <CardContent className="p-6">
+                          <div className="flex items-start gap-4 mb-4">
+                            <Checkbox
+                              checked={selectedCompanions.includes(companion.id)}
+                              onCheckedChange={() => toggleCompanionSelection(companion.id)}
+                              className="mt-1"
+                            />
+                            
+                            <div className="flex-1 space-y-3">
+                              {isEditing ? (
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="text-sm font-medium mb-1 block">Name</label>
+                                    <Input
+                                      value={formData.name || ''}
+                                      onChange={(e) => updateFormData(companion.id, 'name', e.target.value)}
+                                      className="h-8"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium mb-1 block">Age</label>
+                                    <Input
+                                      type="number"
+                                      value={formData.age || ''}
+                                      onChange={(e) => updateFormData(companion.id, 'age', parseInt(e.target.value))}
+                                      className="h-8"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium mb-1 block">Bio</label>
+                                    <Textarea
+                                      value={formData.bio || ''}
+                                      onChange={(e) => updateFormData(companion.id, 'bio', e.target.value)}
+                                      className="min-h-[60px]"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium mb-1 block">Likes (comma-separated)</label>
+                                    <Input
+                                      value={(formData.likes || []).join(', ')}
+                                      onChange={(e) => updateFormData(companion.id, 'likes', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
+                                      className="h-8"
+                                      placeholder="Reading, hiking, music..."
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium mb-1 block">Dislikes (comma-separated)</label>
+                                    <Input
+                                      value={(formData.dislikes || []).join(', ')}
+                                      onChange={(e) => updateFormData(companion.id, 'dislikes', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
+                                      className="h-8"
+                                      placeholder="Loud noises, crowds..."
+                                    />
+                                  </div>
+                                </div>
+                              ) : (
+                                <div>
+                                  <h3 className="font-semibold text-lg">{companion.name}</h3>
+                                  <p className="text-sm text-muted-foreground mb-2">
+                                    {companion.age} • {companion.gender}
+                                  </p>
+                                  <p className="text-sm mb-2">{companion.bio}</p>
+                                  {companion.likes && companion.likes.length > 0 && (
+                                    <div className="mb-1">
+                                      <span className="text-xs font-medium text-green-600">Likes: </span>
+                                      <span className="text-xs">{companion.likes.join(', ')}</span>
+                                    </div>
+                                  )}
+                                  {companion.dislikes && companion.dislikes.length > 0 && (
+                                    <div>
+                                      <span className="text-xs font-medium text-red-600">Dislikes: </span>
+                                      <span className="text-xs">{companion.dislikes.join(', ')}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                              {hasPlaceholderImage(companion) && (
+                                <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">
+                                  Needs Image
+                                </span>
+                              )}
+                              
+                              <div className="flex gap-1">
+                                {isEditing ? (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => saveCompanion(companion.id)}
+                                      disabled={isSaving}
+                                      className="h-8 px-2"
+                                    >
+                                      {isSaving ? (
+                                        <RefreshCw className="w-4 h-4 animate-spin" />
+                                      ) : (
+                                        <Save className="w-4 h-4" />
+                                      )}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => toggleEdit(companion.id)}
+                                      disabled={isSaving}
+                                      className="h-8 px-2"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => toggleEdit(companion.id)}
+                                    className="h-8 px-2"
+                                  >
+                                    <Edit3 className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => triggerFileUpload(companion.id)}
+                                  disabled={uploadingImages.includes(companion.id) || isEditing}
+                                  className="h-8 px-2"
+                                >
+                                  {uploadingImages.includes(companion.id) ? (
+                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Upload className="w-4 h-4" />
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="aspect-square bg-muted rounded-lg overflow-hidden">
+                            <img 
+                              src={companion.image_url} 
+                              alt={companion.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = `https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face`;
+                              }}
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
 
