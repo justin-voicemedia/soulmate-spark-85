@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -311,7 +311,11 @@ export const AdminPanel = () => {
     // Reset the input
     event.target.value = '';
   };
-
+  
+  useEffect(() => {
+    loadCompanions();
+  }, []);
+  
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-6">
@@ -335,10 +339,10 @@ export const AdminPanel = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="image-manager" className="w-full">
+      <Tabs defaultValue="bulk-operations" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="image-manager">Image Manager</TabsTrigger>
-          <TabsTrigger value="bulk-operations">Bulk Operations</TabsTrigger>
+          <TabsTrigger value="bulk-operations">Manage Companions</TabsTrigger>
         </TabsList>
         
         <TabsContent value="image-manager" className="space-y-4">
