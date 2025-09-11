@@ -8,9 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface PaymentFormProps {
   onSuccess: () => void;
+  onBack: () => void;
 }
 
-export const PaymentForm = ({ onSuccess }: PaymentFormProps) => {
+export const PaymentForm = ({ onSuccess, onBack }: PaymentFormProps) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<'basic' | 'premium'>('basic');
@@ -75,7 +76,10 @@ export const PaymentForm = ({ onSuccess }: PaymentFormProps) => {
       {/* Header */}
       <header className="px-6 pb-8">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-2">
+          <div 
+            className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={onBack}
+          >
             <Heart className="w-8 h-8 text-primary" />
             <span className="text-2xl font-bold">LoveCalls.ai</span>
           </div>

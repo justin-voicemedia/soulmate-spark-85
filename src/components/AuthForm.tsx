@@ -80,7 +80,10 @@ export const AuthForm = ({ onBack, onSuccess }: AuthFormProps) => {
       {/* Header */}
       <header className="px-6 pb-8">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-2">
+          <div 
+            className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={onBack}
+          >
             <Heart className="w-8 h-8 text-primary" />
             <span className="text-2xl font-bold">LoveCalls.ai</span>
           </div>

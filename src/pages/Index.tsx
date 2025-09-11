@@ -294,6 +294,7 @@ const AppContent = () => {
     return (
       <PaymentForm
         onSuccess={handlePaymentSuccess}
+        onBack={handleBackToLanding}
       />
     );
   }
