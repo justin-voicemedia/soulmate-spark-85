@@ -267,7 +267,11 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
                     <img 
                       src={selectedCompanion.image_url}
                       alt={selectedCompanion.name}
-                      className="w-full h-96 md:h-full object-contain bg-muted/20 rounded-t-lg md:rounded-l-lg md:rounded-t-none"
+                      className="w-full h-96 md:h-full object-cover rounded-t-lg md:rounded-l-lg md:rounded-t-none"
+                      onError={(e) => {
+                        console.error('Failed to load detailed image:', selectedCompanion.image_url);
+                        e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedCompanion.name}`;
+                      }}
                     />
                     <Button
                       onClick={() => handleGenerateNewImage(selectedCompanion)}
@@ -572,7 +576,12 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
                       <img 
                         src={companion.image_url}
                         alt={companion.name}
-                        className="w-full h-64 object-contain bg-muted/20 rounded-t-lg"
+                        className="w-full h-64 object-cover rounded-t-lg"
+                        onError={(e) => {
+                          console.error('Failed to load image:', companion.image_url);
+                          e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${companion.name}`;
+                        }}
+                        onLoad={() => console.log('Image loaded successfully:', companion.image_url)}
                       />
                       <Button
                         onClick={(e) => {
