@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 interface AuthFormProps {
   onBack: () => void;
-  onSuccess: () => void;
+  onSuccess: () => void | Promise<void>;
 }
 
 export const AuthForm = ({ onBack, onSuccess }: AuthFormProps) => {

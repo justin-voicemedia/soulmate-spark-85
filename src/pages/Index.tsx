@@ -139,29 +139,53 @@ const AppContent = () => {
     setCurrentState('auth');
   };
 
-  const handleAuthSuccess = () => {
-    // After auth, go directly to app. If no companion yet, create a lightweight default so users can access account/settings immediately
+  const handleAuthSuccess = async () => {
+    // After auth, restore user's saved companion if available; never auto-change selection
     if (selectedCompanion) {
       setCurrentState('app');
       return;
     }
 
-    const fallbackCompanion: Companion = {
-      id: 'default',
-      name: 'Alex',
-      age: 28,
-      gender: 'Female',
-      bio: 'Your AI companion. You can customize or choose another later.',
-      hobbies: ['Chatting', 'Listening'],
-      personality: ['Empathetic', 'Supportive'],
-      likes: ['Meaningful talks'],
-      dislikes: ['Negativity'],
-      image_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face',
-      location: 'Virtual'
-    };
+    if (!user) {
+      setCurrentState('companions');
+      return;
+    }
 
-    setSelectedCompanion(fallbackCompanion);
-    setCurrentState('app');
+    try {
+      const { data: uc, error: ucError } = await supabase
+        .from('user_companions')
+        .select('companion_id')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (ucError) {
+        console.error('Error loading user companion:', ucError);
+      }
+
+      if (uc?.companion_id) {
+        const { data: comp, error: compError } = await supabase
+          .from('companions')
+          .select('*')
+          .eq('id', uc.companion_id)
+          .maybeSingle();
+
+        if (!compError && comp) {
+          setSelectedCompanion(comp as Companion);
+          setCurrentState('app');
+          return;
+        } else {
+          console.error('Error loading companion details:', compError);
+        }
+      }
+
+      // No saved companion; guide user to pick one
+      setCurrentState('companions');
+    } catch (e) {
+      console.error('Error restoring companion on auth:', e);
+      setCurrentState('companions');
+    }
   };
 
   const handlePaymentSuccess = () => {
