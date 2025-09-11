@@ -6,8 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useImageGeneration } from '@/hooks/useImageGeneration';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { RefreshCw, Image as ImageIcon, Sparkles, Upload, Settings } from 'lucide-react';
+import { RefreshCw, Image as ImageIcon, Sparkles, Upload, Settings, Home } from 'lucide-react';
 import { CompanionImageManager } from './CompanionImageManager';
+import { useNavigate } from 'react-router-dom';
 
 interface Companion {
   id: string;
@@ -28,6 +29,7 @@ export const AdminPanel = () => {
   const [uploadingImages, setUploadingImages] = useState<string[]>([]);
   const { generateCompanionImage } = useImageGeneration();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   const loadCompanions = async () => {
     setCompanionsLoading(true);
@@ -223,9 +225,20 @@ export const AdminPanel = () => {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-6">
-        <div className="flex items-center gap-2 mb-2">
-          <Settings className="w-6 h-6" />
-          <h1 className="text-2xl font-bold">Admin Panel</h1>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Settings className="w-6 h-6" />
+            <h1 className="text-2xl font-bold">Admin Panel</h1>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2"
+          >
+            <Home className="w-4 h-4" />
+            Back to Main Site
+          </Button>
         </div>
         <p className="text-muted-foreground">
           Manage companion images and generate AI images for the homepage
