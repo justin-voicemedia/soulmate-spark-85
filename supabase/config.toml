@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.track-usage]
 verify_jwt = false
+
+[functions.image-proxy]
+verify_jwt = false

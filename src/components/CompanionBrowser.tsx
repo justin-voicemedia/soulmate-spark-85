@@ -285,7 +285,10 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
                       className="w-full h-96 md:h-full object-cover rounded-t-lg md:rounded-l-lg md:rounded-t-none"
                       referrerPolicy="no-referrer"
                       onError={(e) => {
-                        console.error('Image failed to load:', selectedCompanion.image_url);
+                        const direct = selectedCompanion.image_url;
+                        if (e.currentTarget.src !== direct) {
+                          e.currentTarget.src = direct;
+                        }
                       }}
                     />
                     <Button
@@ -594,7 +597,10 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
                         className="w-full h-64 object-cover rounded-t-lg"
                         referrerPolicy="no-referrer"
                         onError={(e) => {
-                          console.error('Image failed to load:', companion.image_url);
+                          const direct = companion.image_url;
+                          if (e.currentTarget.src !== direct) {
+                            e.currentTarget.src = direct;
+                          }
                         }}
                       />
                       <Button
