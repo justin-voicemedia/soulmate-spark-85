@@ -43,6 +43,7 @@ interface MobileAppProps {
   };
   onBack: () => void;
   onUpgrade?: () => void;
+  onEditCompanion?: (companion: any) => void;
 }
 
 interface Message {
@@ -52,7 +53,7 @@ interface Message {
   timestamp: Date;
 }
 
-export const MobileApp = ({ companion, onBack, onUpgrade }: MobileAppProps) => {
+export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion }: MobileAppProps) => {
   const { user, signOut } = useAuth();
   const { trialStatus, trackUsage, getRemainingMinutes, getRemainingDays, canUseService } = useTrialStatus();
   const [activeTab, setActiveTab] = useState<'chat' | 'profile' | 'settings'>('profile');
@@ -222,6 +223,20 @@ export const MobileApp = ({ companion, onBack, onUpgrade }: MobileAppProps) => {
             Voice Call
           </Button>
         </div>
+
+        {/* Edit Companion Button */}
+        {onEditCompanion && (
+          <div className="w-full">
+            <Button 
+              onClick={() => onEditCompanion(companion)}
+              variant="outline" 
+              className="w-full"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Edit Companion Details
+            </Button>
+          </div>
+        )}
 
         {/* Trial Status Alert */}
         {trialStatus && !trialStatus.subscribed && (

@@ -13,7 +13,7 @@ import { CompanionMatchingService } from "@/services/companionMatching";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type AppState = 'landing' | 'questionnaire' | 'matches' | 'companions' | 'builder' | 'auth' | 'payment' | 'app' | 'admin';
+type AppState = 'landing' | 'questionnaire' | 'matches' | 'companions' | 'builder' | 'auth' | 'payment' | 'app' | 'admin' | 'edit-companion';
 
 interface QuestionnaireData {
   companionType: string;
@@ -49,6 +49,7 @@ const AppContent = () => {
   const [currentState, setCurrentState] = useState<AppState>('landing');
   const [questionnaireData, setQuestionnaireData] = useState<QuestionnaireData | null>(null);
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
+  const [editingCompanion, setEditingCompanion] = useState<Companion | null>(null);
   const [matches, setMatches] = useState<CompanionMatch[]>([]);
   const [matchingSummary, setMatchingSummary] = useState<string>('');
 
@@ -70,6 +71,10 @@ const AppContent = () => {
           companion={selectedCompanion} 
           onBack={() => setCurrentState('landing')}
           onUpgrade={() => setCurrentState('payment')}
+          onEditCompanion={(companion) => {
+            setEditingCompanion(companion);
+            setCurrentState('edit-companion');
+          }}
         />
       );
   }
@@ -171,6 +176,12 @@ const AppContent = () => {
 
   const handleCompanionCreated = (companion: Companion) => {
     setSelectedCompanion(companion);
+    
+    // If we were editing, clear the editing state
+    if (editingCompanion) {
+      setEditingCompanion(null);
+    }
+    
     // Go directly to app - users can try before they pay
     if (user) {
       setCurrentState('app');
@@ -214,6 +225,16 @@ const AppContent = () => {
       <CompanionBuilder
         onBack={handleBackToLanding}
         onCompanionCreated={handleCompanionCreated}
+      />
+    );
+  }
+
+  if (currentState === 'edit-companion') {
+    return (
+      <CompanionBuilder
+        onBack={() => setCurrentState('app')}
+        onCompanionCreated={handleCompanionCreated}
+        editingCompanion={editingCompanion}
       />
     );
   }

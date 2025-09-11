@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,19 @@ import { useAuth } from '@/hooks/useAuth';
 interface CompanionBuilderProps {
   onBack: () => void;
   onCompanionCreated: (companion: any) => void;
+  editingCompanion?: {
+    id: string;
+    name: string;
+    age: number;
+    gender: string;
+    bio: string;
+    hobbies: string[];
+    personality: string[];
+    likes: string[];
+    dislikes: string[];
+    image_url: string;
+    location: string;
+  } | null;
 }
 
 const sexOptions = ['Male', 'Female', 'Non-binary'];
@@ -26,8 +39,14 @@ const personalityTraits = [
 const hobbyOptions = [
   'Reading', 'Cooking', 'Traveling', 'Gaming', 'Sports', 'Music', 'Art', 'Dancing', 'Hiking', 'Photography'
 ];
+const likeOptions = [
+  'Meaningful conversations', 'Quality time', 'Adventure', 'Romance', 'Humor', 'Deep discussions', 'Spontaneous fun', 'Intellectual talks', 'Physical affection', 'Emotional support'
+];
+const dislikeOptions = [
+  'Negativity', 'Dishonesty', 'Rudeness', 'Shallow conversations', 'Drama', 'Arrogance', 'Jealousy', 'Disrespect', 'Pessimism', 'Being ignored'
+];
 
-export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilderProps) => {
+export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion }: CompanionBuilderProps) => {
   const { user } = useAuth();
   const { generateCompanionImage, loading: imageLoading } = useImageGeneration();
   const [creating, setCreating] = useState(false);
@@ -35,15 +54,24 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
-    name: '',
-    sex: '',
+    name: editingCompanion?.name || '',
+    sex: editingCompanion?.gender ? editingCompanion.gender.charAt(0).toUpperCase() + editingCompanion.gender.slice(1) : '',
     race: '',
-    age: 25,
-    description: '',
+    age: editingCompanion?.age || 25,
+    description: editingCompanion?.bio || '',
     physicalDescription: '',
-    personality: [] as string[],
-    hobbies: [] as string[]
+    personality: editingCompanion?.personality || [] as string[],
+    hobbies: editingCompanion?.hobbies || [] as string[],
+    likes: editingCompanion?.likes || [] as string[],
+    dislikes: editingCompanion?.dislikes || [] as string[]
   });
+
+  // Set initial image if editing
+  useEffect(() => {
+    if (editingCompanion?.image_url) {
+      setGeneratedImageUrl(editingCompanion.image_url);
+    }
+  }, [editingCompanion]);
 
   const handlePersonalityChange = (trait: string, checked: boolean) => {
     setFormData(prev => ({
@@ -60,6 +88,24 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
       hobbies: checked 
         ? [...prev.hobbies, hobby]
         : prev.hobbies.filter(h => h !== hobby)
+    }));
+  };
+
+  const handleLikesChange = (like: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      likes: checked 
+        ? [...prev.likes, like]
+        : prev.likes.filter(l => l !== like)
+    }));
+  };
+
+  const handleDislikesChange = (dislike: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      dislikes: checked 
+        ? [...prev.dislikes, dislike]
+        : prev.dislikes.filter(d => d !== dislike)
     }));
   };
 
@@ -170,8 +216,8 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
     try {
       let imageUrl = generatedImageUrl;
       
-      // Generate image if not already generated
-      if (!imageUrl) {
+      // Generate image if not already generated and not editing
+      if (!imageUrl && !editingCompanion) {
         imageUrl = await generateCompanionImage({
           name: formData.name,
           age: formData.age,
@@ -183,38 +229,53 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
         });
       }
 
-      // Create companion in database
       const companionData = {
         name: formData.name,
         age: formData.age,
         gender: formData.sex.toLowerCase(),
-        bio: formData.description || `Hi, I'm ${formData.name}! I'm a ${formData.age}-year-old ${formData.race} ${formData.sex.toLowerCase()} who loves ${formData.hobbies.slice(0, 2).join(' and ')}.`,
+        bio: formData.description || `Hi, I'm ${formData.name}! I'm a ${formData.age}-year-old ${formData.sex.toLowerCase()} who loves ${formData.hobbies.slice(0, 2).join(' and ')}.`,
         hobbies: formData.hobbies,
         personality: formData.personality,
-        likes: ['Meaningful conversations', 'Quality time'],
-        dislikes: ['Negativity', 'Dishonesty'],
+        likes: formData.likes.length > 0 ? formData.likes : ['Meaningful conversations', 'Quality time'],
+        dislikes: formData.dislikes.length > 0 ? formData.dislikes : ['Negativity', 'Dishonesty'],
         image_url: imageUrl,
-        location: 'Custom',
+        location: editingCompanion?.location || 'Custom',
         is_prebuilt: false,
         user_id: user.id
       };
 
-      const { data: companion, error } = await supabase
-        .from('companions')
-        .insert(companionData)
-        .select()
-        .single();
+      let companion;
+      if (editingCompanion) {
+        // Update existing companion
+        const { data, error } = await supabase
+          .from('companions')
+          .update(companionData)
+          .eq('id', editingCompanion.id)
+          .eq('user_id', user.id)
+          .select()
+          .single();
 
-      if (error) {
-        throw error;
+        if (error) throw error;
+        companion = data;
+        toast.success(`${formData.name} has been updated successfully!`);
+      } else {
+        // Create new companion
+        const { data, error } = await supabase
+          .from('companions')
+          .insert(companionData)
+          .select()
+          .single();
+
+        if (error) throw error;
+        companion = data;
+        toast.success(`${formData.name} has been created successfully!`);
       }
 
-      toast.success(`${formData.name} has been created successfully!`);
       onCompanionCreated(companion);
       
     } catch (error) {
-      console.error('Error creating companion:', error);
-      toast.error('Failed to create companion. Please try again.');
+      console.error('Error saving companion:', error);
+      toast.error(`Failed to ${editingCompanion ? 'update' : 'create'} companion. Please try again.`);
     } finally {
       setCreating(false);
     }
@@ -233,7 +294,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
             Back
           </Button>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            Build Your Perfect Companion
+            {editingCompanion ? `Edit ${editingCompanion.name}` : 'Build Your Perfect Companion'}
           </h1>
         </div>
 
@@ -241,7 +302,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              Create Your Ideal Companion
+              {editingCompanion ? `Edit ${editingCompanion.name}` : 'Create Your Ideal Companion'}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -362,6 +423,40 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
                         onCheckedChange={(checked) => handleHobbyChange(hobby, checked as boolean)}
                       />
                       <Label htmlFor={`hobby-${hobby}`} className="text-sm">{hobby}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Likes */}
+              <div>
+                <Label>What They Like</Label>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-2">
+                  {likeOptions.map(like => (
+                    <div key={like} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`like-${like}`}
+                        checked={formData.likes.includes(like)}
+                        onCheckedChange={(checked) => handleLikesChange(like, checked as boolean)}
+                      />
+                      <Label htmlFor={`like-${like}`} className="text-sm">{like}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dislikes */}
+              <div>
+                <Label>What They Dislike</Label>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-2">
+                  {dislikeOptions.map(dislike => (
+                    <div key={dislike} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`dislike-${dislike}`}
+                        checked={formData.dislikes.includes(dislike)}
+                        onCheckedChange={(checked) => handleDislikesChange(dislike, checked as boolean)}
+                      />
+                      <Label htmlFor={`dislike-${dislike}`} className="text-sm">{dislike}</Label>
                     </div>
                   ))}
                 </div>
