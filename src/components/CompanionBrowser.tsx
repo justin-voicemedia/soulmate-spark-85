@@ -1,8 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Heart, MapPin, Calendar, Sparkles } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, Heart, MapPin, Calendar, Sparkles, Search, Filter } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useImageGeneration } from "@/hooks/useImageGeneration";
 import { toast } from "sonner";
@@ -30,11 +34,85 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
   const [companions, setCompanions] = useState<Companion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const { generateCompanionImage, loading: imageGenerating } = useImageGeneration();
+
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedGender, setSelectedGender] = useState('all');
+  const [ageRange, setAgeRange] = useState({ min: 18, max: 65 });
+  const [selectedLocation, setSelectedLocation] = useState('all');
+  const [selectedHobbies, setSelectedHobbies] = useState<string[]>([]);
+  const [selectedPersonality, setSelectedPersonality] = useState<string[]>([]);
 
   useEffect(() => {
     loadCompanions();
   }, []);
+
+  // Get unique values for filter options
+  const uniqueLocations = useMemo(() => {
+    const locations = companions.map(c => c.location).filter(Boolean);
+    return [...new Set(locations)];
+  }, [companions]);
+
+  const uniqueHobbies = useMemo(() => {
+    const hobbies = companions.flatMap(c => c.hobbies);
+    return [...new Set(hobbies)].sort();
+  }, [companions]);
+
+  const uniquePersonality = useMemo(() => {
+    const personality = companions.flatMap(c => c.personality);
+    return [...new Set(personality)].sort();
+  }, [companions]);
+
+  // Filter companions based on current filter criteria
+  const filteredCompanions = useMemo(() => {
+    return companions.filter(companion => {
+      // Search term filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const matchesSearch = 
+          companion.name.toLowerCase().includes(searchLower) ||
+          companion.bio.toLowerCase().includes(searchLower) ||
+          companion.hobbies.some(hobby => hobby.toLowerCase().includes(searchLower)) ||
+          companion.personality.some(trait => trait.toLowerCase().includes(searchLower));
+        if (!matchesSearch) return false;
+      }
+
+      // Gender filter
+      if (selectedGender !== 'all' && companion.gender !== selectedGender) {
+        return false;
+      }
+
+      // Age range filter
+      if (companion.age < ageRange.min || companion.age > ageRange.max) {
+        return false;
+      }
+
+      // Location filter
+      if (selectedLocation !== 'all' && companion.location !== selectedLocation) {
+        return false;
+      }
+
+      // Hobbies filter
+      if (selectedHobbies.length > 0) {
+        const hasSelectedHobby = selectedHobbies.some(hobby => 
+          companion.hobbies.includes(hobby)
+        );
+        if (!hasSelectedHobby) return false;
+      }
+
+      // Personality filter
+      if (selectedPersonality.length > 0) {
+        const hasSelectedTrait = selectedPersonality.some(trait => 
+          companion.personality.includes(trait)
+        );
+        if (!hasSelectedTrait) return false;
+      }
+
+      return true;
+    });
+  }, [companions, searchTerm, selectedGender, ageRange, selectedLocation, selectedHobbies, selectedPersonality]);
 
   const loadCompanions = async () => {
     try {
@@ -121,6 +199,31 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
     if (selectedCompanion) {
       onSelectCompanion(selectedCompanion);
     }
+  };
+
+  const handleHobbyToggle = (hobby: string) => {
+    setSelectedHobbies(prev => 
+      prev.includes(hobby)
+        ? prev.filter(h => h !== hobby)
+        : [...prev, hobby]
+    );
+  };
+
+  const handlePersonalityToggle = (trait: string) => {
+    setSelectedPersonality(prev => 
+      prev.includes(trait)
+        ? prev.filter(t => t !== trait)
+        : [...prev, trait]
+    );
+  };
+
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setSelectedGender('all');
+    setAgeRange({ min: 18, max: 65 });
+    setSelectedLocation('all');
+    setSelectedHobbies([]);
+    setSelectedPersonality([]);
   };
 
   if (loading) {
@@ -278,71 +381,232 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
             </p>
           </div>
 
-          {/* Companions Grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {companions.map(companion => (
-              <Card 
-                key={companion.id}
-                className="cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-                onClick={() => handleSelectCompanion(companion)}
+          {/* Search and Filter Controls */}
+          <div className="mb-8">
+            {/* Search Bar */}
+            <div className="flex gap-4 mb-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  placeholder="Search companions by name, bio, hobbies..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center gap-2"
               >
-                <CardContent className="p-0">
-                  <div className="relative">
-                    <img 
-                      src={companion.image_url}
-                      alt={companion.name}
-                      className="w-full h-64 object-contain bg-muted/20 rounded-t-lg"
-                    />
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleGenerateNewImage(companion);
-                      }}
-                      disabled={imageGenerating}
-                      className="absolute top-2 right-2 bg-primary/80 hover:bg-primary"
-                      size="sm"
-                    >
-                      <Sparkles className="w-3 h-3" />
+                <Filter className="w-4 h-4" />
+                Filters
+                {(selectedGender !== 'all' || selectedLocation !== 'all' || selectedHobbies.length > 0 || selectedPersonality.length > 0 || ageRange.min > 18 || ageRange.max < 65) && (
+                  <Badge variant="secondary" className="ml-2">{
+                    [
+                      selectedGender !== 'all' ? 1 : 0,
+                      selectedLocation !== 'all' ? 1 : 0,
+                      selectedHobbies.length,
+                      selectedPersonality.length,
+                      (ageRange.min > 18 || ageRange.max < 65) ? 1 : 0
+                    ].filter(Boolean).length
+                  }</Badge>
+                )}
+              </Button>
+            </div>
+
+            {/* Filter Panel */}
+            {showFilters && (
+              <Card className="p-6 mb-4">
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {/* Gender Filter */}
+                  <div>
+                    <Label className="text-sm font-semibold mb-2 block">Gender</Label>
+                    <Select value={selectedGender} onValueChange={setSelectedGender}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Any gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Any Gender</SelectItem>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="non-binary">Non-binary</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Age Range Filter */}
+                  <div>
+                    <Label className="text-sm font-semibold mb-2 block">Age Range</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Min"
+                        value={ageRange.min}
+                        onChange={(e) => setAgeRange(prev => ({ ...prev, min: parseInt(e.target.value) || 18 }))}
+                        min="18"
+                        max="65"
+                        className="w-full"
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Max"
+                        value={ageRange.max}
+                        onChange={(e) => setAgeRange(prev => ({ ...prev, max: parseInt(e.target.value) || 65 }))}
+                        min="18"
+                        max="65"
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Location Filter */}
+                  <div>
+                    <Label className="text-sm font-semibold mb-2 block">Location</Label>
+                    <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Any location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Any Location</SelectItem>
+                        {uniqueLocations.map(location => (
+                          <SelectItem key={location} value={location}>{location}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Clear Filters */}
+                  <div className="flex items-end">
+                    <Button variant="outline" onClick={clearAllFilters} className="w-full">
+                      Clear All
                     </Button>
                   </div>
-                  <div className="p-6">
-                    <div className="flex items-center justify-between mb-2">
-                      <CardTitle className="text-xl">{companion.name}</CardTitle>
-                      <div className="text-sm text-muted-foreground">
-                        {companion.age}
+                </div>
+
+                {/* Hobbies Filter */}
+                <div className="mt-6">
+                  <Label className="text-sm font-semibold mb-2 block">Hobbies & Interests</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    {uniqueHobbies.map(hobby => (
+                      <div key={hobby} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`filter-hobby-${hobby}`}
+                          checked={selectedHobbies.includes(hobby)}
+                          onCheckedChange={() => handleHobbyToggle(hobby)}
+                        />
+                        <Label htmlFor={`filter-hobby-${hobby}`} className="text-sm cursor-pointer">
+                          {hobby}
+                        </Label>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center text-muted-foreground text-sm mb-3">
-                      <MapPin className="w-3 h-3 mr-1" />
-                      <span>{companion.location}</span>
-                    </div>
+                    ))}
+                  </div>
+                </div>
 
-                    <CardDescription className="mb-4 line-clamp-3">
-                      {companion.bio}
-                    </CardDescription>
+                {/* Personality Filter */}
+                <div className="mt-6">
+                  <Label className="text-sm font-semibold mb-2 block">Personality Traits</Label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                    {uniquePersonality.map(trait => (
+                      <div key={trait} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`filter-personality-${trait}`}
+                          checked={selectedPersonality.includes(trait)}
+                          onCheckedChange={() => handlePersonalityToggle(trait)}
+                        />
+                        <Label htmlFor={`filter-personality-${trait}`} className="text-sm cursor-pointer">
+                          {trait}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Card>
+            )}
 
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-sm font-semibold mb-1">Hobbies:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {companion.hobbies.slice(0, 3).map(hobby => (
-                            <Badge key={hobby} variant="secondary" className="text-xs">
-                              {hobby}
-                            </Badge>
-                          ))}
-                          {companion.hobbies.length > 3 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{companion.hobbies.length - 3}
-                            </Badge>
-                          )}
+            {/* Results Summary */}
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-muted-foreground">
+                Showing {filteredCompanions.length} of {companions.length} companions
+              </p>
+            </div>
+          </div>
+
+          {/* Companions Grid */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {filteredCompanions.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <p className="text-muted-foreground text-lg mb-2">No companions match your current filters.</p>
+                <p className="text-muted-foreground text-sm mb-4">Try adjusting your search criteria or clearing some filters.</p>
+                <Button variant="outline" onClick={clearAllFilters}>
+                  Clear All Filters
+                </Button>
+              </div>
+            ) : (
+              filteredCompanions.map(companion => (
+                <Card 
+                  key={companion.id}
+                  className="cursor-pointer hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                  onClick={() => handleSelectCompanion(companion)}
+                >
+                  <CardContent className="p-0">
+                    <div className="relative">
+                      <img 
+                        src={companion.image_url}
+                        alt={companion.name}
+                        className="w-full h-64 object-contain bg-muted/20 rounded-t-lg"
+                      />
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleGenerateNewImage(companion);
+                        }}
+                        disabled={imageGenerating}
+                        className="absolute top-2 right-2 bg-primary/80 hover:bg-primary"
+                        size="sm"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                      </Button>
+                    </div>
+                    <div className="p-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <CardTitle className="text-xl">{companion.name}</CardTitle>
+                        <div className="text-sm text-muted-foreground">
+                          {companion.age}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center text-muted-foreground text-sm mb-3">
+                        <MapPin className="w-3 h-3 mr-1" />
+                        <span>{companion.location}</span>
+                      </div>
+
+                      <CardDescription className="mb-4 line-clamp-3">
+                        {companion.bio}
+                      </CardDescription>
+
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm font-semibold mb-1">Hobbies:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {companion.hobbies.slice(0, 3).map(hobby => (
+                              <Badge key={hobby} variant="secondary" className="text-xs">
+                                {hobby}
+                              </Badge>
+                            ))}
+                            {companion.hobbies.length > 3 && (
+                              <Badge variant="secondary" className="text-xs">
+                                +{companion.hobbies.length - 3}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
 
           {/* Back Button */}
