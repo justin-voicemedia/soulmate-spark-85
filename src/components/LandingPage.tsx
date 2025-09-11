@@ -77,7 +77,10 @@ export const LandingPage = ({ onStartQuestionnaire, onBrowseCompanions, onBuildC
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Heart className="w-8 h-8 text-primary" />
-            <span className="text-2xl font-bold">LoveCalls.ai</span>
+            <div className="flex flex-col">
+              <span className="text-2xl font-bold">LoveCalls.ai</span>
+              <span className="text-xs text-muted-foreground">powered by voicemedia.ai</span>
+            </div>
           </div>
           <Button variant="outline" onClick={onSignIn}>Sign In</Button>
         </div>
