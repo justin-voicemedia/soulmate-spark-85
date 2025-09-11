@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { RefreshCw, Image as ImageIcon, Sparkles, Upload, Settings, Home, Edit3, Save, X } from 'lucide-react';
 import { CompanionImageManager } from './CompanionImageManager';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Companion {
   id: string;
@@ -37,6 +38,7 @@ export const AdminPanel = () => {
   const { generateCompanionImage } = useImageGeneration();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
 
   const loadCompanions = async () => {
     setCompanionsLoading(true);
@@ -237,6 +239,11 @@ export const AdminPanel = () => {
   const handleImageUpload = async (companionId: string, file: File) => {
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file');
+      return;
+    }
+
+    if (!user) {
+      toast.error('You must be logged in to upload images');
       return;
     }
 
