@@ -159,7 +159,7 @@ export const LandingPage = ({ onStartQuestionnaire, onBrowseCompanions, onBuildC
                     <img 
                       src={companion.image_url}
                       alt={companion.name}
-                      className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-56 object-contain bg-muted group-hover:scale-105 transition-transform duration-300"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     <div className="absolute bottom-2 left-2 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
