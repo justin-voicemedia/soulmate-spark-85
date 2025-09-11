@@ -205,13 +205,23 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
 
               {/* Physical Description */}
               <div>
-                <Label htmlFor="physicalDescription">Physical Description (Optional)</Label>
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="physicalDescription">Physical Description (Optional)</Label>
+                  <span className={`text-sm ${
+                    formData.physicalDescription.length > 1000 ? 'text-destructive' : 
+                    formData.physicalDescription.length > 900 ? 'text-yellow-500' : 
+                    'text-muted-foreground'
+                  }`}>
+                    {formData.physicalDescription.length}/1020
+                  </span>
+                </div>
                 <Textarea
                   id="physicalDescription"
                   value={formData.physicalDescription}
                   onChange={(e) => setFormData(prev => ({ ...prev, physicalDescription: e.target.value }))}
                   placeholder="Describe your ideal companion's physical attributes and attire (height, build, hair, style, etc.)..."
                   rows={3}
+                  maxLength={1020}
                 />
               </div>
 
