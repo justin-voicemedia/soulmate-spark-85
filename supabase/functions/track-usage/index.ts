@@ -6,95 +6,163 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const logStep = (step: string, details?: any) => {
-  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
-  console.log(`[TRACK-USAGE] ${step}${detailsStr}`);
-};
-
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } }
-  );
-
   try {
-    logStep("Function started");
+    // Initialize Supabase client with service role key
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
 
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
+    const { action, companionId, userId, sessionId, minutesUsed } = await req.json();
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
-    const user = userData.user;
-    if (!user) throw new Error("User not authenticated");
-    logStep("User authenticated", { userId: user.id });
-
-    const body = await req.json();
-    const { companion_id, minutes_used, session_id } = body;
-    
-    if (!companion_id || minutes_used === undefined) {
-      throw new Error("companion_id and minutes_used are required");
+    if (!userId || !companionId) {
+      throw new Error("userId and companionId are required");
     }
 
-    logStep("Tracking usage", { companion_id, minutes_used, session_id });
+    if (action === "start") {
+      // Create new session record
+      const { data, error } = await supabaseClient
+        .from("conversation_usage")
+        .insert({
+          user_id: userId,
+          companion_id: companionId,
+          session_start: new Date().toISOString(),
+          minutes_used: 0
+        })
+        .select()
+        .single();
 
-    // Insert usage record
-    const { error: usageError } = await supabaseClient
-      .from("conversation_usage")
-      .upsert({
-        id: session_id || undefined,
-        user_id: user.id,
-        companion_id: companion_id,
-        minutes_used: Math.ceil(minutes_used), // Round up to nearest minute
-        session_end: new Date().toISOString(),
-      });
+      if (error) throw error;
 
-    if (usageError) {
-      logStep("Error inserting usage record", { error: usageError });
-      throw new Error(`Failed to track usage: ${usageError.message}`);
+      return new Response(
+        JSON.stringify({ success: true, sessionId: data.id }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
     }
 
-    // Update subscriber's total trial minutes used
-    const { data: totalUsage } = await supabaseClient
-      .from("conversation_usage")
-      .select("minutes_used")
-      .eq("user_id", user.id);
+    if (action === "end") {
+      if (!sessionId || minutesUsed === undefined) {
+        throw new Error("sessionId and minutesUsed are required for end action");
+      }
 
-    const totalMinutesUsed = totalUsage?.reduce((sum, record) => sum + record.minutes_used, 0) || 0;
+      // Update session record with end time and minutes used
+      const { data, error } = await supabaseClient
+        .from("conversation_usage")
+        .update({
+          session_end: new Date().toISOString(),
+          minutes_used: minutesUsed
+        })
+        .eq("id", sessionId)
+        .select()
+        .single();
 
-    const { error: subscriberError } = await supabaseClient
-      .from("subscribers")
-      .update({ 
-        trial_minutes_used: totalMinutesUsed,
-        updated_at: new Date().toISOString()
-      })
-      .eq("user_id", user.id);
+      if (error) throw error;
 
-    if (subscriberError) {
-      logStep("Error updating subscriber", { error: subscriberError });
+      // Update trial usage if user is in trial
+      const { data: subscriberData, error: subscriberError } = await supabaseClient
+        .from("subscribers")
+        .select("trial_minutes_used, subscribed")
+        .eq("user_id", userId)
+        .single();
+
+      if (!subscriberError && !subscriberData?.subscribed) {
+        // User is in trial, update trial minutes
+        const newTrialMinutes = (subscriberData.trial_minutes_used || 0) + minutesUsed;
+        
+        const { error: updateError } = await supabaseClient
+          .from("subscribers")
+          .update({ trial_minutes_used: newTrialMinutes })
+          .eq("user_id", userId);
+
+        if (updateError) {
+          console.error("Trial update error:", updateError);
+          // Don't throw - allow usage tracking to continue
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, usage: data }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
     }
 
-    logStep("Usage tracked successfully", { totalMinutesUsed });
+    // Legacy support for existing tracking calls
+    if (action === "track" || !action) {
+      const { companion_id, minutes_used } = await req.json();
+      
+      // Get user from auth header for legacy calls
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) throw new Error("No authorization header provided");
 
-    return new Response(JSON.stringify({ 
-      success: true,
-      total_minutes_used: totalMinutesUsed
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+      const token = authHeader.replace("Bearer ", "");
+      const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+      if (userError) throw new Error(`Authentication error: ${userError.message}`);
+      const user = userData.user;
+      if (!user) throw new Error("User not authenticated");
+
+      // Insert usage record for legacy tracking
+      const { data, error } = await supabaseClient
+        .from("conversation_usage")
+        .insert({
+          user_id: user.id,
+          companion_id: companion_id || companionId,
+          minutes_used: Math.ceil(minutes_used || minutesUsed || 1),
+          session_start: new Date().toISOString(),
+          session_end: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update trial usage
+      const { data: subscriberData, error: subscriberError } = await supabaseClient
+        .from("subscribers")
+        .select("trial_minutes_used, subscribed")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!subscriberError && !subscriberData?.subscribed) {
+        const newTrialMinutes = (subscriberData.trial_minutes_used || 0) + Math.ceil(minutes_used || minutesUsed || 1);
+        
+        await supabaseClient
+          .from("subscribers")
+          .update({ trial_minutes_used: newTrialMinutes })
+          .eq("user_id", user.id);
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, usage: data }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    }
+
+    throw new Error("Invalid action. Use 'start', 'end', or 'track'");
+
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR in track-usage", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    console.error("Error in track-usage:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      }
+    );
   }
 });

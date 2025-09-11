@@ -21,10 +21,12 @@ import {
   MoreVertical,
   Clock,
   AlertCircle,
-  Crown
+  Crown,
+  BarChart3
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTrialStatus } from "@/hooks/useTrialStatus";
+import { VoiceWidget } from "@/components/VoiceWidget";
 import { toast } from "sonner";
 
 interface MobileAppProps {
@@ -44,6 +46,7 @@ interface MobileAppProps {
   onBack: () => void;
   onUpgrade?: () => void;
   onEditCompanion?: (companion: any) => void;
+  onViewUsage?: () => void;
 }
 
 interface Message {
@@ -53,10 +56,10 @@ interface Message {
   timestamp: Date;
 }
 
-export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion }: MobileAppProps) => {
+export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onViewUsage }: MobileAppProps) => {
   const { user, signOut } = useAuth();
   const { trialStatus, trackUsage, getRemainingMinutes, getRemainingDays, canUseService } = useTrialStatus();
-  const [activeTab, setActiveTab] = useState<'chat' | 'profile' | 'settings'>('profile');
+  const [activeTab, setActiveTab] = useState<'chat' | 'profile' | 'settings' | 'voice'>('profile');
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -94,7 +97,7 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion }: Mob
     };
   }, [sessionStartTime, companion.id, trackUsage]);
 
-  const handleTabChange = (newTab: 'chat' | 'profile' | 'settings') => {
+  const handleTabChange = (newTab: 'chat' | 'profile' | 'settings' | 'voice') => {
     // Track usage when leaving chat tab
     if (activeTab === 'chat' && sessionStartTime && newTab !== 'chat') {
       const sessionDurationMs = new Date().getTime() - sessionStartTime.getTime();
@@ -214,13 +217,13 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion }: Mob
             Start Chat
           </Button>
           <Button 
-            onClick={handleVoiceCall}
+            onClick={() => handleTabChange('voice')}
             variant="outline" 
             className="flex items-center justify-center h-16"
             disabled={!canUseService()}
           >
-            <Phone className="w-5 h-5 mr-2" />
-            Voice Call
+            <Mic className="w-5 h-5 mr-2" />
+            Voice Chat
           </Button>
         </div>
 
@@ -495,6 +498,14 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion }: Mob
           <CardTitle>Account</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start"
+            onClick={onViewUsage}
+          >
+            <BarChart3 className="w-4 h-4 mr-2" />
+            Usage Dashboard
+          </Button>
           <Button variant="ghost" className="w-full justify-start">
             <Settings className="w-4 h-4 mr-2" />
             Account Settings
@@ -513,6 +524,17 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion }: Mob
           </Button>
         </CardContent>
       </Card>
+    </div>
+  );
+
+  const renderVoice = () => (
+    <div className="flex flex-col h-full p-4">
+      <div className="flex-1 flex items-center justify-center">
+        <VoiceWidget 
+          companionId={companion.id}
+          companionName={companion.name}
+        />
+      </div>
     </div>
   );
 
@@ -535,12 +557,13 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion }: Mob
       <div className="flex-1 overflow-hidden">
         {activeTab === 'profile' && renderProfile()}
         {activeTab === 'chat' && renderChat()}
+        {activeTab === 'voice' && renderVoice()}
         {activeTab === 'settings' && renderSettings()}
       </div>
 
       {/* Bottom Navigation */}
       <div className="border-t bg-card">
-        <div className="grid grid-cols-3 p-2">
+        <div className="grid grid-cols-4 p-2">
           <Button
             variant={activeTab === 'profile' ? 'default' : 'ghost'}
             size="sm"
@@ -559,6 +582,16 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion }: Mob
           >
             <MessageCircle className="w-4 h-4 mb-1" />
             <span className="text-xs">Chat</span>
+          </Button>
+          <Button
+            variant={activeTab === 'voice' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => handleTabChange('voice')}
+            className="flex flex-col items-center py-3"
+            disabled={!canUseService()}
+          >
+            <Mic className="w-4 h-4 mb-1" />
+            <span className="text-xs">Voice</span>
           </Button>
           <Button
             variant={activeTab === 'settings' ? 'default' : 'ghost'}

@@ -8,12 +8,13 @@ import { MobileApp } from "@/components/MobileApp";
 import { AdminPanel } from "@/components/AdminPanel";
 import { MatchResults } from "@/components/MatchResults";
 import { CompanionBuilder } from "@/components/CompanionBuilder";
+import { UsageDashboard } from "@/components/UsageDashboard";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { CompanionMatchingService } from "@/services/companionMatching";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type AppState = 'landing' | 'questionnaire' | 'matches' | 'companions' | 'builder' | 'auth' | 'payment' | 'app' | 'admin' | 'edit-companion';
+type AppState = 'landing' | 'questionnaire' | 'matches' | 'companions' | 'builder' | 'auth' | 'payment' | 'app' | 'admin' | 'edit-companion' | 'usage';
 
 interface QuestionnaireData {
   companionType: string;
@@ -75,6 +76,7 @@ const AppContent = () => {
             setEditingCompanion(companion);
             setCurrentState('edit-companion');
           }}
+          onViewUsage={() => setCurrentState('usage')}
         />
       );
   }
@@ -253,6 +255,25 @@ const AppContent = () => {
       <PaymentForm
         onSuccess={handlePaymentSuccess}
       />
+    );
+  }
+
+  // Usage dashboard
+  if (currentState === 'usage') {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="max-w-7xl mx-auto p-4">
+          <div className="mb-6">
+            <button 
+              onClick={() => setCurrentState('app')}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              ← Back to App
+            </button>
+          </div>
+          <UsageDashboard />
+        </div>
+      </div>
     );
   }
 
