@@ -466,7 +466,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <Label>Companion Image</Label>
-                  {!generatedImageUrl && (
+                  {!editingCompanion && !generatedImageUrl && (
                     <div className="flex gap-2">
                       <Button
                         type="button"
@@ -520,6 +520,14 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
                   )}
                 </div>
 
+                {editingCompanion && (
+                  <div className="p-3 bg-muted/50 rounded-lg border">
+                    <p className="text-sm text-muted-foreground">
+                      Image editing is not available when editing existing companions. The current image will be preserved.
+                    </p>
+                  </div>
+                )}
+
                 {generatedImageUrl && (
                   <div className="space-y-3">
                     <div className="relative inline-block">
@@ -529,78 +537,80 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
                         className="w-48 h-48 object-cover rounded-lg border shadow-sm"
                       />
                     </div>
-                     <div className="flex gap-2 flex-wrap">
-                       <Button
-                         type="button"
-                         variant="outline"
-                         onClick={handleGenerateImage}
-                         disabled={imageLoading || uploading}
-                       >
-                         {imageLoading ? (
-                           <>
-                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-                             Generating...
-                           </>
-                         ) : (
-                           <>
-                             <ImageIcon className="h-4 w-4 mr-2" />
-                             Generate New AI Image
-                           </>
-                         )}
-                       </Button>
-                       <div className="relative">
-                         <input
-                           type="file"
-                           accept="image/*"
-                           onChange={handleFileUpload}
-                           disabled={imageLoading || uploading}
-                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                           id="replace-image-upload"
-                         />
-                         <Button
-                           type="button"
-                           variant="outline"
-                           disabled={imageLoading || uploading}
-                           asChild
-                         >
-                           <label htmlFor="replace-image-upload" className="cursor-pointer">
-                             {uploading ? (
-                               <>
-                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-                                 Uploading...
-                               </>
-                             ) : (
-                               <>
-                                 <Upload className="h-4 w-4 mr-2" />
-                                 Upload New Photo
-                               </>
-                             )}
-                           </label>
-                         </Button>
-                       </div>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete Image
+                    {!editingCompanion && (
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleGenerateImage}
+                          disabled={imageLoading || uploading}
+                        >
+                          {imageLoading ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <ImageIcon className="h-4 w-4 mr-2" />
+                              Generate New AI Image
+                            </>
+                          )}
+                        </Button>
+                        <div className="relative">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileUpload}
+                            disabled={imageLoading || uploading}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            id="replace-image-upload"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={imageLoading || uploading}
+                            asChild
+                          >
+                            <label htmlFor="replace-image-upload" className="cursor-pointer">
+                              {uploading ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                                  Uploading...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="h-4 w-4 mr-2" />
+                                  Upload New Photo
+                                </>
+                              )}
+                            </label>
                           </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Companion Image?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete this image? This action cannot be undone and you'll need to generate a new image.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDeleteImage} className="bg-destructive hover:bg-destructive/90">
+                        </div>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <Trash2 className="h-4 w-4 mr-2" />
                               Delete Image
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Companion Image?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this image? This action cannot be undone and you'll need to generate a new image.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleDeleteImage} className="bg-destructive hover:bg-destructive/90">
+                                Delete Image
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
