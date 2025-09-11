@@ -1,7 +1,23 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Heart, MessageCircle, Shield, Star } from "lucide-react";
-import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Heart, MessageCircle, Shield, Star, MapPin, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Companion {
+  id: string;
+  name: string;
+  age: number;
+  gender: string;
+  bio: string;
+  hobbies: string[];
+  personality: string[];
+  likes: string[];
+  dislikes: string[];
+  image_url: string;
+  location: string;
+}
 
 interface LandingPageProps {
   onStartQuestionnaire: () => void;
@@ -11,6 +27,49 @@ interface LandingPageProps {
 }
 
 export const LandingPage = ({ onStartQuestionnaire, onBrowseCompanions, onBuildCompanion, onSignIn }: LandingPageProps) => {
+  const [featuredCompanions, setFeaturedCompanions] = useState<Companion[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadFeaturedCompanions();
+  }, []);
+
+  const loadFeaturedCompanions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('companions')
+        .select('*')
+        .eq('is_prebuilt', true)
+        .limit(6)
+        .order('created_at');
+
+      if (error) {
+        console.error('Error loading featured companions:', error);
+        return;
+      }
+
+      const formattedCompanions: Companion[] = (data || []).map(companion => ({
+        id: companion.id,
+        name: companion.name,
+        age: companion.age,
+        gender: companion.gender,
+        bio: companion.bio,
+        hobbies: companion.hobbies || [],
+        personality: companion.personality || [],
+        likes: companion.likes || [],
+        dislikes: companion.dislikes || [],
+        image_url: companion.image_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${companion.name}`,
+        location: companion.location || 'Virtual'
+      }));
+
+      setFeaturedCompanions(formattedCompanions);
+    } catch (error) {
+      console.error('Error loading companions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary">
       {/* Header */}
@@ -49,6 +108,102 @@ export const LandingPage = ({ onStartQuestionnaire, onBrowseCompanions, onBuildC
             </Button>
             <Button size="lg" variant="secondary" onClick={onBuildCompanion} className="text-lg px-8 py-6">
               Build Your Own
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Companions Section */}
+      <section className="px-6 py-16">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-3xl font-bold text-center mb-4">Meet Our Featured Companions</h2>
+          <p className="text-xl text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
+            Discover personalities crafted for meaningful connections. Each companion has unique traits, interests, and conversation styles.
+          </p>
+          
+          {loading ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <Card key={i} className="overflow-hidden">
+                  <div className="animate-pulse">
+                    <div className="h-64 bg-muted"></div>
+                    <CardContent className="p-4">
+                      <div className="h-4 bg-muted rounded mb-2"></div>
+                      <div className="h-3 bg-muted rounded w-3/4 mb-4"></div>
+                      <div className="flex gap-2">
+                        <div className="h-6 bg-muted rounded w-16"></div>
+                        <div className="h-6 bg-muted rounded w-16"></div>
+                      </div>
+                    </CardContent>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : featuredCompanions.length > 0 ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {featuredCompanions.map(companion => (
+                <Card 
+                  key={companion.id}
+                  className="overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer group"
+                  onClick={onBrowseCompanions}
+                >
+                  <div className="relative">
+                    <img 
+                      src={companion.image_url}
+                      alt={companion.name}
+                      className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="absolute bottom-2 left-2 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="flex items-center text-sm">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        <span>{companion.age}</span>
+                        <span className="mx-2">•</span>
+                        <MapPin className="w-3 h-3 mr-1" />
+                        <span>{companion.location}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <CardTitle className="text-lg">{companion.name}</CardTitle>
+                      <Badge variant="secondary" className="text-xs">
+                        {companion.gender}
+                      </Badge>
+                    </div>
+                    
+                    <CardDescription className="mb-3 line-clamp-2 text-sm">
+                      {companion.bio}
+                    </CardDescription>
+
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-1">
+                        {companion.hobbies.slice(0, 2).map(hobby => (
+                          <Badge key={hobby} variant="outline" className="text-xs px-2 py-1">
+                            {hobby}
+                          </Badge>
+                        ))}
+                        {companion.hobbies.length > 2 && (
+                          <Badge variant="outline" className="text-xs px-2 py-1">
+                            +{companion.hobbies.length - 2}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground mb-4">No companions available yet.</p>
+              <Button onClick={onBuildCompanion}>Create Your First Companion</Button>
+            </div>
+          )}
+          
+          <div className="text-center">
+            <Button size="lg" onClick={onBrowseCompanions} className="text-lg px-8">
+              View All Companions
             </Button>
           </div>
         </div>
