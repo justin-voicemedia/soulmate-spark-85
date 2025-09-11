@@ -6,9 +6,10 @@ import { toast } from 'sonner';
 export const useCompanionSelection = () => {
   const { user } = useAuth();
   const [selectedCompanion, setSelectedCompanion] = useState<string | null>(null);
+  const [selectedVoice, setSelectedVoice] = useState<string>('21m00Tcm4TlvDq8ikWAM'); // Default to Rachel
   const [isCreatingAgent, setIsCreatingAgent] = useState(false);
 
-  const selectCompanion = async (companionId: string) => {
+  const selectCompanion = async (companionId: string, voiceId?: string) => {
     if (!user) {
       toast.error('Please sign in first');
       return;
@@ -19,7 +20,10 @@ export const useCompanionSelection = () => {
     try {
       // Create or get Vapi agent for this user-companion pair
       const { data, error } = await supabase.functions.invoke('create-vapi-agent', {
-        body: { companionId }
+        body: { 
+          companionId,
+          voiceId: voiceId || selectedVoice 
+        }
       });
 
       if (error) {
@@ -27,6 +31,9 @@ export const useCompanionSelection = () => {
       }
 
       setSelectedCompanion(companionId);
+      if (voiceId) {
+        setSelectedVoice(voiceId);
+      }
       toast.success(data?.message || 'Companion selected successfully');
       
     } catch (error) {
@@ -37,7 +44,39 @@ export const useCompanionSelection = () => {
     }
   };
 
-  // Load user's selected companion on mount
+  const updateVoice = async (voiceId: string) => {
+    if (!user || !selectedCompanion) {
+      toast.error('Please select a companion first');
+      return;
+    }
+
+    setIsCreatingAgent(true);
+    
+    try {
+      // Update the voice for the current companion
+      const { data, error } = await supabase.functions.invoke('create-vapi-agent', {
+        body: { 
+          companionId: selectedCompanion,
+          voiceId 
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setSelectedVoice(voiceId);
+      toast.success('Voice updated successfully');
+      
+    } catch (error) {
+      console.error('Error updating voice:', error);
+      toast.error('Failed to update voice');
+    } finally {
+      setIsCreatingAgent(false);
+    }
+  };
+
+  // Load user's selected companion and voice on mount
   useEffect(() => {
     const loadSelectedCompanion = async () => {
       if (!user) return;
@@ -45,7 +84,7 @@ export const useCompanionSelection = () => {
       try {
         const { data, error } = await supabase
           .from('user_companions')
-          .select('companion_id')
+          .select('companion_id, voice_id')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(1)
@@ -53,6 +92,9 @@ export const useCompanionSelection = () => {
 
         if (!error && data) {
           setSelectedCompanion(data.companion_id);
+          if (data.voice_id) {
+            setSelectedVoice(data.voice_id);
+          }
         }
       } catch (error) {
         console.error('Error loading selected companion:', error);
@@ -64,7 +106,9 @@ export const useCompanionSelection = () => {
 
   return {
     selectedCompanion,
+    selectedVoice,
     selectCompanion,
+    updateVoice,
     isCreatingAgent
   };
 };

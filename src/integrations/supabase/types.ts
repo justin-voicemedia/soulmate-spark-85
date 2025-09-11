@@ -220,6 +220,7 @@ export type Database = {
           updated_at: string
           user_id: string
           vapi_agent_id: string | null
+          voice_id: string | null
         }
         Insert: {
           companion_id: string
@@ -231,6 +232,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           vapi_agent_id?: string | null
+          voice_id?: string | null
         }
         Update: {
           companion_id?: string
@@ -242,6 +244,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           vapi_agent_id?: string | null
+          voice_id?: string | null
         }
         Relationships: [
           {

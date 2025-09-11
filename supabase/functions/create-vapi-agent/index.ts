@@ -29,7 +29,7 @@ serve(async (req) => {
     const user = userData.user;
     if (!user) throw new Error("User not authenticated");
 
-    const { companionId } = await req.json();
+    const { companionId, voiceId } = await req.json();
     if (!companionId) throw new Error("Companion ID is required");
 
     // Get companion details
@@ -102,7 +102,7 @@ Stay in character throughout the conversation. Be engaging, empathetic, and main
       },
       voice: {
         provider: "11labs",
-        voiceId: "21m00Tcm4TlvDq8ikWAM" // Rachel voice
+        voiceId: voiceId || "21m00Tcm4TlvDq8ikWAM" // Use provided voice or default to Rachel
       },
       firstMessage: `Hi! I'm ${companion.name}. I'm so excited to talk with you today. How are you feeling?`
     };
@@ -125,12 +125,15 @@ Stay in character throughout the conversation. Be engaging, empathetic, and main
     const vapiAgent = await vapiResponse.json();
     console.log("Created Vapi agent:", vapiAgent.id);
 
-    // Store or update user-companion relationship with agent ID
+    // Store or update user-companion relationship with agent ID and voice
     if (existingRelation) {
       // Update existing relationship
       const { error: updateError } = await supabaseClient
         .from("user_companions")
-        .update({ vapi_agent_id: vapiAgent.id })
+        .update({ 
+          vapi_agent_id: vapiAgent.id,
+          voice_id: voiceId || "21m00Tcm4TlvDq8ikWAM"
+        })
         .eq("user_id", user.id)
         .eq("companion_id", companionId);
 
@@ -145,7 +148,8 @@ Stay in character throughout the conversation. Be engaging, empathetic, and main
         .insert({
           user_id: user.id,
           companion_id: companionId,
-          vapi_agent_id: vapiAgent.id
+          vapi_agent_id: vapiAgent.id,
+          voice_id: voiceId || "21m00Tcm4TlvDq8ikWAM"
         });
 
       if (insertError) {

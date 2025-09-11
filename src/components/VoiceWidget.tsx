@@ -6,6 +6,8 @@ import { Mic, MicOff, Phone, PhoneOff, Volume2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { VoiceSelector } from '@/components/VoiceSelector';
+import { useCompanionSelection } from '@/hooks/useCompanionSelection';
 
 interface VoiceWidgetProps {
   companionId: string;
@@ -24,6 +26,7 @@ export const VoiceWidget: React.FC<VoiceWidgetProps> = ({
   companionName 
 }) => {
   const { user } = useAuth();
+  const { selectedVoice, updateVoice, isCreatingAgent } = useCompanionSelection();
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionDuration, setSessionDuration] = useState(0);
@@ -154,7 +157,10 @@ export const VoiceWidget: React.FC<VoiceWidgetProps> = ({
     try {
       // Get or create Vapi agent for this user-companion pair
       const { data: agentData, error: agentError } = await supabase.functions.invoke('create-vapi-agent', {
-        body: { companionId }
+        body: { 
+          companionId,
+          voiceId: selectedVoice 
+        }
       });
       
       if (agentError || !agentData?.agentId) {
@@ -207,6 +213,14 @@ export const VoiceWidget: React.FC<VoiceWidgetProps> = ({
           <Volume2 className="h-5 w-5 text-primary" />
           <h3 className="text-lg font-semibold">Voice Chat with {companionName}</h3>
         </div>
+        
+        {!isConnected && (
+          <VoiceSelector
+            value={selectedVoice}
+            onValueChange={updateVoice}
+            disabled={isLoading || isCreatingAgent}
+          />
+        )}
         
         {isConnected && (
           <div className="space-y-2">
