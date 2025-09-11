@@ -48,13 +48,15 @@ serve(async (req) => {
       console.log('[GENERATE-IMAGE] Enhanced physical description:', enhancedPhysicalDescription);
     }
     
-    const imagePrompt = `Ultra-photorealistic human portrait: ${age}-year-old ${gender.toLowerCase()}, genuine human photography, not AI-generated looking. 
-    ${enhancedPhysicalDescription}Personality: ${personality.slice(0, 2).join(', ')}. Interests: ${hobbies.slice(0, 2).join(', ')}. 
-    CRITICAL: Must look like real human photography - natural skin imperfections, realistic lighting, authentic facial expressions.
-    Professional headshot style, natural studio lighting, direct eye contact, genuine smile, modern casual clothing.
-    Shot with high-end camera, shallow depth of field, perfect focus on eyes, natural skin texture with pores visible.
-    Absolutely NO: cartoon style, anime, illustration, digital art, CGI look, artificial appearance, perfect skin.
-    Must appear as authentic human photography, indistinguishable from real person photo. Hyperrealistic human only.`;
+    // Create shorter prompt to stay under 1024 character limit
+    const basePrompt = `Photorealistic ${age}-year-old ${gender.toLowerCase()}, ${enhancedPhysicalDescription}`;
+    const personalityText = personality.slice(0, 2).join(', ');
+    const hobbiesText = hobbies.slice(0, 2).join(', ');
+    
+    const imagePrompt = `${basePrompt}Personality: ${personalityText}. Hobbies: ${hobbiesText}. Professional headshot, natural lighting, genuine smile, realistic human photography only.`;
+    
+    // Ensure prompt is under 1024 characters
+    const finalPrompt = imagePrompt.length > 1000 ? imagePrompt.substring(0, 1000) : imagePrompt;
 
     console.log('[GENERATE-IMAGE] Generated prompt:', imagePrompt);
 
@@ -67,7 +69,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        prompt: imagePrompt,
+        prompt: finalPrompt,
         model: 'grok-2-image',
         n: 1,
         response_format: 'url',
@@ -97,7 +99,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       imageUrl,
-      prompt: imagePrompt 
+      prompt: finalPrompt 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
