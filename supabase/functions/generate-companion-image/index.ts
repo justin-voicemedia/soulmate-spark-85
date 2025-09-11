@@ -37,26 +37,46 @@ serve(async (req) => {
     
     const { name, age, gender, bio, physicalDescription, personality, hobbies }: CompanionImageRequest = requestBody;
 
-    // Create a detailed prompt for ultra-realistic AI companion image
+    // Create a detailed, dynamic prompt for creative AI companion image
     let enhancedPhysicalDescription = '';
     if (physicalDescription && physicalDescription.trim()) {
-      // Always add "ultra realistic" to user's physical description
-      enhancedPhysicalDescription = physicalDescription.toLowerCase().includes('ultra realistic') 
-        ? physicalDescription 
-        : `Ultra realistic ${physicalDescription}`;
-      enhancedPhysicalDescription = `PHYSICAL DESCRIPTION: ${enhancedPhysicalDescription}. `;
-      console.log('[GENERATE-IMAGE] Enhanced physical description:', enhancedPhysicalDescription);
+      enhancedPhysicalDescription = `${physicalDescription}. `;
+      console.log('[GENERATE-IMAGE] Physical description:', enhancedPhysicalDescription);
     }
     
-    // Create shorter prompt to stay under 1024 character limit
-    const basePrompt = `Photorealistic ${age}-year-old ${gender.toLowerCase()}, ${enhancedPhysicalDescription}`;
-    const personalityText = personality.slice(0, 2).join(', ');
-    const hobbiesText = hobbies.slice(0, 2).join(', ');
+    // Build rich, creative prompt with full personality and context
+    const personalityText = personality.length > 0 ? personality.join(', ') : 'friendly, approachable';
+    const hobbiesText = hobbies.length > 0 ? hobbies.join(', ') : 'reading, exploring';
     
-    const imagePrompt = `${basePrompt}Personality: ${personalityText}. Hobbies: ${hobbiesText}. Professional headshot, natural lighting, genuine smile, realistic human photography only.`;
+    // Create dynamic scene descriptions based on personality and hobbies
+    const sceneElements = [];
+    if (hobbies.includes('reading') || hobbies.includes('books')) {
+      sceneElements.push('cozy library setting with soft warm lighting');
+    } else if (hobbies.includes('fitness') || hobbies.includes('sports')) {
+      sceneElements.push('active lifestyle setting with natural outdoor lighting');
+    } else if (hobbies.includes('art') || hobbies.includes('creative')) {
+      sceneElements.push('artistic studio environment with creative lighting');
+    } else if (hobbies.includes('travel') || hobbies.includes('adventure')) {
+      sceneElements.push('wanderlust-inspired background with golden hour lighting');
+    } else {
+      sceneElements.push('beautifully composed environment with cinematic lighting');
+    }
     
-    // Ensure prompt is under 1024 characters
-    const finalPrompt = imagePrompt.length > 1000 ? imagePrompt.substring(0, 1000) : imagePrompt;
+    // Personality-driven pose and expression
+    const expressionStyle = personality.includes('confident') || personality.includes('outgoing') 
+      ? 'confident pose with engaging eye contact and charismatic smile'
+      : personality.includes('gentle') || personality.includes('kind')
+      ? 'warm, genuine expression with soft smile and kind eyes'
+      : personality.includes('mysterious') || personality.includes('introverted')
+      ? 'thoughtful expression with subtle smile and intriguing gaze'
+      : 'natural, authentic expression with genuine warmth';
+    
+    const basePrompt = `Portrait of a ${age}-year-old ${gender.toLowerCase()}, ${enhancedPhysicalDescription}`;
+    
+    const imagePrompt = `${basePrompt}Personality traits: ${personalityText}. Interests: ${hobbiesText}. ${expressionStyle}. ${sceneElements[0]}. High-quality portrait photography, detailed facial features, natural skin texture, dynamic composition, professional photography aesthetic, depth of field, vibrant but natural colors.`;
+    
+    // Use more of the available character limit (1024)
+    const finalPrompt = imagePrompt.length > 1020 ? imagePrompt.substring(0, 1020) + '...' : imagePrompt;
 
     console.log('[GENERATE-IMAGE] Generated prompt:', imagePrompt);
 
