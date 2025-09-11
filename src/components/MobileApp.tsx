@@ -569,7 +569,10 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
       {/* Mobile App Header */}
       <div className="p-4 border-b bg-card">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+          <div 
+            className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={onBack}
+          >
             <Heart className="w-6 h-6 text-primary" />
             <span className="text-lg font-bold">LoveCalls</span>
           </div>
