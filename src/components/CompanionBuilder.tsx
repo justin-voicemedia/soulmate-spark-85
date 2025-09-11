@@ -6,7 +6,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { ArrowLeft, Sparkles, Trash2, Image as ImageIcon } from 'lucide-react';
 import { useImageGeneration } from '@/hooks/useImageGeneration';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -30,6 +31,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
   const { user } = useAuth();
   const { generateCompanionImage, loading: imageLoading } = useImageGeneration();
   const [creating, setCreating] = useState(false);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -60,6 +62,36 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
     }));
   };
 
+  const handleGenerateImage = async () => {
+    if (!formData.name || !formData.sex || !formData.race) {
+      toast.error('Please fill in name, sex, and race before generating an image');
+      return;
+    }
+
+    try {
+      const imageUrl = await generateCompanionImage({
+        name: formData.name,
+        age: formData.age,
+        gender: formData.sex,
+        bio: formData.description,
+        physicalDescription: formData.physicalDescription,
+        personality: formData.personality,
+        hobbies: formData.hobbies
+      });
+      
+      setGeneratedImageUrl(imageUrl);
+      toast.success('Image generated successfully!');
+    } catch (error) {
+      console.error('Error generating image:', error);
+      toast.error('Failed to generate image. Please try again.');
+    }
+  };
+
+  const handleDeleteImage = () => {
+    setGeneratedImageUrl(null);
+    toast.success('Image deleted successfully');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -76,16 +108,20 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
     setCreating(true);
 
     try {
-      // Generate image
-      const imageUrl = await generateCompanionImage({
-        name: formData.name,
-        age: formData.age,
-        gender: formData.sex,
-        bio: formData.description,
-        physicalDescription: formData.physicalDescription,
-        personality: formData.personality,
-        hobbies: formData.hobbies
-      });
+      let imageUrl = generatedImageUrl;
+      
+      // Generate image if not already generated
+      if (!imageUrl) {
+        imageUrl = await generateCompanionImage({
+          name: formData.name,
+          age: formData.age,
+          gender: formData.sex,
+          bio: formData.description,
+          physicalDescription: formData.physicalDescription,
+          personality: formData.personality,
+          hobbies: formData.hobbies
+        });
+      }
 
       // Create companion in database
       const companionData = {
@@ -271,12 +307,93 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated }: CompanionBuilde
                 </div>
               </div>
 
+              {/* Image Generation Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>Companion Image</Label>
+                  {!generatedImageUrl && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleGenerateImage}
+                      disabled={imageLoading || !formData.name || !formData.sex || !formData.race}
+                    >
+                      {imageLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <ImageIcon className="h-4 w-4 mr-2" />
+                          Generate Image
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+
+                {generatedImageUrl && (
+                  <div className="space-y-3">
+                    <div className="relative inline-block">
+                      <img 
+                        src={generatedImageUrl} 
+                        alt={`Generated image of ${formData.name}`}
+                        className="w-48 h-48 object-cover rounded-lg border shadow-sm"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleGenerateImage}
+                        disabled={imageLoading}
+                      >
+                        {imageLoading ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <ImageIcon className="h-4 w-4 mr-2" />
+                            Generate New Image
+                          </>
+                        )}
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Image
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Companion Image?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this image? This action cannot be undone and you'll need to generate a new image.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteImage} className="bg-destructive hover:bg-destructive/90">
+                              Delete Image
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <Button 
                 type="submit" 
                 disabled={creating || imageLoading || !formData.name || !formData.sex || !formData.race}
                 className="w-full"
               >
-                {creating || imageLoading ? (
+                {creating ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     Creating Your Companion...
