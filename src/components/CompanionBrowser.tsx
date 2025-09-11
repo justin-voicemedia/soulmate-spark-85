@@ -39,6 +39,21 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
   const { generateCompanionImage, loading: imageGenerating } = useImageGeneration();
   const { selectedCompanion: userSelectedCompanion, selectCompanion, isCreatingAgent } = useCompanionSelection();
 
+  const getImageSrc = (url: string) => {
+    try {
+      const u = new URL(url);
+      if (
+        u.hostname === 'rugoqenajhbjqcmrplac.supabase.co' &&
+        u.pathname.includes('/storage/v1/object/public/companion-images/')
+      ) {
+        return `https://rugoqenajhbjqcmrplac.supabase.co/functions/v1/image-proxy?url=${encodeURIComponent(url)}`;
+      }
+      return url;
+    } catch {
+      return url;
+    }
+  };
+
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGender, setSelectedGender] = useState('all');
@@ -265,14 +280,13 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
                   {/* Image Section */}
                   <div className="md:w-1/2 relative">
                     <img 
-                      src={selectedCompanion.image_url}
+                      src={getImageSrc(selectedCompanion.image_url)}
                       alt={selectedCompanion.name}
                       className="w-full h-96 md:h-full object-cover rounded-t-lg md:rounded-l-lg md:rounded-t-none"
+                      referrerPolicy="no-referrer"
                       onError={(e) => {
                         console.error('Image failed to load:', selectedCompanion.image_url);
-                        // Keep original URL to help debug, don't fallback yet  
                       }}
-                      crossOrigin="anonymous"
                     />
                     <Button
                       onClick={() => handleGenerateNewImage(selectedCompanion)}
@@ -575,14 +589,13 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
                   <CardContent className="p-0">
                     <div className="relative">
                       <img 
-                        src={companion.image_url}
+                        src={getImageSrc(companion.image_url)}
                         alt={companion.name}
                         className="w-full h-64 object-cover rounded-t-lg"
+                        referrerPolicy="no-referrer"
                         onError={(e) => {
                           console.error('Image failed to load:', companion.image_url);
-                          // Keep original URL to help debug, don't fallback yet
                         }}
-                        crossOrigin="anonymous"
                       />
                       <Button
                         onClick={(e) => {
