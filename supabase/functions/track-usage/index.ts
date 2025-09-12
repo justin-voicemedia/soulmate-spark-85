@@ -22,6 +22,15 @@ serve(async (req) => {
 
     const { action, companionId, userId, sessionId, minutesUsed, apiType = 'voice', tokensUsed = 0, customCost } = await req.json();
 
+    // Helper function to estimate tokens from minutes for voice conversations
+    const estimateTokensFromMinutes = (minutes: number, apiType: string) => {
+      if (apiType === 'voice' && minutes > 0) {
+        // 140 words/min × 1.33 tokens/word × 2 (input + output) ≈ 372 tokens/minute
+        return Math.round(minutes * 372);
+      }
+      return 0;
+    };
+
     if (!userId || !companionId) {
       throw new Error("userId and companionId are required");
     }
@@ -36,7 +45,7 @@ serve(async (req) => {
           session_start: new Date().toISOString(),
           minutes_used: 0,
           api_type: apiType,
-          tokens_used: tokensUsed,
+          tokens_used: tokensUsed || 0,
           cost_override: customCost
         })
         .select()
@@ -59,10 +68,12 @@ serve(async (req) => {
       }
 
       // Update session record with end time and minutes used
+      const finalTokens = tokensUsed || estimateTokensFromMinutes(minutesUsed, apiType);
+      
       const updateData: any = {
         session_end: new Date().toISOString(),
         minutes_used: minutesUsed,
-        tokens_used: tokensUsed
+        tokens_used: finalTokens
       };
       
       if (customCost !== undefined) {
@@ -124,14 +135,17 @@ serve(async (req) => {
       if (!user) throw new Error("User not authenticated");
 
       // Insert usage record for legacy tracking
+      const finalMinutes = Math.ceil(minutes_used || minutesUsed || 1);
+      const finalTokens = tokensUsed || estimateTokensFromMinutes(finalMinutes, apiType);
+      
       const insertData: any = {
         user_id: user.id,
         companion_id: companion_id || companionId,
-        minutes_used: Math.ceil(minutes_used || minutesUsed || 1),
+        minutes_used: finalMinutes,
         session_start: new Date().toISOString(),
         session_end: new Date().toISOString(),
         api_type: apiType,
-        tokens_used: tokensUsed
+        tokens_used: finalTokens
       };
       
       if (customCost !== undefined) {
@@ -154,7 +168,7 @@ serve(async (req) => {
         .single();
 
       if (!subscriberError && !subscriberData?.subscribed) {
-        const newTrialMinutes = (subscriberData.trial_minutes_used || 0) + Math.ceil(minutes_used || minutesUsed || 1);
+        const newTrialMinutes = (subscriberData.trial_minutes_used || 0) + finalMinutes;
         
         await supabaseClient
           .from("subscribers")

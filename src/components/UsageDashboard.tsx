@@ -385,7 +385,7 @@ export const UsageDashboard: React.FC = () => {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Real-time voice conversations with speech-to-speech capability
+                Real-time voice conversations (~372 tokens/minute estimated)
               </p>
             </div>
             <Separator />
@@ -400,7 +400,7 @@ export const UsageDashboard: React.FC = () => {
             </div>
             <Separator />
             <p className="text-xs text-muted-foreground">
-              All usage is billed per token. Costs shown are calculated based on actual token consumption.
+              All usage is billed per token. Voice conversations automatically estimate ~372 tokens/minute (140 words/min × 1.33 tokens/word × 2 for input+output) when exact counts aren't available.
             </p>
           </div>
         </CardContent>

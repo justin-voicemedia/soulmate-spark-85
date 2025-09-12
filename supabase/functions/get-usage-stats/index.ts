@@ -58,14 +58,16 @@ serve(async (req) => {
       if (session.cost_override !== null) return Number(session.cost_override);
       
       const apiType = session.api_type || 'voice';
+      const tokensUsed = session.tokens_used || 0;
+      
       if (apiType === 'voice') {
-        const tokensUsed = session.tokens_used || 0;
+        // If no tokens recorded, estimate from minutes using speech formula
+        const effectiveTokens = tokensUsed || (session.minutes_used * 372); // 372 tokens/minute estimate
         // OpenAI Realtime API: $32/million input tokens + $64/million output tokens
         // Assuming roughly 50/50 split for conversational AI
         const avgCostPerMillionTokens = (32 + 64) / 2; // $48 per million tokens average
-        return (tokensUsed / 1000000) * avgCostPerMillionTokens;
+        return (effectiveTokens / 1000000) * avgCostPerMillionTokens;
       } else if (apiType === 'text') {
-        const tokensUsed = session.tokens_used || 0;
         return (tokensUsed / 1000000) * 2.50; // GPT-5-mini cost per million tokens
       }
       return 0;
@@ -83,7 +85,10 @@ serve(async (req) => {
     
     const voiceMinutes = voiceSessions.reduce((sum, s) => sum + (s.minutes_used || 0), 0);
     const voiceCost = voiceSessions.reduce((sum, s) => sum + calculateCost(s), 0);
-    const voiceTokens = voiceSessions.reduce((sum, s) => sum + (s.tokens_used || 0), 0);
+    const voiceTokens = voiceSessions.reduce((sum, s) => {
+      const tokens = s.tokens_used || (s.minutes_used * 372); // Estimate if not recorded
+      return sum + tokens;
+    }, 0);
     const textMinutes = textSessions.reduce((sum, s) => sum + (s.minutes_used || 0), 0);
     const textCost = textSessions.reduce((sum, s) => sum + calculateCost(s), 0);
     const textTokens = textSessions.reduce((sum, s) => sum + (s.tokens_used || 0), 0);
