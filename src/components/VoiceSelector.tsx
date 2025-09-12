@@ -17,7 +17,7 @@ export const AVAILABLE_VOICES = [
   { id: 'Xb7hH8MSUJpSbSDYk0k2', name: 'Alice', description: 'Bright and cheerful' },
   { id: 'XrExE9yKIg1WjnnlVkGX', name: 'Matilda', description: 'Playful and fun' },
   { id: 'bIHbv24MWmeRgasZH58o', name: 'Will', description: 'Strong and reliable' },
-  { id: 'cgSgspJ2msm6clMCkdW9', name: 'Jessica', description: 'Sweet and caring' },
+  { id: 'zcXVJyhbHhZfRK91XjO4', name: 'Jessica', description: 'Sweet and caring' },
   { id: 'cjVigY5qzO86Huf0OWal', name: 'Eric', description: 'Intellectual and thoughtful' },
   { id: 'iP95p4xoKVk53GoZ742B', name: 'Chris', description: 'Friendly neighbor' },
   { id: 'nPczCjzI2devNBz1zQrb', name: 'Brian', description: 'Supportive and kind' },
