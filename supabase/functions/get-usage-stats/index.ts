@@ -39,6 +39,12 @@ serve(async (req) => {
 
     if (usageError) throw usageError;
 
+    console.log('Usage data retrieved:', {
+      count: usageData?.length || 0,
+      firstFew: usageData?.slice(0, 3),
+      companionIds: usageData?.map(s => s.companion_id)
+    });
+
     // Build companion name map (no DB joins required)
     const companionIds = Array.from(
       new Set((usageData || []).map((s: any) => s.companion_id).filter((id: any) => !!id))
@@ -53,6 +59,7 @@ serve(async (req) => {
         console.error('Failed to load companion names', companionsError);
       } else {
         companionsData?.forEach((c: any) => companionNamesById.set(c.id, c.name));
+        console.log('Companion names loaded:', Object.fromEntries(companionNamesById));
       }
     }
 
@@ -130,17 +137,20 @@ serve(async (req) => {
     usageData.forEach(session => {
       const companionName = companionNamesById.get(session.companion_id) || 'Unknown Companion';
       const minutes = session.minutes_used || 0;
+      const cost = calculateCost(session);
       
       if (companionMap.has(companionName)) {
+        const existing = companionMap.get(companionName);
         companionMap.set(companionName, {
-          ...companionMap.get(companionName),
-          minutes: companionMap.get(companionName).minutes + minutes
+          companionName,
+          minutes: existing.minutes + minutes,
+          cost: existing.cost + cost
         });
       } else {
         companionMap.set(companionName, {
           companionName,
           minutes,
-          cost: calculateCost(session)
+          cost
         });
       }
     });
