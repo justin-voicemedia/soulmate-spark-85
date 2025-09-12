@@ -24,6 +24,8 @@ const OPENAI_VOICES = [
   { id: 'sage', name: 'Sage', description: 'Confident and steady' },
   { id: 'shimmer', name: 'Shimmer', description: 'Gentle and soothing' },
   { id: 'verse', name: 'Verse', description: 'Engaging and upbeat' },
+  { id: 'marin', name: 'Marin', description: 'Natural and conversational' },
+  { id: 'cedar', name: 'Cedar', description: 'Warm and articulate' },
 ];
 
 export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, companionName }) => {
