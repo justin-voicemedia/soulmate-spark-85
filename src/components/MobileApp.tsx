@@ -570,15 +570,28 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
       <div className="p-4 border-b bg-card">
         <div className="flex items-center justify-between">
           <div 
-            className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
+            className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity px-2 py-1 rounded-md hover:bg-muted"
             onClick={onBack}
+            title="Back to main site"
           >
             <Heart className="w-6 h-6 text-primary" />
-            <span className="text-lg font-bold">LoveCalls</span>
+            <span className="text-lg font-bold">LoveCalls.ai</span>
           </div>
-          <Button size="sm" variant="ghost">
-            <MoreVertical className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center space-x-2">
+            {onViewUsage && (
+              <Button 
+                size="sm" 
+                variant="ghost"
+                onClick={() => onViewUsage()}
+                title="View usage dashboard"
+              >
+                <BarChart3 className="w-4 h-4" />
+              </Button>
+            )}
+            <Button size="sm" variant="ghost">
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
