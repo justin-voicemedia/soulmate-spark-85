@@ -594,7 +594,7 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
                       <img 
                         src={getImageSrc(companion.image_url)}
                         alt={companion.name}
-                        className="w-full h-64 object-cover rounded-t-lg"
+                        className="w-full h-72 object-contain bg-muted rounded-t-lg"
                         referrerPolicy="no-referrer"
                         onError={(e) => {
                           const direct = companion.image_url;
