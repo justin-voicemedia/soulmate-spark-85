@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
-import { Clock, DollarSign, Phone, User, RefreshCw, TrendingUp, MessageSquare, Mic } from 'lucide-react';
+import { Clock, Phone, User, RefreshCw, TrendingUp, MessageSquare, Mic } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -132,7 +132,7 @@ export const UsageDashboard: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Usage Dashboard</h2>
-          <p className="text-muted-foreground">Track your voice chat usage and costs</p>
+          <p className="text-muted-foreground">Track your usage</p>
         </div>
         <Button onClick={handleRefresh} disabled={isRefreshing} variant="outline">
           <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -178,17 +178,6 @@ export const UsageDashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Cost</p>
-                <p className="text-2xl font-bold">${usage.totalCost.toFixed(2)}</p>
-              </div>
-              <DollarSign className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
 
         <Card>
           <CardContent className="p-6">
@@ -234,10 +223,6 @@ export const UsageDashboard: React.FC = () => {
                 <span className="text-muted-foreground">Minutes</span>
                 <span className="font-semibold">{usage.voiceStats.minutes}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Cost</span>
-                <span className="font-semibold">${usage.voiceStats.cost.toFixed(2)}</span>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -254,10 +239,6 @@ export const UsageDashboard: React.FC = () => {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Sessions</span>
                 <span className="font-semibold">{usage.textStats.sessions}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Cost</span>
-                <span className="font-semibold">${usage.textStats.cost.toFixed(2)}</span>
               </div>
             </div>
           </CardContent>
@@ -276,10 +257,6 @@ export const UsageDashboard: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Minutes</span>
                   <span className="font-semibold">{usage.todayMinutes}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Cost</span>
-                  <span className="font-semibold">${usage.todayCost.toFixed(2)}</span>
                 </div>
               </div>
               <Separator />
@@ -307,10 +284,6 @@ export const UsageDashboard: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Minutes</span>
                   <span className="font-semibold">{usage.thisMonthMinutes}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Cost</span>
-                  <span className="font-semibold">${usage.thisMonthCost.toFixed(2)}</span>
                 </div>
               </div>
               <Separator />
@@ -347,9 +320,6 @@ export const UsageDashboard: React.FC = () => {
                       <p className="text-sm text-muted-foreground">{companion.minutes} minutes</p>
                     </div>
                   </div>
-                  <Badge variant="secondary">
-                    ${companion.cost.toFixed(2)}
-                  </Badge>
                 </div>
               ))}
             </div>

@@ -134,7 +134,7 @@ serve(async (req) => {
 
     // Companion breakdown
     const companionMap = new Map();
-    usageData.forEach(session => {
+    monthUsage.forEach(session => {
       const companionName = companionNamesById.get(session.companion_id) || 'Unknown Companion';
       const minutes = session.minutes_used || 0;
       const cost = calculateCost(session);

@@ -47,9 +47,10 @@ export const useTrialStatus = () => {
     try {
       const { data, error } = await supabase.functions.invoke('track-usage', {
         body: {
-          companion_id: companionId,
-          minutes_used: minutesUsed,
-          session_id: sessionId,
+          action: 'track',
+          companionId,
+          minutesUsed,
+          apiType: 'text',
         },
         headers: {
           Authorization: `Bearer ${session.access_token}`,

@@ -20,19 +20,33 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    const { action, companionId, userId, sessionId, minutesUsed, apiType = 'voice', tokensUsed = 0, customCost } = await req.json();
+    const body = await req.json();
+    const {
+      action,
+      companionId,
+      companion_id,
+      userId,
+      sessionId,
+      session_id,
+      minutesUsed,
+      minutes_used,
+      apiType: rawApiType,
+      tokensUsed = 0,
+      customCost
+    } = body;
 
-    // Helper function to estimate tokens from minutes for voice conversations
-    const estimateTokensFromMinutes = (minutes: number, apiType: string) => {
-      if (apiType === 'voice' && minutes > 0) {
-        // 140 words/min × 1.33 tokens/word × 2 (input + output) ≈ 372 tokens/minute
-        return Math.round(minutes * 372);
-      }
-      return 0;
-    };
+    const effectiveCompanionId = companionId || companion_id;
+    const effectiveSessionId = sessionId || session_id;
+    const effectiveMinutes = minutesUsed ?? minutes_used;
+    const defaultApiType = action === 'track' || !action ? 'text' : 'voice';
+    const apiType = rawApiType || defaultApiType;
 
-    if (!userId || !companionId) {
-      throw new Error("userId and companionId are required");
+    // Validate required params for start/end; legacy 'track' uses auth header instead
+    if (action === 'start' && (!userId || !effectiveCompanionId)) {
+      throw new Error("userId and companionId are required for start action");
+    }
+    if (action === 'end' && (!userId || !effectiveSessionId || effectiveMinutes === undefined)) {
+      throw new Error("userId, sessionId and minutesUsed are required for end action");
     }
 
     if (action === "start") {
@@ -41,7 +55,7 @@ serve(async (req) => {
         .from("conversation_usage")
         .insert({
           user_id: userId,
-          companion_id: companionId,
+          companion_id: effectiveCompanionId,
           session_start: new Date().toISOString(),
           minutes_used: 0,
           api_type: apiType,
@@ -72,7 +86,7 @@ serve(async (req) => {
       
       const updateData: any = {
         session_end: new Date().toISOString(),
-        minutes_used: minutesUsed,
+        minutes_used: Math.ceil(effectiveMinutes as number),
         tokens_used: finalTokens
       };
       
@@ -83,7 +97,7 @@ serve(async (req) => {
       const { data, error } = await supabaseClient
         .from("conversation_usage")
         .update(updateData)
-        .eq("id", sessionId)
+        .eq("id", effectiveSessionId)
         .select()
         .single();
 
@@ -122,8 +136,6 @@ serve(async (req) => {
 
     // Legacy support for existing tracking calls
     if (action === "track" || !action) {
-      const { companion_id, minutes_used } = await req.json();
-      
       // Get user from auth header for legacy calls
       const authHeader = req.headers.get("Authorization");
       if (!authHeader) throw new Error("No authorization header provided");
@@ -134,17 +146,17 @@ serve(async (req) => {
       const user = userData.user;
       if (!user) throw new Error("User not authenticated");
 
-      // Insert usage record for legacy tracking
-      const finalMinutes = Math.ceil(minutes_used || minutesUsed || 1);
-      const finalTokens = tokensUsed || estimateTokensFromMinutes(finalMinutes, apiType);
+      const finalMinutes = Math.ceil((effectiveMinutes as number) || 1);
+      const inferredApiType = rawApiType || 'text';
+      const finalTokens = tokensUsed || estimateTokensFromMinutes(finalMinutes, inferredApiType);
       
       const insertData: any = {
         user_id: user.id,
-        companion_id: companion_id || companionId,
+        companion_id: effectiveCompanionId,
         minutes_used: finalMinutes,
         session_start: new Date().toISOString(),
         session_end: new Date().toISOString(),
-        api_type: apiType,
+        api_type: inferredApiType,
         tokens_used: finalTokens
       };
       
