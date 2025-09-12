@@ -20,7 +20,7 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    const { action, companionId, userId, sessionId, minutesUsed } = await req.json();
+    const { action, companionId, userId, sessionId, minutesUsed, apiType = 'voice', tokensUsed = 0, customCost } = await req.json();
 
     if (!userId || !companionId) {
       throw new Error("userId and companionId are required");
@@ -34,7 +34,10 @@ serve(async (req) => {
           user_id: userId,
           companion_id: companionId,
           session_start: new Date().toISOString(),
-          minutes_used: 0
+          minutes_used: 0,
+          api_type: apiType,
+          tokens_used: tokensUsed,
+          cost_override: customCost
         })
         .select()
         .single();
@@ -56,12 +59,19 @@ serve(async (req) => {
       }
 
       // Update session record with end time and minutes used
+      const updateData: any = {
+        session_end: new Date().toISOString(),
+        minutes_used: minutesUsed,
+        tokens_used: tokensUsed
+      };
+      
+      if (customCost !== undefined) {
+        updateData.cost_override = customCost;
+      }
+      
       const { data, error } = await supabaseClient
         .from("conversation_usage")
-        .update({
-          session_end: new Date().toISOString(),
-          minutes_used: minutesUsed
-        })
+        .update(updateData)
         .eq("id", sessionId)
         .select()
         .single();
@@ -114,15 +124,23 @@ serve(async (req) => {
       if (!user) throw new Error("User not authenticated");
 
       // Insert usage record for legacy tracking
+      const insertData: any = {
+        user_id: user.id,
+        companion_id: companion_id || companionId,
+        minutes_used: Math.ceil(minutes_used || minutesUsed || 1),
+        session_start: new Date().toISOString(),
+        session_end: new Date().toISOString(),
+        api_type: apiType,
+        tokens_used: tokensUsed
+      };
+      
+      if (customCost !== undefined) {
+        insertData.cost_override = customCost;
+      }
+      
       const { data, error } = await supabaseClient
         .from("conversation_usage")
-        .insert({
-          user_id: user.id,
-          companion_id: companion_id || companionId,
-          minutes_used: Math.ceil(minutes_used || minutesUsed || 1),
-          session_start: new Date().toISOString(),
-          session_end: new Date().toISOString()
-        })
+        .insert(insertData)
         .select()
         .single();
 

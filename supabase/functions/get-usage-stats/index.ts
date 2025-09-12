@@ -53,25 +53,53 @@ serve(async (req) => {
       throw subscriberError;
     }
 
+    // Helper function to calculate cost based on API type
+    const calculateCost = (session: any) => {
+      if (session.cost_override !== null) return Number(session.cost_override);
+      
+      const apiType = session.api_type || 'voice';
+      if (apiType === 'voice') {
+        return (session.minutes_used || 0) * 0.24; // OpenAI Realtime API cost per minute
+      } else if (apiType === 'text') {
+        const tokensUsed = session.tokens_used || 0;
+        return (tokensUsed / 1000000) * 2.50; // GPT-5-mini cost per million tokens
+      }
+      return 0;
+    };
+
     // Calculate usage statistics
     const totalMinutes = usageData.reduce((sum, session) => sum + (session.minutes_used || 0), 0);
-    const totalCost = totalMinutes * 0.10;
+    const totalCost = usageData.reduce((sum, session) => sum + calculateCost(session), 0);
     const sessionsCount = usageData.length;
     const avgSessionLength = sessionsCount > 0 ? totalMinutes / sessionsCount : 0;
+    
+    // Calculate breakdown by API type
+    const voiceSessions = usageData.filter(s => (s.api_type || 'voice') === 'voice');
+    const textSessions = usageData.filter(s => s.api_type === 'text');
+    
+    const voiceMinutes = voiceSessions.reduce((sum, s) => sum + (s.minutes_used || 0), 0);
+    const voiceCost = voiceSessions.reduce((sum, s) => sum + calculateCost(s), 0);
+    const textMinutes = textSessions.reduce((sum, s) => sum + (s.minutes_used || 0), 0);
+    const textCost = textSessions.reduce((sum, s) => sum + calculateCost(s), 0);
+    const totalTokens = textSessions.reduce((sum, s) => sum + (s.tokens_used || 0), 0);
 
     // Today's usage
     const todayUsage = usageData.filter(session => 
       session.session_start.startsWith(today)
     );
     const todayMinutes = todayUsage.reduce((sum, session) => sum + (session.minutes_used || 0), 0);
-    const todayCost = todayMinutes * 0.10;
+    const todayCost = todayUsage.reduce((sum, session) => sum + calculateCost(session), 0);
+    const todayVoiceMinutes = todayUsage.filter(s => (s.api_type || 'voice') === 'voice').reduce((sum, s) => sum + (s.minutes_used || 0), 0);
+    const todayTextMinutes = todayUsage.filter(s => s.api_type === 'text').reduce((sum, s) => sum + (s.minutes_used || 0), 0);
 
     // This month's usage
     const monthUsage = usageData.filter(session => 
       session.session_start >= monthStart
     );
     const thisMonthMinutes = monthUsage.reduce((sum, session) => sum + (session.minutes_used || 0), 0);
-    const thisMonthCost = thisMonthMinutes * 0.10;
+    const thisMonthCost = monthUsage.reduce((sum, session) => sum + calculateCost(session), 0);
+    const monthVoiceMinutes = monthUsage.filter(s => (s.api_type || 'voice') === 'voice').reduce((sum, s) => sum + (s.minutes_used || 0), 0);
+    const monthTextMinutes = monthUsage.filter(s => s.api_type === 'text').reduce((sum, s) => sum + (s.minutes_used || 0), 0);
 
     // Companion breakdown
     const companionMap = new Map();
@@ -88,7 +116,7 @@ serve(async (req) => {
         companionMap.set(companionName, {
           companionName,
           minutes,
-          cost: minutes * 0.10
+          cost: calculateCost(session)
         });
       }
     });
@@ -114,7 +142,28 @@ serve(async (req) => {
         todayCost,
         thisMonthMinutes,
         thisMonthCost,
-        companionBreakdown
+        companionBreakdown,
+        // API type breakdown
+        voiceStats: {
+          minutes: voiceMinutes,
+          cost: voiceCost,
+          sessions: voiceSessions.length
+        },
+        textStats: {
+          minutes: textMinutes,
+          cost: textCost,
+          sessions: textSessions.length,
+          totalTokens: totalTokens
+        },
+        // Daily breakdown by API type
+        todayStats: {
+          voice: { minutes: todayVoiceMinutes },
+          text: { minutes: todayTextMinutes }
+        },
+        monthStats: {
+          voice: { minutes: monthVoiceMinutes },
+          text: { minutes: monthTextMinutes }
+        }
       },
       trial: {
         isTrialUser,

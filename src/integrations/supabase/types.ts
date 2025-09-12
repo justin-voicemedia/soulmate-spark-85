@@ -67,30 +67,39 @@ export type Database = {
       }
       conversation_usage: {
         Row: {
+          api_type: string | null
           companion_id: string
+          cost_override: number | null
           created_at: string
           id: string
           minutes_used: number | null
           session_end: string | null
           session_start: string
+          tokens_used: number | null
           user_id: string
         }
         Insert: {
+          api_type?: string | null
           companion_id: string
+          cost_override?: number | null
           created_at?: string
           id?: string
           minutes_used?: number | null
           session_end?: string | null
           session_start?: string
+          tokens_used?: number | null
           user_id: string
         }
         Update: {
+          api_type?: string | null
           companion_id?: string
+          cost_override?: number | null
           created_at?: string
           id?: string
           minutes_used?: number | null
           session_end?: string | null
           session_start?: string
+          tokens_used?: number | null
           user_id?: string
         }
         Relationships: []

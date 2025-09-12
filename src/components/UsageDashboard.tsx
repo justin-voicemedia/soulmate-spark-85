@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
-import { Clock, DollarSign, Phone, User, RefreshCw, TrendingUp } from 'lucide-react';
+import { Clock, DollarSign, Phone, User, RefreshCw, TrendingUp, MessageSquare, Mic } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -23,6 +23,25 @@ interface UsageStats {
     minutes: number;
     cost: number;
   }[];
+  voiceStats: {
+    minutes: number;
+    cost: number;
+    sessions: number;
+  };
+  textStats: {
+    minutes: number;
+    cost: number;
+    sessions: number;
+    totalTokens: number;
+  };
+  todayStats: {
+    voice: { minutes: number };
+    text: { minutes: number };
+  };
+  monthStats: {
+    voice: { minutes: number };
+    text: { minutes: number };
+  };
 }
 
 interface TrialInfo {
@@ -39,7 +58,8 @@ export const UsageDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const COST_PER_MINUTE = 0.10;
+  const VOICE_COST_PER_MINUTE = 0.24;
+  const TEXT_COST_PER_MILLION_TOKENS = 2.50;
 
   const fetchUsageData = async () => {
     if (!user) return;
@@ -196,6 +216,59 @@ export const UsageDashboard: React.FC = () => {
         </Card>
       </div>
 
+      {/* API Type Breakdown */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Mic className="h-5 w-5" />
+              Voice Conversations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Sessions</span>
+                <span className="font-semibold">{usage.voiceStats.sessions}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Minutes</span>
+                <span className="font-semibold">{usage.voiceStats.minutes}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Cost</span>
+                <span className="font-semibold">${usage.voiceStats.cost.toFixed(2)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Text Conversations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Sessions</span>
+                <span className="font-semibold">{usage.textStats.sessions}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tokens Used</span>
+                <span className="font-semibold">{usage.textStats.totalTokens.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Cost</span>
+                <span className="font-semibold">${usage.textStats.cost.toFixed(2)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Today & This Month */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
@@ -203,14 +276,27 @@ export const UsageDashboard: React.FC = () => {
             <CardTitle className="text-lg">Today's Usage</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Minutes</span>
-                <span className="font-semibold">{usage.todayMinutes}</span>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Minutes</span>
+                  <span className="font-semibold">{usage.todayMinutes}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Cost</span>
+                  <span className="font-semibold">${usage.todayCost.toFixed(2)}</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Cost</span>
-                <span className="font-semibold">${usage.todayCost.toFixed(2)}</span>
+              <Separator />
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Voice</p>
+                  <p className="font-medium">{usage.todayStats.voice.minutes}m</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Text</p>
+                  <p className="font-medium">{usage.todayStats.text.minutes}m</p>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -221,14 +307,27 @@ export const UsageDashboard: React.FC = () => {
             <CardTitle className="text-lg">This Month</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Minutes</span>
-                <span className="font-semibold">{usage.thisMonthMinutes}</span>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Minutes</span>
+                  <span className="font-semibold">{usage.thisMonthMinutes}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Cost</span>
+                  <span className="font-semibold">${usage.thisMonthCost.toFixed(2)}</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Cost</span>
-                <span className="font-semibold">${usage.thisMonthCost.toFixed(2)}</span>
+              <Separator />
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Voice</p>
+                  <p className="font-medium">{usage.monthStats.voice.minutes}m</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Text</p>
+                  <p className="font-medium">{usage.monthStats.text.minutes}m</p>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -269,14 +368,29 @@ export const UsageDashboard: React.FC = () => {
           <CardTitle className="text-lg">Pricing Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Rate per minute</span>
-              <span className="font-semibold">${COST_PER_MINUTE.toFixed(2)}</span>
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Voice rate per minute</span>
+                <span className="font-semibold">${VOICE_COST_PER_MINUTE.toFixed(2)}</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Real-time voice conversations using OpenAI Realtime API
+              </p>
+            </div>
+            <Separator />
+            <div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Text rate per million tokens</span>
+                <span className="font-semibold">${TEXT_COST_PER_MILLION_TOKENS.toFixed(2)}</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Text conversations using GPT-5-mini API
+              </p>
             </div>
             <Separator />
             <p className="text-xs text-muted-foreground">
-              Voice chat usage is billed per minute. Partial minutes are rounded up to the nearest minute.
+              Voice usage is billed per minute. Text usage is billed per token. Partial minutes/tokens are rounded up.
             </p>
           </div>
         </CardContent>
