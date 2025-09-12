@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LandingPage } from "@/components/LandingPage";
 import { Questionnaire } from "@/components/Questionnaire";
 import { CompanionBrowser } from "@/components/CompanionBrowser";
@@ -53,6 +53,43 @@ const AppContent = () => {
   const [editingCompanion, setEditingCompanion] = useState<Companion | null>(null);
   const [matches, setMatches] = useState<CompanionMatch[]>([]);
   const [matchingSummary, setMatchingSummary] = useState<string>('');
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+
+  // Auto-load companion for returning users
+  useEffect(() => {
+    const loadExistingCompanion = async () => {
+      if (!user || initialLoadComplete) return;
+      
+      try {
+        const { data: uc, error: ucError } = await supabase
+          .from('user_companions')
+          .select('companion_id')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!ucError && uc?.companion_id) {
+          const { data: comp, error: compError } = await supabase
+            .from('companions')
+            .select('*')
+            .eq('id', uc.companion_id)
+            .maybeSingle();
+
+          if (!compError && comp) {
+            setSelectedCompanion(comp as Companion);
+            setCurrentState('app');
+          }
+        }
+      } catch (error) {
+        console.error('Error loading existing companion:', error);
+      } finally {
+        setInitialLoadComplete(true);
+      }
+    };
+
+    loadExistingCompanion();
+  }, [user, initialLoadComplete]);
 
   if (loading) {
     return (
