@@ -132,10 +132,10 @@ serve(async (req) => {
     const monthVoiceMinutes = monthUsage.filter(s => (s.api_type || 'voice') === 'voice').reduce((sum, s) => sum + (s.minutes_used || 0), 0);
     const monthTextMinutes = monthUsage.filter(s => s.api_type === 'text').reduce((sum, s) => sum + (s.minutes_used || 0), 0);
 
-    // Companion breakdown
+    // Companion breakdown - use ALL usage data, not just month
     const companionMap = new Map();
-    monthUsage.forEach(session => {
-      const companionName = companionNamesById.get(session.companion_id) || 'Unknown Companion';
+    usageData.forEach(session => {
+      const companionName = companionNamesById.get(session.companion_id) || `Companion ${session.companion_id?.slice(0, 8)}`;
       const minutes = session.minutes_used || 0;
       const cost = calculateCost(session);
       
@@ -156,6 +156,7 @@ serve(async (req) => {
     });
 
     const companionBreakdown = Array.from(companionMap.values())
+      .filter(companion => companion.minutes > 0) // Only show companions with actual usage
       .sort((a, b) => b.minutes - a.minutes);
 
     // Trial information
