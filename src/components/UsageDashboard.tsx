@@ -59,9 +59,6 @@ export const UsageDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const REALTIME_INPUT_COST_PER_MILLION = 32.00;
-  const REALTIME_OUTPUT_COST_PER_MILLION = 64.00;
-  const TEXT_COST_PER_MILLION_TOKENS = 2.50;
 
   const fetchUsageData = async () => {
     if (!user) return;
@@ -238,10 +235,6 @@ export const UsageDashboard: React.FC = () => {
                 <span className="font-semibold">{usage.voiceStats.minutes}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Tokens Used</span>
-                <span className="font-semibold">{usage.voiceStats.totalTokens.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
                 <span className="text-muted-foreground">Cost</span>
                 <span className="font-semibold">${usage.voiceStats.cost.toFixed(2)}</span>
               </div>
@@ -261,10 +254,6 @@ export const UsageDashboard: React.FC = () => {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Sessions</span>
                 <span className="font-semibold">{usage.textStats.sessions}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Tokens Used</span>
-                <span className="font-semibold">{usage.textStats.totalTokens.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Cost</span>
@@ -368,43 +357,6 @@ export const UsageDashboard: React.FC = () => {
         </Card>
       )}
 
-      {/* Rate Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Pricing Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div>
-              <div className="flex justify-between items-start">
-                <span className="text-muted-foreground">OpenAI gpt-4o-realtime</span>
-                <div className="text-right">
-                  <div className="font-semibold">${REALTIME_INPUT_COST_PER_MILLION.toFixed(2)} input</div>
-                  <div className="font-semibold">${REALTIME_OUTPUT_COST_PER_MILLION.toFixed(2)} output</div>
-                  <div className="text-xs text-muted-foreground">per million tokens</div>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Real-time voice conversations (~372 tokens/minute estimated)
-              </p>
-            </div>
-            <Separator />
-            <div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">GPT-5-mini per million tokens</span>
-                <span className="font-semibold">${TEXT_COST_PER_MILLION_TOKENS.toFixed(2)}</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Text conversations using GPT-5-mini API
-              </p>
-            </div>
-            <Separator />
-            <p className="text-xs text-muted-foreground">
-              All usage is billed per token. Voice conversations automatically estimate ~372 tokens/minute (140 words/min × 1.33 tokens/word × 2 for input+output) when exact counts aren't available.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
