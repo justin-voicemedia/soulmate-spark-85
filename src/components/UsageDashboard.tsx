@@ -140,31 +140,53 @@ export const UsageDashboard: React.FC = () => {
         </Button>
       </div>
 
-      {/* Trial Status */}
+      {/* Trial Minutes Section */}
       {trialInfo.isTrialUser && (
         <Card className="border-orange-200 bg-orange-50">
           <CardHeader>
-            <CardTitle className="text-orange-800">Trial Account</CardTitle>
+            <CardTitle className="text-orange-800 flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Trial Minutes
+            </CardTitle>
             <CardDescription className="text-orange-600">
               You have {trialInfo.trialDaysRemaining} days remaining in your trial
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Trial minutes used</span>
-                <span>{trialInfo.trialMinutesUsed} / {trialInfo.trialMinutesLimit}</span>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center p-3 bg-white rounded-lg">
+                  <p className="text-2xl font-bold text-orange-800">{trialInfo.trialMinutesUsed}</p>
+                  <p className="text-sm text-orange-600">Minutes Used</p>
+                </div>
+                <div className="text-center p-3 bg-white rounded-lg">
+                  <p className="text-2xl font-bold text-orange-800">{trialInfo.trialMinutesLimit - trialInfo.trialMinutesUsed}</p>
+                  <p className="text-sm text-orange-600">Minutes Left</p>
+                </div>
+                <div className="text-center p-3 bg-white rounded-lg">
+                  <p className="text-2xl font-bold text-orange-800">{trialInfo.trialMinutesLimit}</p>
+                  <p className="text-sm text-orange-600">Total Allowed</p>
+                </div>
               </div>
-              <Progress value={trialProgress} className="h-2" />
-              <p className="text-xs text-orange-600">
-                {trialInfo.trialMinutesLimit - trialInfo.trialMinutesUsed} minutes remaining
-              </p>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium">Trial Progress</span>
+                  <span>{Math.round(trialProgress)}%</span>
+                </div>
+                <Progress value={trialProgress} className="h-3" />
+              </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Overview Stats */}
+      {/* Usage Overview */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-semibold">
+          {trialInfo.isTrialUser ? 'Trial Usage Overview' : 'Usage Overview'}
+        </h3>
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-6">
