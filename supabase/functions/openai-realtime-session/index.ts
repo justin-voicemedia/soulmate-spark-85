@@ -18,36 +18,59 @@ serve(async (req) => {
       throw new Error('OPENAI_API_KEY is not set');
     }
 
-    const { voice = 'alloy', instructions = 'You are a helpful, friendly voice assistant.', model = 'gpt-4o-mini-realtime-preview' } = await req.json().catch(() => ({}));
+    const { voice = 'alloy', instructions = 'You are a helpful, friendly voice assistant.', model = 'gpt-4o-mini-realtime-preview-2024-12-17' } = await req.json().catch(() => ({}));
 
-    const response = await fetch("https://api.openai.com/v1/realtime/sessions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        voice,
-        instructions,
-      }),
-    });
+    console.log(`Creating realtime session with model: ${model}, voice: ${voice}`);
+    console.log(`Instructions length: ${instructions.length} chars`);
 
-    if (!response.ok) {
-      const text = await response.text();
-      console.error("Failed to create realtime session:", text);
-      return new Response(JSON.stringify({ error: text }), {
-        status: response.status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // Try primary model first, fallback to standard if needed
+    const modelsToTry = [
+      model,
+      'gpt-4o-mini-realtime-preview-2024-12-17',
+      'gpt-4o-realtime-preview-2024-12-17'
+    ];
+
+    let lastError = null;
+    for (const attemptModel of modelsToTry) {
+      try {
+        console.log(`Attempting with model: ${attemptModel}`);
+        
+        const response = await fetch("https://api.openai.com/v1/realtime/sessions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${OPENAI_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: attemptModel,
+            voice,
+            instructions,
+          }),
+        });
+
+        console.log(`Response status: ${response.status} for model: ${attemptModel}`);
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log("Session created successfully", data?.id ?? 'no-id');
+          return new Response(JSON.stringify(data), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        } else {
+          const text = await response.text();
+          console.error(`Failed with model ${attemptModel}:`, text);
+          lastError = text;
+          continue; // Try next model
+        }
+      } catch (error) {
+        console.error(`Error with model ${attemptModel}:`, error);
+        lastError = error.message;
+        continue; // Try next model
+      }
     }
 
-    const data = await response.json();
-    console.log("Session created", data?.id ?? 'no-id');
-
-    return new Response(JSON.stringify(data), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    // If we get here, all models failed
+    throw new Error(`All models failed. Last error: ${lastError}`);
   } catch (error) {
     console.error("Error creating realtime session:", error);
     return new Response(JSON.stringify({ error: error.message ?? 'Unknown error' }), {
