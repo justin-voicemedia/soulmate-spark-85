@@ -27,6 +27,7 @@ interface UsageStats {
     minutes: number;
     cost: number;
     sessions: number;
+    totalTokens: number;
   };
   textStats: {
     minutes: number;
@@ -58,7 +59,8 @@ export const UsageDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const VOICE_COST_PER_MINUTE = 0.24;
+  const REALTIME_INPUT_COST_PER_MILLION = 32.00;
+  const REALTIME_OUTPUT_COST_PER_MILLION = 64.00;
   const TEXT_COST_PER_MILLION_TOKENS = 2.50;
 
   const fetchUsageData = async () => {
@@ -236,6 +238,10 @@ export const UsageDashboard: React.FC = () => {
                 <span className="font-semibold">{usage.voiceStats.minutes}</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-muted-foreground">Tokens Used</span>
+                <span className="font-semibold">{usage.voiceStats.totalTokens.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-muted-foreground">Cost</span>
                 <span className="font-semibold">${usage.voiceStats.cost.toFixed(2)}</span>
               </div>
@@ -370,18 +376,22 @@ export const UsageDashboard: React.FC = () => {
         <CardContent>
           <div className="space-y-3">
             <div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Voice rate per minute</span>
-                <span className="font-semibold">${VOICE_COST_PER_MINUTE.toFixed(2)}</span>
+              <div className="flex justify-between items-start">
+                <span className="text-muted-foreground">OpenAI Realtime API</span>
+                <div className="text-right">
+                  <div className="font-semibold">${REALTIME_INPUT_COST_PER_MILLION.toFixed(2)} input</div>
+                  <div className="font-semibold">${REALTIME_OUTPUT_COST_PER_MILLION.toFixed(2)} output</div>
+                  <div className="text-xs text-muted-foreground">per million tokens</div>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Real-time voice conversations using OpenAI Realtime API
+                Real-time voice conversations with speech-to-speech capability
               </p>
             </div>
             <Separator />
             <div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Text rate per million tokens</span>
+                <span className="text-muted-foreground">GPT-5-mini per million tokens</span>
                 <span className="font-semibold">${TEXT_COST_PER_MILLION_TOKENS.toFixed(2)}</span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
@@ -390,7 +400,7 @@ export const UsageDashboard: React.FC = () => {
             </div>
             <Separator />
             <p className="text-xs text-muted-foreground">
-              Voice usage is billed per minute. Text usage is billed per token. Partial minutes/tokens are rounded up.
+              All usage is billed per token. Costs shown are calculated based on actual token consumption.
             </p>
           </div>
         </CardContent>

@@ -59,7 +59,11 @@ serve(async (req) => {
       
       const apiType = session.api_type || 'voice';
       if (apiType === 'voice') {
-        return (session.minutes_used || 0) * 0.24; // OpenAI Realtime API cost per minute
+        const tokensUsed = session.tokens_used || 0;
+        // OpenAI Realtime API: $32/million input tokens + $64/million output tokens
+        // Assuming roughly 50/50 split for conversational AI
+        const avgCostPerMillionTokens = (32 + 64) / 2; // $48 per million tokens average
+        return (tokensUsed / 1000000) * avgCostPerMillionTokens;
       } else if (apiType === 'text') {
         const tokensUsed = session.tokens_used || 0;
         return (tokensUsed / 1000000) * 2.50; // GPT-5-mini cost per million tokens
@@ -79,9 +83,10 @@ serve(async (req) => {
     
     const voiceMinutes = voiceSessions.reduce((sum, s) => sum + (s.minutes_used || 0), 0);
     const voiceCost = voiceSessions.reduce((sum, s) => sum + calculateCost(s), 0);
+    const voiceTokens = voiceSessions.reduce((sum, s) => sum + (s.tokens_used || 0), 0);
     const textMinutes = textSessions.reduce((sum, s) => sum + (s.minutes_used || 0), 0);
     const textCost = textSessions.reduce((sum, s) => sum + calculateCost(s), 0);
-    const totalTokens = textSessions.reduce((sum, s) => sum + (s.tokens_used || 0), 0);
+    const textTokens = textSessions.reduce((sum, s) => sum + (s.tokens_used || 0), 0);
 
     // Today's usage
     const todayUsage = usageData.filter(session => 
@@ -147,13 +152,14 @@ serve(async (req) => {
         voiceStats: {
           minutes: voiceMinutes,
           cost: voiceCost,
-          sessions: voiceSessions.length
+          sessions: voiceSessions.length,
+          totalTokens: voiceTokens
         },
         textStats: {
           minutes: textMinutes,
           cost: textCost,
           sessions: textSessions.length,
-          totalTokens: totalTokens
+          totalTokens: textTokens
         },
         // Daily breakdown by API type
         todayStats: {
