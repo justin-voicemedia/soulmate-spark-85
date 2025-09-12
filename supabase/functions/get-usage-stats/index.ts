@@ -31,16 +31,30 @@ serve(async (req) => {
     const today = now.toISOString().split('T')[0];
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-    // Fetch usage data
+    // Fetch usage data (no join; fetch companion names separately)
     const { data: usageData, error: usageError } = await supabaseClient
       .from('conversation_usage')
-      .select(`
-        *,
-        companions!companion_id(name)
-      `)
+      .select('*')
       .eq('user_id', userId);
 
     if (usageError) throw usageError;
+
+    // Build companion name map (no DB joins required)
+    const companionIds = Array.from(
+      new Set((usageData || []).map((s: any) => s.companion_id).filter((id: any) => !!id))
+    );
+    const companionNamesById = new Map<string, string>();
+    if (companionIds.length > 0) {
+      const { data: companionsData, error: companionsError } = await supabaseClient
+        .from('companions')
+        .select('id,name')
+        .in('id', companionIds);
+      if (companionsError) {
+        console.error('Failed to load companion names', companionsError);
+      } else {
+        companionsData?.forEach((c: any) => companionNamesById.set(c.id, c.name));
+      }
+    }
 
     // Fetch subscriber info for trial status
     const { data: subscriberData, error: subscriberError } = await supabaseClient
@@ -114,7 +128,7 @@ serve(async (req) => {
     // Companion breakdown
     const companionMap = new Map();
     usageData.forEach(session => {
-      const companionName = session.companions?.name || 'Unknown Companion';
+      const companionName = companionNamesById.get(session.companion_id) || 'Unknown Companion';
       const minutes = session.minutes_used || 0;
       
       if (companionMap.has(companionName)) {
