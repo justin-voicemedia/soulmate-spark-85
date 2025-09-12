@@ -6,6 +6,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Estimate tokens based on minutes and API type
+function estimateTokensFromMinutes(minutes: number, apiType: string): number {
+  if (apiType === 'voice') {
+    // Voice conversations typically use more tokens due to real-time processing
+    return Math.ceil(minutes * 1000);
+  } else {
+    // Text conversations
+    return Math.ceil(minutes * 500);
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
