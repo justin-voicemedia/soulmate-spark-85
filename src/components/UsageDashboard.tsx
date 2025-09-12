@@ -59,8 +59,8 @@ export const UsageDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const REALTIME_MINI_INPUT_COST_PER_MILLION = 2.50;
-  const REALTIME_MINI_OUTPUT_COST_PER_MILLION = 10.00;
+  const REALTIME_INPUT_COST_PER_MILLION = 32.00;
+  const REALTIME_OUTPUT_COST_PER_MILLION = 64.00;
   const TEXT_COST_PER_MILLION_TOKENS = 2.50;
 
   const fetchUsageData = async () => {
@@ -377,10 +377,10 @@ export const UsageDashboard: React.FC = () => {
           <div className="space-y-3">
             <div>
               <div className="flex justify-between items-start">
-                <span className="text-muted-foreground">OpenAI gpt-4o-mini-realtime</span>
+                <span className="text-muted-foreground">OpenAI gpt-4o-realtime</span>
                 <div className="text-right">
-                  <div className="font-semibold">${REALTIME_MINI_INPUT_COST_PER_MILLION.toFixed(2)} input</div>
-                  <div className="font-semibold">${REALTIME_MINI_OUTPUT_COST_PER_MILLION.toFixed(2)} output</div>
+                  <div className="font-semibold">${REALTIME_INPUT_COST_PER_MILLION.toFixed(2)} input</div>
+                  <div className="font-semibold">${REALTIME_OUTPUT_COST_PER_MILLION.toFixed(2)} output</div>
                   <div className="text-xs text-muted-foreground">per million tokens</div>
                 </div>
               </div>

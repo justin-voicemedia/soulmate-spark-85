@@ -122,7 +122,11 @@ You are having a voice conversation with someone who has chosen to talk with you
       }
 
       try {
-        openAISocket = new WebSocket("wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview", {
+        console.log("Attempting to connect to OpenAI Realtime API...");
+        console.log("Using model: gpt-4o-realtime-preview-2024-12-17");
+        console.log("API Key configured:", !!openAIApiKey);
+        
+        openAISocket = new WebSocket("wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17", {
           headers: {
             "Authorization": `Bearer ${openAIApiKey}`,
             "OpenAI-Beta": "realtime=v1"
@@ -172,18 +176,28 @@ You are having a voice conversation with someone who has chosen to talk with you
 
         openAISocket.onclose = (event) => {
           console.log("OpenAI WebSocket closed:", event.code, event.reason);
+          console.error("Close code:", event.code);
+          console.error("Close reason:", event.reason);
+          console.error("Was clean:", event.wasClean);
           endUsageTracking();
           socket.send(JSON.stringify({ 
             type: "error", 
             message: "OpenAI connection closed",
             code: event.code,
-            reason: event.reason
+            reason: event.reason,
+            wasClean: event.wasClean
           }));
         };
 
         openAISocket.onerror = (error) => {
           console.error("OpenAI WebSocket error:", error);
-          socket.send(JSON.stringify({ type: "error", message: "OpenAI connection error" }));
+          console.error("OpenAI API Key exists:", !!Deno.env.get("OPENAI_API_KEY"));
+          console.error("Model being used: gpt-4o-realtime-preview-2024-12-17");
+          socket.send(JSON.stringify({ 
+            type: "error", 
+            message: "OpenAI connection error",
+            details: "Check console for more details"
+          }));
         };
 
       } catch (error) {
