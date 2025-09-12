@@ -123,15 +123,11 @@ const AppContent = () => {
   };
 
   const handleBrowseCompanions = () => {
-    setCurrentState('companions');
+    setCurrentState('questionnaire');
   };
 
   const handleBuildCompanion = () => {
-    if (user) {
-      setCurrentState('builder');
-    } else {
-      setCurrentState('auth');
-    }
+    setCurrentState('questionnaire');
   };
 
   const handleSignIn = () => {
@@ -173,12 +169,7 @@ const AppContent = () => {
 
   const handleCompanionSelect = (companion: Companion) => {
     setSelectedCompanion(companion);
-    // Skip questionnaire for prebuilt companions - go directly to auth
-    if (user) {
-      setCurrentState('app');
-    } else {
-      setCurrentState('auth');
-    }
+    setCurrentState('auth');
   };
 
   const handleAuthSuccess = async () => {
