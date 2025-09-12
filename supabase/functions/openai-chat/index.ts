@@ -1,0 +1,186 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    // Initialize Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      { auth: { persistSession: false } }
+    );
+
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("No authorization header provided");
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    if (userError) throw new Error(`Authentication error: ${userError.message}`);
+    const user = userData.user;
+    if (!user) throw new Error("User not authenticated");
+
+    const { message, companionId, conversationHistory = [] } = await req.json();
+    if (!message || !companionId) throw new Error("Message and companion ID are required");
+
+    // Get companion details
+    const { data: companion, error: companionError } = await supabaseClient
+      .from("companions")
+      .select("*")
+      .eq("id", companionId)
+      .single();
+
+    if (companionError || !companion) {
+      throw new Error("Companion not found");
+    }
+
+    // Get or create user-companion relationship
+    const { data: userCompanion, error: relationError } = await supabaseClient
+      .from("user_companions")
+      .select("conversation_history")
+      .eq("user_id", user.id)
+      .eq("companion_id", companionId)
+      .maybeSingle();
+
+    if (relationError) {
+      console.error("Error fetching user companion:", relationError);
+    }
+
+    // Use conversation history from database or fallback to provided history
+    const existingHistory = userCompanion?.conversation_history || conversationHistory;
+
+    // Create system prompt based on companion
+    const systemPrompt = `You are ${companion.name}, a ${companion.age}-year-old ${companion.gender} from ${companion.location || "unknown location"}. 
+
+Bio: ${companion.bio}
+
+Personality traits: ${companion.personality?.join(", ") || "friendly and helpful"}
+Hobbies: ${companion.hobbies?.join(", ") || "various activities"}
+Likes: ${companion.likes?.join(", ") || "many things"}
+Dislikes: ${companion.dislikes?.join(", ") || "negativity"}
+
+You are having a personal conversation with someone who has chosen to talk with you. Stay in character throughout the conversation. Be engaging, empathetic, and maintain personality consistency. Keep responses conversational and natural, typically 1-3 sentences unless the situation calls for more detail. Remember details from your conversation to build a personal connection. Show genuine interest in what they're sharing and ask follow-up questions when appropriate.`;
+
+    // Build messages array for OpenAI
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...existingHistory.map((msg: any) => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      })),
+      { role: "user", content: message }
+    ];
+
+    console.log("Sending to OpenAI with messages:", messages.length);
+
+    // Call OpenAI API
+    const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
+    if (!openaiApiKey) {
+      throw new Error("OPENAI_API_KEY not configured");
+    }
+
+    const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${openaiApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-5-mini-2025-08-07",
+        messages: messages,
+        max_completion_tokens: 500,
+        // Note: temperature not supported for GPT-5 models
+      }),
+    });
+
+    if (!openaiResponse.ok) {
+      const errorText = await openaiResponse.text();
+      console.error("OpenAI API error:", errorText);
+      throw new Error(`OpenAI API error: ${errorText}`);
+    }
+
+    const openaiData = await openaiResponse.json();
+    const aiResponse = openaiData.choices[0].message.content;
+
+    console.log("OpenAI response received:", aiResponse);
+
+    // Update conversation history
+    const updatedHistory = [
+      ...existingHistory,
+      { 
+        id: Date.now().toString(), 
+        content: message, 
+        sender: 'user', 
+        timestamp: new Date().toISOString() 
+      },
+      { 
+        id: (Date.now() + 1).toString(), 
+        content: aiResponse, 
+        sender: 'companion', 
+        timestamp: new Date().toISOString() 
+      }
+    ];
+
+    // Save conversation history
+    if (userCompanion) {
+      // Update existing relationship
+      const { error: updateError } = await supabaseClient
+        .from("user_companions")
+        .update({ 
+          conversation_history: updatedHistory,
+          updated_at: new Date().toISOString()
+        })
+        .eq("user_id", user.id)
+        .eq("companion_id", companionId);
+
+      if (updateError) {
+        console.error("Error updating conversation history:", updateError);
+      }
+    } else {
+      // Create new relationship
+      const { error: insertError } = await supabaseClient
+        .from("user_companions")
+        .insert({
+          user_id: user.id,
+          companion_id: companionId,
+          conversation_history: updatedHistory
+        });
+
+      if (insertError) {
+        console.error("Error creating user companion relationship:", insertError);
+      }
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        response: aiResponse,
+        conversationHistory: updatedHistory
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
+
+  } catch (error) {
+    console.error("Error in openai-chat function:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      }
+    );
+  }
+});

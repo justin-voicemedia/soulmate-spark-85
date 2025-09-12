@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.image-proxy]
 verify_jwt = false
+
+[functions.openai-chat]
+verify_jwt = false

@@ -63,14 +63,7 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
   const { trialStatus, trackUsage, getRemainingMinutes, getRemainingDays, canUseService } = useTrialStatus();
   const [activeTab, setActiveTab] = useState<'chat' | 'profile' | 'settings' | 'voice'>('profile');
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: `Hi ${user?.user_metadata?.name || 'there'}! I'm ${companion.name}. I'm so excited to get to know you better. How are you feeling today?`,
-      sender: 'companion',
-      timestamp: new Date(Date.now() - 5 * 60 * 1000)
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
@@ -80,7 +73,7 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
     scrollToBottom();
   }, [messages]);
 
-  // Fetch user profile
+  // Fetch user profile and conversation history
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user) return;
@@ -94,8 +87,54 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
       setUserProfile(data);
     };
 
+    const loadConversationHistory = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('user_companions')
+          .select('conversation_history')
+          .eq('user_id', user.id)
+          .eq('companion_id', companion.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error loading conversation history:', error);
+          return;
+        }
+
+        if (data?.conversation_history && Array.isArray(data.conversation_history)) {
+          const history = data.conversation_history.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }));
+          setMessages(history.length > 0 ? history : [
+            {
+              id: '1',
+              content: `Hi ${user?.user_metadata?.name || 'there'}! I'm ${companion.name}. I'm so excited to get to know you better. How are you feeling today?`,
+              sender: 'companion',
+              timestamp: new Date()
+            }
+          ]);
+        } else {
+          // Set default welcome message if no history
+          setMessages([
+            {
+              id: '1',
+              content: `Hi ${user?.user_metadata?.name || 'there'}! I'm ${companion.name}. I'm so excited to get to know you better. How are you feeling today?`,
+              sender: 'companion',
+              timestamp: new Date()
+            }
+          ]);
+        }
+      } catch (error) {
+        console.error('Error loading conversation history:', error);
+      }
+    };
+
     fetchProfile();
-  }, [user]);
+    loadConversationHistory();
+  }, [user, companion.id]);
 
   useEffect(() => {
     // Start tracking session time when chat tab is opened
@@ -145,7 +184,7 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!canUseService()) {
       toast.error("Trial expired or out of minutes. Please upgrade to continue.");
       onUpgrade?.();
@@ -161,27 +200,41 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
       };
 
       setMessages(prev => [...prev, userMessage]);
+      const messageText = newMessage;
       setNewMessage('');
 
-      // Simulate AI response
-      setTimeout(() => {
-        const responses = [
-          "That's really interesting! Tell me more about that.",
-          "I love hearing about your experiences. How did that make you feel?",
-          "You have such a unique perspective on things. I really appreciate that about you.",
-          "I've been thinking about what you said earlier. It really resonates with me.",
-          "You always know how to make me smile! What's something that made you happy today?"
-        ];
-        
-        const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: responses[Math.floor(Math.random() * responses.length)],
-          sender: 'companion',
-          timestamp: new Date()
-        };
+      try {
+        // Call OpenAI chat function
+        const { data, error } = await supabase.functions.invoke('openai-chat', {
+          body: {
+            message: messageText,
+            companionId: companion.id,
+            conversationHistory: messages
+          }
+        });
 
-        setMessages(prev => [...prev, aiMessage]);
-      }, 1000 + Math.random() * 2000);
+        if (error) throw error;
+
+        if (data.success) {
+          const aiMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            content: data.response,
+            sender: 'companion',
+            timestamp: new Date()
+          };
+
+          setMessages(prev => [...prev, aiMessage]);
+        } else {
+          throw new Error('Failed to get AI response');
+        }
+      } catch (error) {
+        console.error('Chat error:', error);
+        toast.error('Failed to send message. Please try again.');
+        
+        // Remove the user message on error
+        setMessages(prev => prev.filter(msg => msg.id !== userMessage.id));
+        setNewMessage(messageText); // Restore the message
+      }
     }
   };
 
