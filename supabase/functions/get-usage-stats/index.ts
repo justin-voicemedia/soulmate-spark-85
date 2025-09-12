@@ -63,9 +63,9 @@ serve(async (req) => {
       if (apiType === 'voice') {
         // If no tokens recorded, estimate from minutes using speech formula
         const effectiveTokens = tokensUsed || (session.minutes_used * 372); // 372 tokens/minute estimate
-        // OpenAI Realtime API: $32/million input tokens + $64/million output tokens
+        // OpenAI gpt-4o-mini-realtime-preview: $2.50/million input tokens + $10.00/million output tokens
         // Assuming roughly 50/50 split for conversational AI
-        const avgCostPerMillionTokens = (32 + 64) / 2; // $48 per million tokens average
+        const avgCostPerMillionTokens = (2.50 + 10.00) / 2; // $6.25 per million tokens average
         return (effectiveTokens / 1000000) * avgCostPerMillionTokens;
       } else if (apiType === 'text') {
         return (tokensUsed / 1000000) * 2.50; // GPT-5-mini cost per million tokens

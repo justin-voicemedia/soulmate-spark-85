@@ -122,7 +122,7 @@ You are having a voice conversation with someone who has chosen to talk with you
       }
 
       try {
-        openAISocket = new WebSocket("wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01", {
+        openAISocket = new WebSocket("wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview", {
           headers: {
             "Authorization": `Bearer ${openAIApiKey}`,
             "OpenAI-Beta": "realtime=v1"
