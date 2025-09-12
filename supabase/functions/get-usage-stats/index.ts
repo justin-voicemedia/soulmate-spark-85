@@ -36,7 +36,7 @@ serve(async (req) => {
       .from('conversation_usage')
       .select(`
         *,
-        companions(name)
+        companions!companion_id(name)
       `)
       .eq('user_id', userId);
 
