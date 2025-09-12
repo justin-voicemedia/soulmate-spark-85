@@ -39,15 +39,27 @@ serve(async (req) => {
 
     if (usageError) throw usageError;
 
+    // Filter out likely erroneous legacy entries (bursts of 1-min sessions with near-zero duration)
+    const filteredUsageData = (usageData || []).filter((s: any) => {
+      const minutes = s.minutes_used || 0;
+      if (!s.session_end) return minutes > 0;
+      const start = new Date(s.session_start).getTime();
+      const end = new Date(s.session_end).getTime();
+      const durationMs = Math.abs(end - start);
+      // Drop if recorded as <= 1 minute but lasted < 15s (likely legacy 'track' spam)
+      if (minutes <= 1 && durationMs < 15000) return false;
+      return true;
+    });
+
     console.log('Usage data retrieved:', {
-      count: usageData?.length || 0,
-      firstFew: usageData?.slice(0, 3),
-      companionIds: usageData?.map(s => s.companion_id)
+      total: usageData?.length || 0,
+      filtered: filteredUsageData.length,
+      sample: filteredUsageData.slice(0, 3),
     });
 
     // Build companion name map (no DB joins required)
     const companionIds = Array.from(
-      new Set((usageData || []).map((s: any) => s.companion_id).filter((id: any) => !!id))
+      new Set((filteredUsageData || []).map((s: any) => s.companion_id).filter((id: any) => !!id))
     );
     const companionNamesById = new Map<string, string>();
     if (companionIds.length > 0) {
@@ -95,14 +107,14 @@ serve(async (req) => {
     };
 
     // Calculate usage statistics
-    const totalMinutes = usageData.reduce((sum, session) => sum + (session.minutes_used || 0), 0);
-    const totalCost = usageData.reduce((sum, session) => sum + calculateCost(session), 0);
-    const sessionsCount = usageData.length;
+    const totalMinutes = filteredUsageData.reduce((sum, session) => sum + (session.minutes_used || 0), 0);
+    const totalCost = filteredUsageData.reduce((sum, session) => sum + calculateCost(session), 0);
+    const sessionsCount = filteredUsageData.length;
     const avgSessionLength = sessionsCount > 0 ? totalMinutes / sessionsCount : 0;
     
     // Calculate breakdown by API type
-    const voiceSessions = usageData.filter(s => (s.api_type || 'voice') === 'voice');
-    const textSessions = usageData.filter(s => s.api_type === 'text');
+    const voiceSessions = filteredUsageData.filter(s => (s.api_type || 'voice') === 'voice');
+    const textSessions = filteredUsageData.filter(s => s.api_type === 'text');
     
     const voiceMinutes = voiceSessions.reduce((sum, s) => sum + (s.minutes_used || 0), 0);
     const voiceCost = voiceSessions.reduce((sum, s) => sum + calculateCost(s), 0);
@@ -115,7 +127,7 @@ serve(async (req) => {
     const textTokens = textSessions.reduce((sum, s) => sum + (s.tokens_used || 0), 0);
 
     // Today's usage
-    const todayUsage = usageData.filter(session => 
+    const todayUsage = filteredUsageData.filter(session => 
       session.session_start.startsWith(today)
     );
     const todayMinutes = todayUsage.reduce((sum, session) => sum + (session.minutes_used || 0), 0);
@@ -124,7 +136,7 @@ serve(async (req) => {
     const todayTextMinutes = todayUsage.filter(s => s.api_type === 'text').reduce((sum, s) => sum + (s.minutes_used || 0), 0);
 
     // This month's usage
-    const monthUsage = usageData.filter(session => 
+    const monthUsage = filteredUsageData.filter(session => 
       session.session_start >= monthStart
     );
     const thisMonthMinutes = monthUsage.reduce((sum, session) => sum + (session.minutes_used || 0), 0);
@@ -132,9 +144,9 @@ serve(async (req) => {
     const monthVoiceMinutes = monthUsage.filter(s => (s.api_type || 'voice') === 'voice').reduce((sum, s) => sum + (s.minutes_used || 0), 0);
     const monthTextMinutes = monthUsage.filter(s => s.api_type === 'text').reduce((sum, s) => sum + (s.minutes_used || 0), 0);
 
-    // Companion breakdown - use ALL usage data, not just month
+    // Companion breakdown - based on filtered data (deduplicated)
     const companionMap = new Map();
-    usageData.forEach(session => {
+    filteredUsageData.forEach(session => {
       const companionName = companionNamesById.get(session.companion_id) || `Companion ${session.companion_id?.slice(0, 8)}`;
       const minutes = session.minutes_used || 0;
       const cost = calculateCost(session);
@@ -156,7 +168,7 @@ serve(async (req) => {
     });
 
     const companionBreakdown = Array.from(companionMap.values())
-      .filter(companion => companion.minutes > 0) // Only show companions with actual usage
+      .filter(companion => companion.minutes > 0)
       .sort((a, b) => b.minutes - a.minutes);
 
     // Trial information

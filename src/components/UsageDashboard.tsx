@@ -187,44 +187,43 @@ export const UsageDashboard: React.FC = () => {
         </h3>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Minutes</p>
-                <p className="text-2xl font-bold">{usage.totalMinutes}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Minutes (all time)</p>
+                  <p className="text-2xl font-bold">{usage.totalMinutes}</p>
+                </div>
+                <Clock className="h-8 w-8 text-blue-600" />
               </div>
-              <Clock className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Sessions</p>
-                <p className="text-2xl font-bold">{usage.sessionsCount}</p>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Total Sessions</p>
+                  <p className="text-2xl font-bold">{usage.sessionsCount}</p>
+                </div>
+                <Phone className="h-8 w-8 text-purple-600" />
               </div>
-              <Phone className="h-8 w-8 text-purple-600" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Avg Session</p>
-                <p className="text-2xl font-bold">{usage.avgSessionLength.toFixed(1)}m</p>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Avg Session</p>
+                  <p className="text-2xl font-bold">{usage.avgSessionLength.toFixed(1)}m</p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-orange-600" />
               </div>
-              <TrendingUp className="h-8 w-8 text-orange-600" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
 
       {/* API Type Breakdown */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -328,8 +327,8 @@ export const UsageDashboard: React.FC = () => {
       {usage.companionBreakdown.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Usage by Companion</CardTitle>
-            <CardDescription>See how much time you've spent with each companion</CardDescription>
+            <CardTitle className="text-lg">Usage by Companion (current month)</CardTitle>
+            <CardDescription>Minutes spent with each companion this month</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
