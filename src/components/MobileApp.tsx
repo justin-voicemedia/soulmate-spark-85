@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTrialStatus } from "@/hooks/useTrialStatus";
-import { VoiceWidget } from "@/components/VoiceWidget";
+import { OpenAIVoiceWidget } from "@/components/OpenAIVoiceWidget";
 import { toast } from "sonner";
 
 interface MobileAppProps {
@@ -609,9 +609,9 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
   const renderVoice = () => (
     <div className="flex flex-col h-full p-4">
       <div className="flex-1 flex items-center justify-center">
-        <VoiceWidget 
-          companionId={companion.id}
-          companionName={companion.name}
+        <OpenAIVoiceWidget 
+          companionId={companion.id} 
+          companionName={companion.name} 
         />
       </div>
     </div>
