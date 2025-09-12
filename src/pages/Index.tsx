@@ -173,7 +173,12 @@ const AppContent = () => {
 
   const handleCompanionSelect = (companion: Companion) => {
     setSelectedCompanion(companion);
-    setCurrentState('auth');
+    // Skip questionnaire for prebuilt companions - go directly to auth
+    if (user) {
+      setCurrentState('app');
+    } else {
+      setCurrentState('auth');
+    }
   };
 
   const handleAuthSuccess = async () => {
