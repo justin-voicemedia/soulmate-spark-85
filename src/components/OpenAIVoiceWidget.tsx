@@ -305,7 +305,7 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
           )}
         </div>
 
-        <p className="text-xs text-muted-foreground">Voice usage is billed per token (input + output).</p>
+        <p className="text-xs text-muted-foreground">Voice usage is billed per minute.</p>
       </div>
     </Card>
   );
