@@ -238,7 +238,7 @@ export const VoiceWidget: React.FC<VoiceWidgetProps> = ({
           <img 
             src={companionImage} 
             alt={companionName}
-            className="w-32 h-32 rounded-full object-cover border-4 border-primary/30 shadow-lg"
+            className="w-48 h-48 rounded-full object-cover border-4 border-primary/30 shadow-lg"
             onError={(e) => {
               e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${companionName}`;
             }}
