@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Sparkles, Trash2, Image as ImageIcon, Upload } from 'lucide-react';
 import { useImageGeneration } from '@/hooks/useImageGeneration';
+import { VoiceSelector } from '@/components/VoiceSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -52,6 +53,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
   const [creating, setCreating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [selectedVoice, setSelectedVoice] = useState<string>('21m00Tcm4TlvDq8ikWAM');
   
   const [formData, setFormData] = useState({
     name: editingCompanion?.name || '',
@@ -66,12 +68,34 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
     dislikes: editingCompanion?.dislikes || [] as string[]
   });
 
-  // Set initial image if editing
+  // Set initial image and load companion's voice if editing
   useEffect(() => {
     if (editingCompanion?.image_url) {
       setGeneratedImageUrl(editingCompanion.image_url);
     }
-  }, [editingCompanion]);
+    
+    // Load companion's voice if editing
+    const loadCompanionVoice = async () => {
+      if (!editingCompanion || !user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('user_companions')
+          .select('voice_id')
+          .eq('user_id', user.id)
+          .eq('companion_id', editingCompanion.id)
+          .maybeSingle();
+          
+        if (!error && data?.voice_id) {
+          setSelectedVoice(data.voice_id);
+        }
+      } catch (error) {
+        console.error('Error loading companion voice:', error);
+      }
+    };
+    
+    loadCompanionVoice();
+  }, [editingCompanion, user]);
 
   const handlePersonalityChange = (trait: string, checked: boolean) => {
     setFormData(prev => ({
@@ -257,6 +281,16 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
 
         if (error) throw error;
         companion = data;
+        
+        // Update voice selection for existing companion
+        await supabase
+          .from('user_companions')
+          .upsert({
+            user_id: user.id,
+            companion_id: companion.id,
+            voice_id: selectedVoice
+          });
+          
         toast.success(`${formData.name} has been updated successfully!`);
       } else {
         // Create new companion
@@ -268,6 +302,16 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
 
         if (error) throw error;
         companion = data;
+        
+        // Set voice selection for new companion
+        await supabase
+          .from('user_companions')
+          .upsert({
+            user_id: user.id,
+            companion_id: companion.id,
+            voice_id: selectedVoice
+          });
+          
         toast.success(`${formData.name} has been created successfully!`);
       }
 
@@ -460,6 +504,16 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* Voice Selection */}
+              <div>
+                <Label>Voice</Label>
+                <VoiceSelector
+                  value={selectedVoice}
+                  onValueChange={setSelectedVoice}
+                  disabled={creating || uploading}
+                />
               </div>
 
               {/* Image Generation Section */}

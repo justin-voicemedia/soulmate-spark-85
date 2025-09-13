@@ -15,25 +15,11 @@ interface VoiceWidgetProps {
   companionImage?: string;
 }
 
-// Supported voices per OpenAI docs
-const OPENAI_VOICES = [
-  { id: 'alloy', name: 'Alloy', description: 'Balanced and natural' },
-  { id: 'ash', name: 'Ash', description: 'Calm and conversational' },
-  { id: 'ballad', name: 'Ballad', description: 'Warm and expressive' },
-  { id: 'coral', name: 'Coral', description: 'Friendly and bright' },
-  { id: 'echo', name: 'Echo', description: 'Clear and articulate' },
-  { id: 'sage', name: 'Sage', description: 'Confident and steady' },
-  { id: 'shimmer', name: 'Shimmer', description: 'Gentle and soothing' },
-  { id: 'verse', name: 'Verse', description: 'Engaging and upbeat' },
-  { id: 'marin', name: 'Marin', description: 'Natural and conversational' },
-  { id: 'cedar', name: 'Cedar', description: 'Warm and articulate' },
-];
-
 export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, companionName, companionImage }) => {
   const { user } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [selectedVoice, setSelectedVoice] = useState('alloy');
+  const [companionVoice, setCompanionVoice] = useState('alloy');
   const [sessionDuration, setSessionDuration] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -42,6 +28,30 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
   const sessionIdRef = useRef<string | null>(null);
   const sessionStartTimeRef = useRef<Date | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Load companion's voice setting
+  useEffect(() => {
+    const loadCompanionVoice = async () => {
+      if (!user || !companionId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('user_companions')
+          .select('voice_id')
+          .eq('user_id', user.id)
+          .eq('companion_id', companionId)
+          .maybeSingle();
+          
+        if (!error && data?.voice_id) {
+          setCompanionVoice(data.voice_id);
+        }
+      } catch (error) {
+        console.error('Error loading companion voice:', error);
+      }
+    };
+    
+    loadCompanionVoice();
+  }, [user, companionId]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -77,7 +87,7 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
 
       // Connect via WebRTC using ephemeral token
       chatRef.current = new RealtimeChat(handleMessage);
-      await chatRef.current.init(selectedVoice, instructions, 'gpt-4o-mini-realtime-preview');
+      await chatRef.current.init(companionVoice, instructions, 'gpt-4o-mini-realtime-preview');
 
       setIsConnecting(false);
       setIsConnected(true);
@@ -268,29 +278,6 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
           <Volume2 className="h-5 w-5 text-primary" />
           <h3 className="text-lg font-semibold">Voice Chat with {companionName}</h3>
         </div>
-
-        {!isConnected && !isConnecting && (
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Choose Voice</label>
-              <Select value={selectedVoice} onValueChange={setSelectedVoice}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {OPENAI_VOICES.map((voice) => (
-                    <SelectItem key={voice.id} value={voice.id}>
-                      <div>
-                        <div className="font-medium">{voice.name}</div>
-                        <div className="text-xs text-muted-foreground">{voice.description}</div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
 
         <div className="space-y-2">
           {getConnectionStatusBadge()}

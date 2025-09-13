@@ -10,6 +10,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useImageGeneration } from "@/hooks/useImageGeneration";
 import { useCompanionSelection } from "@/hooks/useCompanionSelection";
+import { VoiceSelector } from "@/components/VoiceSelector";
 import { toast } from "sonner";
 
 interface Companion {
@@ -61,6 +62,7 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [selectedHobbies, setSelectedHobbies] = useState<string[]>([]);
   const [selectedPersonality, setSelectedPersonality] = useState<string[]>([]);
+  const [selectedVoiceForCompanion, setSelectedVoiceForCompanion] = useState<string>('21m00Tcm4TlvDq8ikWAM');
 
   useEffect(() => {
     loadCompanions();
@@ -214,7 +216,7 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
 
   const handleConfirmSelection = async () => {
     if (selectedCompanion) {
-      await selectCompanion(selectedCompanion.id);
+      await selectCompanion(selectedCompanion.id, selectedVoiceForCompanion);
       onSelectCompanion(selectedCompanion);
     }
   };
@@ -363,6 +365,15 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
                             </Badge>
                           ))}
                         </div>
+                      </div>
+                      
+                      <div>
+                        <h3 className="font-semibold mb-2">Voice</h3>
+                        <VoiceSelector
+                          value={selectedVoiceForCompanion}
+                          onValueChange={setSelectedVoiceForCompanion}
+                          disabled={isCreatingAgent}
+                        />
                       </div>
                     </div>
                   </div>
