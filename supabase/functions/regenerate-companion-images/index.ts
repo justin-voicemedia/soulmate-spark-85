@@ -60,7 +60,7 @@ serve(async (req) => {
     let successCount = 0;
     let failureCount = 0;
 
-    // Process companions in batches to avoid overwhelming the API
+    // Process companions sequentially to avoid overwhelming the API
     for (const companion of companions) {
       try {
         console.log(`Processing ${companion.name}...`);
@@ -85,6 +85,7 @@ serve(async (req) => {
             prompt: prompt,
             size: '1024x1024',
             quality: 'high',
+            output_format: 'png',
             n: 1
           }),
         });
@@ -97,7 +98,7 @@ serve(async (req) => {
         }
 
         const imageData = await imageResponse.json();
-        const imageBase64 = imageData.data[0].b64_json;
+        const imageBase64 = imageData.data?.[0]?.b64_json;
 
         if (!imageBase64) {
           console.error(`No image data received for ${companion.name}`);
@@ -105,21 +106,22 @@ serve(async (req) => {
           continue;
         }
 
-        // Convert base64 to Blob (PNG)
+        // Convert base64 -> Uint8Array and wrap in a File for multipart upload
         const binaryStr = atob(imageBase64);
         const bytes = new Uint8Array(binaryStr.length);
         for (let i = 0; i < binaryStr.length; i++) {
           bytes[i] = binaryStr.charCodeAt(i);
         }
-        const blob = new Blob([bytes.buffer], { type: 'image/png' });
+        const fileName = `companion-${companion.id}-${Date.now()}.png`;
+        const file = new File([bytes], fileName, { type: 'image/png' });
         
         // Upload to Supabase storage
-        const fileName = `companion-${companion.id}-${Date.now()}.png`;
         const { data: uploadData, error: uploadError } = await supabaseClient.storage
           .from('companion-images')
-          .upload(fileName, blob, {
+          .upload(fileName, file, {
             contentType: 'image/png',
-            upsert: false
+            cacheControl: '3600',
+            upsert: false,
           });
 
         if (uploadError) {
@@ -174,7 +176,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in regenerate-companion-images function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: (error as Error).message }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
