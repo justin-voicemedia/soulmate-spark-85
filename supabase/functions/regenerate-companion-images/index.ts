@@ -105,14 +105,19 @@ serve(async (req) => {
           continue;
         }
 
-        // Convert base64 to blob
-        const imageBuffer = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
+        // Convert base64 to Blob (PNG)
+        const binaryStr = atob(imageBase64);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) {
+          bytes[i] = binaryStr.charCodeAt(i);
+        }
+        const blob = new Blob([bytes.buffer], { type: 'image/png' });
         
         // Upload to Supabase storage
         const fileName = `companion-${companion.id}-${Date.now()}.png`;
         const { data: uploadData, error: uploadError } = await supabaseClient.storage
           .from('companion-images')
-          .upload(fileName, imageBuffer, {
+          .upload(fileName, blob, {
             contentType: 'image/png',
             upsert: false
           });
