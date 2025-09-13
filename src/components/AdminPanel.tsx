@@ -30,6 +30,7 @@ export const AdminPanel = () => {
   const [companions, setCompanions] = useState<Companion[]>([]);
   const [companionsLoading, setCompanionsLoading] = useState(false);
   const [generatingImages, setGeneratingImages] = useState(false);
+  const [regeneratingImages, setRegeneratingImages] = useState(false);
   const [selectedCompanions, setSelectedCompanions] = useState<string[]>([]);
   const [uploadingImages, setUploadingImages] = useState<string[]>([]);
   const [editingCompanions, setEditingCompanions] = useState<string[]>([]);
@@ -307,6 +308,33 @@ export const AdminPanel = () => {
     }
   };
 
+  const handleRegenerateBrokenImages = async () => {
+    if (!confirm('This will regenerate all broken companion images (temporary imgen.x.ai URLs) and may take several minutes. Continue?')) {
+      return;
+    }
+
+    setRegeneratingImages(true);
+    
+    try {
+      toast.info('Starting image regeneration... This may take a few minutes.');
+      
+      const { data, error } = await supabase.functions.invoke('regenerate-companion-images');
+      
+      if (error) throw error;
+      
+      toast.success(`Image regeneration completed! Updated ${data.updated} companions, ${data.failed} failed.`);
+      
+      // Refresh the companions list to show new images
+      await loadCompanions();
+      
+    } catch (error) {
+      console.error('Error regenerating images:', error);
+      toast.error('Failed to regenerate companion images');
+    } finally {
+      setRegeneratingImages(false);
+    }
+  };
+
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     const companionId = event.target.getAttribute('data-companion-id');
@@ -371,25 +399,44 @@ export const AdminPanel = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">
-                <div className="flex gap-2 flex-wrap">
-                  <Button 
-                    onClick={loadCompanions} 
-                    disabled={companionsLoading}
-                    variant="outline"
-                  >
-                    <RefreshCw className={`w-4 h-4 mr-2 ${companionsLoading ? 'animate-spin' : ''}`} />
-                    Load Companions ({companions.length})
-                  </Button>
-                  
-                  <Button 
-                    onClick={generateNewImagesOnly}
-                    disabled={generatingImages || companions.length === 0}
-                    variant="secondary"
-                  >
-                    <Sparkles className={`w-4 h-4 mr-2 ${generatingImages ? 'animate-pulse' : ''}`} />
-                    Generate New Images Only ({companions.filter(hasPlaceholderImage).length})
-                  </Button>
-                </div>
+                 <div className="flex gap-2 flex-wrap">
+                   <Button 
+                     onClick={loadCompanions} 
+                     disabled={companionsLoading}
+                     variant="outline"
+                   >
+                     <RefreshCw className={`w-4 h-4 mr-2 ${companionsLoading ? 'animate-spin' : ''}`} />
+                     Load Companions ({companions.length})
+                   </Button>
+                   
+                   <Button 
+                     onClick={generateNewImagesOnly}
+                     disabled={generatingImages || companions.length === 0}
+                     variant="secondary"
+                   >
+                     <Sparkles className={`w-4 h-4 mr-2 ${generatingImages ? 'animate-pulse' : ''}`} />
+                     Generate New Images Only ({companions.filter(hasPlaceholderImage).length})
+                   </Button>
+                   
+                   <Button 
+                     onClick={handleRegenerateBrokenImages}
+                     disabled={generatingImages || regeneratingImages || companions.length === 0}
+                     variant="outline"
+                     className="border-orange-200 text-orange-700 hover:bg-orange-50"
+                   >
+                     {regeneratingImages ? (
+                       <>
+                         <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                         Regenerating...
+                       </>
+                     ) : (
+                       <>
+                         <RefreshCw className="w-4 h-4 mr-2" />
+                         Fix Broken Images
+                       </>
+                     )}
+                   </Button>
+                 </div>
 
                 {companions.length > 0 && (
                   <div className="flex gap-2 flex-wrap">
