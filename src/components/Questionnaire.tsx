@@ -17,12 +17,27 @@ interface QuestionnaireData {
   name: string;
 }
 
+interface Companion {
+  id: string;
+  name: string;
+  age: number;
+  gender: string;
+  bio: string;
+  hobbies: string[];
+  personality: string[];
+  likes: string[];
+  dislikes: string[];
+  image_url: string;
+  location: string;
+}
+
 interface QuestionnaireProps {
   onBack: () => void;
   onComplete: (data: QuestionnaireData) => void;
+  selectedCompanion?: Companion | null;
 }
 
-export const Questionnaire = ({ onBack, onComplete }: QuestionnaireProps) => {
+export const Questionnaire = ({ onBack, onComplete, selectedCompanion }: QuestionnaireProps) => {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<QuestionnaireData>({
     companionType: "",
@@ -68,6 +83,73 @@ export const Questionnaire = ({ onBack, onComplete }: QuestionnaireProps) => {
   const renderStep = () => {
     switch (step) {
       case 1:
+        if (selectedCompanion) {
+          return (
+            <Card className="w-full max-w-2xl mx-auto">
+              <CardHeader>
+                <div className="text-center space-y-4">
+                  <div className="mx-auto w-24 h-24 rounded-full overflow-hidden">
+                    <img 
+                      src={selectedCompanion.image_url} 
+                      alt={selectedCompanion.name}
+                      className="w-full h-full object-contain bg-muted"
+                      onError={(e) => {
+                        e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedCompanion.name}`;
+                      }}
+                    />
+                  </div>
+                  <CardTitle className="text-2xl">How would you like to connect with {selectedCompanion.name}?</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup value={data.companionType} onValueChange={(value) => updateData('companionType', value)}>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2 p-4 rounded-lg border hover:bg-secondary cursor-pointer">
+                      <RadioGroupItem value="casual" id="casual" />
+                      <Label htmlFor="casual" className="cursor-pointer flex-1">
+                        <div>
+                          <h3 className="font-semibold">Casual Friend</h3>
+                          <p className="text-muted-foreground">Light conversations, fun chats, share daily moments with {selectedCompanion.name}</p>
+                        </div>
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 p-4 rounded-lg border hover:bg-secondary cursor-pointer">
+                      <RadioGroupItem value="romantic" id="romantic" />
+                      <Label htmlFor="romantic" className="cursor-pointer flex-1">
+                        <div>
+                          <h3 className="font-semibold">Romantic Partner</h3>
+                          <p className="text-muted-foreground">Build a deep emotional connection and romantic bond with {selectedCompanion.name}</p>
+                        </div>
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 p-4 rounded-lg border hover:bg-secondary cursor-pointer">
+                      <RadioGroupItem value="spiritual" id="spiritual" />
+                      <Label htmlFor="spiritual" className="cursor-pointer flex-1">
+                        <div>
+                          <h3 className="font-semibold">Spiritual Guide</h3>
+                          <p className="text-muted-foreground">Explore mindfulness and spiritual growth together with {selectedCompanion.name}</p>
+                        </div>
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 p-4 rounded-lg border hover:bg-secondary cursor-pointer">
+                      <RadioGroupItem value="intimate" id="intimate" />
+                      <Label htmlFor="intimate" className="cursor-pointer flex-1">
+                        <div>
+                          <h3 className="font-semibold">Intimate Companion</h3>
+                          <p className="text-muted-foreground">Share intimate moments and adult conversations with {selectedCompanion.name} (18+)</p>
+                        </div>
+                      </Label>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </CardContent>
+            </Card>
+          );
+        }
+        
         return (
           <Card className="w-full max-w-2xl mx-auto">
             <CardHeader>
@@ -367,7 +449,7 @@ export const Questionnaire = ({ onBack, onComplete }: QuestionnaireProps) => {
         <div className="max-w-2xl mx-auto flex justify-between">
           <Button variant="outline" onClick={handlePrevious}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            {step === 1 ? "Back to Home" : "Previous"}
+            {step === 1 ? (selectedCompanion ? "Back to Browse" : "Back to Home") : "Previous"}
           </Button>
           
           <Button onClick={handleNext} disabled={!canContinue()}>

@@ -112,7 +112,7 @@ export const LandingPage = ({ onStartQuestionnaire, onBrowseCompanions, onBuildC
               Start Questionnaire
             </Button>
             <Button size="lg" variant="outline" onClick={onBrowseCompanions} className="text-lg px-8 py-6">
-              Browse Prebuilt Companions
+              Browse & Choose Companions
             </Button>
             <Button size="lg" variant="secondary" onClick={onBuildCompanion} className="text-lg px-8 py-6">
               Build Your Own

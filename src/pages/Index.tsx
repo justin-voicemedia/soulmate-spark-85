@@ -123,7 +123,7 @@ const AppContent = () => {
   };
 
   const handleBrowseCompanions = () => {
-    setCurrentState('questionnaire');
+    setCurrentState('companions');
   };
 
   const handleBuildCompanion = () => {
@@ -137,8 +137,15 @@ const AppContent = () => {
   const handleQuestionnaireComplete = async (data: QuestionnaireData) => {
     setQuestionnaireData(data);
     
+    // If we have a selected companion (from browsing), proceed to auth
+    // If not, show matching results as before
+    if (selectedCompanion) {
+      setCurrentState('auth');
+      return;
+    }
+    
     try {
-      // Fetch all prebuilt companions
+      // Fetch all prebuilt companions for matching
       const { data: companions, error } = await supabase
         .from('companions')
         .select('*')
@@ -169,7 +176,7 @@ const AppContent = () => {
 
   const handleCompanionSelect = (companion: Companion) => {
     setSelectedCompanion(companion);
-    setCurrentState('auth');
+    setCurrentState('questionnaire');
   };
 
   const handleAuthSuccess = async () => {
@@ -268,8 +275,9 @@ const AppContent = () => {
   if (currentState === 'questionnaire') {
     return (
       <Questionnaire
-        onBack={handleBackToLanding}
+        onBack={selectedCompanion ? () => setCurrentState('companions') : handleBackToLanding}
         onComplete={handleQuestionnaireComplete}
+        selectedCompanion={selectedCompanion}
       />
     );
   }
