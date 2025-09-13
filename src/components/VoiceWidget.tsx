@@ -26,7 +26,7 @@ export const VoiceWidget: React.FC<VoiceWidgetProps> = ({
   companionImage 
 }) => {
   const { user } = useAuth();
-  const [companionVoice, setCompanionVoice] = useState<string>('21m00Tcm4TlvDq8ikWAM');
+  const [companionVoice, setCompanionVoice] = useState<string>('alloy');
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionDuration, setSessionDuration] = useState(0);

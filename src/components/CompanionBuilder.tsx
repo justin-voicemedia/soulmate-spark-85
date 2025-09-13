@@ -53,7 +53,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
   const [creating, setCreating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
-  const [selectedVoice, setSelectedVoice] = useState<string>('21m00Tcm4TlvDq8ikWAM');
+  const [selectedVoice, setSelectedVoice] = useState<string>('alloy');
   
   const [formData, setFormData] = useState({
     name: editingCompanion?.name || '',

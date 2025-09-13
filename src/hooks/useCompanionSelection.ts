@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 export const useCompanionSelection = () => {
   const { user } = useAuth();
   const [selectedCompanion, setSelectedCompanion] = useState<string | null>(null);
-  const [selectedVoice, setSelectedVoice] = useState<string>('21m00Tcm4TlvDq8ikWAM'); // Default to Rachel
+  const [selectedVoice, setSelectedVoice] = useState<string>('alloy'); // Default to Rachel
   const [isCreatingAgent, setIsCreatingAgent] = useState(false);
 
   const selectCompanion = async (companionId: string, voiceId?: string) => {

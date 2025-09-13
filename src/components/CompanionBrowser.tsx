@@ -62,7 +62,7 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
   const [selectedLocation, setSelectedLocation] = useState('all');
   const [selectedHobbies, setSelectedHobbies] = useState<string[]>([]);
   const [selectedPersonality, setSelectedPersonality] = useState<string[]>([]);
-  const [selectedVoiceForCompanion, setSelectedVoiceForCompanion] = useState<string>('21m00Tcm4TlvDq8ikWAM');
+  const [selectedVoiceForCompanion, setSelectedVoiceForCompanion] = useState<string>('alloy');
 
   useEffect(() => {
     loadCompanions();
