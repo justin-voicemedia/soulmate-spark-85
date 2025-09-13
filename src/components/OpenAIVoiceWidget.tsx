@@ -43,7 +43,9 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
           .maybeSingle();
           
         if (!error && data?.voice_id) {
-          setCompanionVoice(data.voice_id);
+          const v = data.voice_id as string;
+          const allowed = ['alloy','ash','ballad','coral','echo','sage','shimmer','verse','marin','cedar'];
+          setCompanionVoice(allowed.includes(v) ? v : 'alloy');
         }
       } catch (error) {
         console.error('Error loading companion voice:', error);

@@ -46,7 +46,7 @@ serve(async (req) => {
     // Check if user-companion relationship already exists with agent
     const { data: existingRelation, error: relationError } = await supabaseClient
       .from("user_companions")
-      .select("vapi_agent_id")
+      .select("vapi_agent_id, voice_id")
       .eq("user_id", user.id)
       .eq("companion_id", companionId)
       .maybeSingle();
@@ -55,8 +55,8 @@ serve(async (req) => {
       console.error("Error checking existing relation:", relationError);
     }
 
-    // If agent already exists, return it
-    if (existingRelation?.vapi_agent_id) {
+    // If agent exists and no voice change requested, return it
+    if (existingRelation?.vapi_agent_id && (!voiceId || voiceId === existingRelation.voice_id)) {
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -88,22 +88,21 @@ Dislikes: ${companion.dislikes?.join(", ") || "negativity"}
 
 Stay in character throughout the conversation. Be engaging, empathetic, and maintain personality consistency. Keep responses conversational and natural. Remember details from our conversation to build a personal connection.`;
 
+    const openAIVoices = new Set(["alloy","ash","ballad","coral","echo","sage","shimmer","verse","marin","cedar"]);
+    const resolvedVoice = voiceId || existingRelation?.voice_id || "alloy";
+
     const agentConfig = {
       name: `${companion.name} - User ${user.id.slice(0, 8)}`,
       model: {
         provider: "openai",
         model: "gpt-4o-mini",
         messages: [
-          {
-            role: "system",
-            content: systemPrompt
-          }
+          { role: "system", content: systemPrompt }
         ]
       },
-      voice: {
-        provider: "11labs",
-        voiceId: voiceId || "21m00Tcm4TlvDq8ikWAM" // Use provided voice or default to Rachel
-      },
+      voice: openAIVoices.has(resolvedVoice)
+        ? { provider: "openai", voice: resolvedVoice }
+        : { provider: "11labs", voiceId: resolvedVoice || "21m00Tcm4TlvDq8ikWAM" },
       firstMessage: `Hi! I'm ${companion.name}. I'm so excited to talk with you today. How are you feeling?`
     };
 
@@ -132,7 +131,7 @@ Stay in character throughout the conversation. Be engaging, empathetic, and main
         .from("user_companions")
         .update({ 
           vapi_agent_id: vapiAgent.id,
-          voice_id: voiceId || "21m00Tcm4TlvDq8ikWAM"
+          voice_id: resolvedVoice
         })
         .eq("user_id", user.id)
         .eq("companion_id", companionId);
@@ -149,7 +148,7 @@ Stay in character throughout the conversation. Be engaging, empathetic, and main
           user_id: user.id,
           companion_id: companionId,
           vapi_agent_id: vapiAgent.id,
-          voice_id: voiceId || "21m00Tcm4TlvDq8ikWAM"
+          voice_id: resolvedVoice
         });
 
       if (insertError) {

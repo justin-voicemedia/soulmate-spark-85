@@ -20,6 +20,10 @@ serve(async (req) => {
 
     const { voice = 'alloy', instructions = 'You are a helpful, friendly voice assistant.', model = 'gpt-4o-mini-realtime-preview-2024-12-17' } = await req.json().catch(() => ({}));
 
+    // Validate voice against OpenAI supported list
+    const allowedVoices = new Set(['alloy','ash','ballad','coral','echo','sage','shimmer','verse','marin','cedar']);
+    const voiceToUse = allowedVoices.has(voice) ? voice : 'alloy';
+
     console.log(`Creating realtime session with model: ${model}, voice: ${voice}`);
     console.log(`Instructions length: ${instructions.length} chars`);
 
