@@ -231,31 +231,35 @@ export const VoiceWidget: React.FC<VoiceWidgetProps> = ({
   }
 
   return (
-    <Card className="p-6">
-      <div className="text-center space-y-4">
-        {/* Companion Image */}
-        {companionImage && (
-          <div className="flex justify-center mb-4">
-            <div className="relative">
-              <img 
-                src={companionImage} 
-                alt={companionName}
-                className="w-24 h-24 rounded-full object-cover border-4 border-primary/20"
-                onError={(e) => {
-                  e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${companionName}`;
-                }}
-              />
-              {isConnected && (
-                <div className="absolute inset-0 rounded-full border-4 border-green-500 animate-pulse"></div>
-              )}
+    <div className="flex flex-col items-center space-y-6">
+      {/* Companion Image - Large and Above Widget */}
+      {companionImage && (
+        <div className="relative">
+          <img 
+            src={companionImage} 
+            alt={companionName}
+            className="w-32 h-32 rounded-full object-cover border-4 border-primary/30 shadow-lg"
+            onError={(e) => {
+              e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${companionName}`;
+            }}
+          />
+          {isConnected && (
+            <div className="absolute inset-0 rounded-full border-4 border-green-500 animate-pulse shadow-lg"></div>
+          )}
+          {isConnected && (
+            <div className="absolute -bottom-2 -right-2 bg-green-500 text-white rounded-full p-2">
+              <Phone className="h-4 w-4" />
             </div>
-          </div>
-        )}
-        
-        <div className="flex items-center justify-center space-x-2">
-          <Volume2 className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Voice Chat with {companionName}</h3>
+          )}
         </div>
+      )}
+
+      <Card className="p-6 w-full max-w-md">
+        <div className="text-center space-y-4">
+          <div className="flex items-center justify-center space-x-2">
+            <Volume2 className="h-5 w-5 text-primary" />
+            <h3 className="text-lg font-semibold">Voice Chat with {companionName}</h3>
+          </div>
         
         {isConnected && (
           <div className="space-y-2">
@@ -306,5 +310,6 @@ export const VoiceWidget: React.FC<VoiceWidgetProps> = ({
         </p>
       </div>
     </Card>
+    </div>
   );
 };
