@@ -12,6 +12,7 @@ import { useCompanionSelection } from '@/hooks/useCompanionSelection';
 interface VoiceWidgetProps {
   companionId: string;
   companionName: string;
+  companionImage?: string;
 }
 
 interface VapiResponse {
@@ -23,7 +24,8 @@ interface VapiResponse {
 
 export const VoiceWidget: React.FC<VoiceWidgetProps> = ({ 
   companionId, 
-  companionName 
+  companionName,
+  companionImage 
 }) => {
   const { user } = useAuth();
   const { selectedVoice, updateVoice, isCreatingAgent } = useCompanionSelection();
@@ -209,6 +211,25 @@ export const VoiceWidget: React.FC<VoiceWidgetProps> = ({
   return (
     <Card className="p-6">
       <div className="text-center space-y-4">
+        {/* Companion Image */}
+        {companionImage && (
+          <div className="flex justify-center mb-4">
+            <div className="relative">
+              <img 
+                src={companionImage} 
+                alt={companionName}
+                className="w-24 h-24 rounded-full object-cover border-4 border-primary/20"
+                onError={(e) => {
+                  e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${companionName}`;
+                }}
+              />
+              {isConnected && (
+                <div className="absolute inset-0 rounded-full border-4 border-green-500 animate-pulse"></div>
+              )}
+            </div>
+          </div>
+        )}
+        
         <div className="flex items-center justify-center space-x-2">
           <Volume2 className="h-5 w-5 text-primary" />
           <h3 className="text-lg font-semibold">Voice Chat with {companionName}</h3>

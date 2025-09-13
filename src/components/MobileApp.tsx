@@ -612,6 +612,7 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
         <OpenAIVoiceWidget 
           companionId={companion.id} 
           companionName={companion.name} 
+          companionImage={companion.image_url}
         />
       </div>
     </div>
