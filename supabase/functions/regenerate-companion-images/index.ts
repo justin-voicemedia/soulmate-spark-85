@@ -52,9 +52,9 @@ serve(async (req) => {
       );
     }
 
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
+    const grokApiKey = Deno.env.get('GROK_API_KEY');
+    if (!grokApiKey) {
+      throw new Error('Grok API key not configured');
     }
 
     let successCount = 0;
@@ -73,53 +73,57 @@ serve(async (req) => {
 
         console.log(`Generating image for ${companion.name} with prompt: ${prompt.substring(0, 100)}...`);
 
-        // Generate image using OpenAI
-        const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
+        // Generate image using Grok (xAI)
+        const grokResponse = await fetch('https://api.x.ai/v1/images/generations', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${openAIApiKey}`,
+            'Authorization': `Bearer ${grokApiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'gpt-image-1',
-            prompt: prompt,
-            size: '1024x1024',
-            quality: 'high',
-            output_format: 'png',
-            n: 1
+            prompt,
+            model: 'grok-2-image',
+            n: 1,
+            response_format: 'url',
           }),
         });
 
-        if (!imageResponse.ok) {
-          const errorText = await imageResponse.text();
-          console.error(`OpenAI API error for ${companion.name}:`, errorText);
+        if (!grokResponse.ok) {
+          const errorText = await grokResponse.text();
+          console.error(`Grok API error for ${companion.name}:`, errorText);
           failureCount++;
           continue;
         }
 
-        const imageData = await imageResponse.json();
-        const imageBase64 = imageData.data?.[0]?.b64_json;
+        const grokData = await grokResponse.json();
+        const imageUrl = grokData.data?.[0]?.url;
 
-        if (!imageBase64) {
-          console.error(`No image data received for ${companion.name}`);
+        if (!imageUrl) {
+          console.error(`No image URL received for ${companion.name}`);
           failureCount++;
           continue;
         }
 
-        // Convert base64 -> Uint8Array and wrap in a File for multipart upload
-        const binaryStr = atob(imageBase64);
-        const bytes = new Uint8Array(binaryStr.length);
-        for (let i = 0; i < binaryStr.length; i++) {
-          bytes[i] = binaryStr.charCodeAt(i);
+        // Download image URL and wrap content in a File for multipart upload
+        const downloadRes = await fetch(imageUrl);
+        if (!downloadRes.ok) {
+          const txt = await downloadRes.text();
+          console.error(`Error downloading image for ${companion.name}:`, txt);
+          failureCount++;
+          continue;
         }
-        const fileName = `companion-${companion.id}-${Date.now()}.png`;
-        const file = new File([bytes], fileName, { type: 'image/png' });
+        const arrayBuffer = await downloadRes.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        const contentType = downloadRes.headers.get('content-type') ?? 'image/png';
+        const extension = contentType.includes('jpeg') ? 'jpg' : (contentType.includes('webp') ? 'webp' : 'png');
+        const fileName = `companion-${companion.id}-${Date.now()}.${extension}`;
+        const file = new File([bytes], fileName, { type: contentType });
         
         // Upload to Supabase storage
         const { data: uploadData, error: uploadError } = await supabaseClient.storage
           .from('companion-images')
           .upload(fileName, file, {
-            contentType: 'image/png',
+            contentType,
             cacheControl: '3600',
             upsert: false,
           });
