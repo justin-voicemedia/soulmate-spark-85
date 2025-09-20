@@ -29,7 +29,7 @@ serve(async (req) => {
     const user = userData.user;
     if (!user) throw new Error("User not authenticated");
 
-    const { companionId, voiceId } = await req.json();
+    const { companionId, voiceId, relationshipType } = await req.json();
     if (!companionId) throw new Error("Companion ID is required");
 
     // Get companion details
@@ -43,10 +43,22 @@ serve(async (req) => {
       throw new Error("Companion not found");
     }
 
+    // Get relationship prompt
+    const resolvedRelationshipType = relationshipType || "casual_friend";
+    const { data: relationshipPrompt, error: promptError } = await supabaseClient
+      .from("relationship_prompts")
+      .select("prompt_text")
+      .eq("relationship_type", resolvedRelationshipType)
+      .single();
+
+    if (promptError) {
+      console.error("Error fetching relationship prompt:", promptError);
+    }
+
     // Check if user-companion relationship already exists with agent
     const { data: existingRelation, error: relationError } = await supabaseClient
       .from("user_companions")
-      .select("vapi_agent_id, voice_id")
+      .select("vapi_agent_id, voice_id, relationship_type")
       .eq("user_id", user.id)
       .eq("companion_id", companionId)
       .maybeSingle();
@@ -55,8 +67,10 @@ serve(async (req) => {
       console.error("Error checking existing relation:", relationError);
     }
 
-    // If agent exists and no voice change requested, return it
-    if (existingRelation?.vapi_agent_id && (!voiceId || voiceId === existingRelation.voice_id)) {
+    // If agent exists with same voice and relationship type, return it
+    if (existingRelation?.vapi_agent_id && 
+        (!voiceId || voiceId === existingRelation.voice_id) &&
+        (!relationshipType || relationshipType === existingRelation.relationship_type)) {
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -76,8 +90,8 @@ serve(async (req) => {
       throw new Error("VAPI_PRIVATE_KEY not configured");
     }
 
-    // Create system prompt based on companion
-    const systemPrompt = `You are ${companion.name}, a ${companion.age}-year-old ${companion.gender} from ${companion.location || "unknown location"}. 
+    // Create system prompt based on companion and relationship type
+    const basePrompt = `You are ${companion.name}, a ${companion.age}-year-old ${companion.gender} from ${companion.location || "unknown location"}. 
 
 Bio: ${companion.bio}
 
@@ -86,7 +100,9 @@ Hobbies: ${companion.hobbies?.join(", ") || "various activities"}
 Likes: ${companion.likes?.join(", ") || "many things"}
 Dislikes: ${companion.dislikes?.join(", ") || "negativity"}
 
-Stay in character throughout the conversation. Be engaging, empathetic, and maintain personality consistency. Keep responses conversational and natural. Remember details from our conversation to build a personal connection.`;
+${relationshipPrompt?.prompt_text || "Stay in character throughout the conversation. Be engaging, empathetic, and maintain personality consistency. Keep responses conversational and natural. Remember details from our conversation to build a personal connection."}`;
+
+    const systemPrompt = basePrompt;
 
     const openAIVoices = new Set(["alloy","ash","ballad","coral","echo","sage","shimmer","verse","marin","cedar"]);
     const resolvedVoice = voiceId || existingRelation?.voice_id || "alloy";
@@ -131,7 +147,8 @@ Stay in character throughout the conversation. Be engaging, empathetic, and main
         .from("user_companions")
         .update({ 
           vapi_agent_id: vapiAgent.id,
-          voice_id: resolvedVoice
+          voice_id: resolvedVoice,
+          relationship_type: resolvedRelationshipType
         })
         .eq("user_id", user.id)
         .eq("companion_id", companionId);
@@ -148,7 +165,8 @@ Stay in character throughout the conversation. Be engaging, empathetic, and main
           user_id: user.id,
           companion_id: companionId,
           vapi_agent_id: vapiAgent.id,
-          voice_id: resolvedVoice
+          voice_id: resolvedVoice,
+          relationship_type: resolvedRelationshipType
         });
 
       if (insertError) {

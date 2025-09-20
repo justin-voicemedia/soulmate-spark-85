@@ -134,6 +134,30 @@ export type Database = {
         }
         Relationships: []
       }
+      relationship_prompts: {
+        Row: {
+          created_at: string
+          id: string
+          prompt_text: string
+          relationship_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          prompt_text: string
+          relationship_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          prompt_text?: string
+          relationship_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subscribers: {
         Row: {
           created_at: string
@@ -229,6 +253,7 @@ export type Database = {
           custom_memories: Json | null
           id: string
           is_active: boolean | null
+          relationship_type: string | null
           updated_at: string
           user_id: string
           vapi_agent_id: string | null
@@ -241,6 +266,7 @@ export type Database = {
           custom_memories?: Json | null
           id?: string
           is_active?: boolean | null
+          relationship_type?: string | null
           updated_at?: string
           user_id: string
           vapi_agent_id?: string | null
@@ -253,6 +279,7 @@ export type Database = {
           custom_memories?: Json | null
           id?: string
           is_active?: boolean | null
+          relationship_type?: string | null
           updated_at?: string
           user_id?: string
           vapi_agent_id?: string | null

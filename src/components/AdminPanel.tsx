@@ -36,6 +36,9 @@ export const AdminPanel = () => {
   const [editingCompanions, setEditingCompanions] = useState<string[]>([]);
   const [savingCompanions, setSavingCompanions] = useState<string[]>([]);
   const [editFormData, setEditFormData] = useState<Record<string, Partial<Companion>>>({});
+  const [relationshipPrompts, setRelationshipPrompts] = useState<Record<string, string>>({});
+  const [promptsLoading, setPromptsLoading] = useState(false);
+  const [savingPrompts, setSavingPrompts] = useState(false);
   const { generateCompanionImage } = useImageGeneration();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -57,6 +60,66 @@ export const AdminPanel = () => {
     } finally {
       setCompanionsLoading(false);
     }
+  };
+
+  const loadRelationshipPrompts = async () => {
+    setPromptsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('relationship_prompts')
+        .select('*')
+        .order('relationship_type');
+
+      if (error) throw error;
+      
+      const promptsMap: Record<string, string> = {};
+      data?.forEach(prompt => {
+        promptsMap[prompt.relationship_type] = prompt.prompt_text;
+      });
+      setRelationshipPrompts(promptsMap);
+    } catch (error) {
+      console.error('Error loading relationship prompts:', error);
+      toast.error('Failed to load relationship prompts');
+    } finally {
+      setPromptsLoading(false);
+    }
+  };
+
+  const saveRelationshipPrompts = async () => {
+    setSavingPrompts(true);
+    try {
+      const relationshipTypes = ['casual_friend', 'romantic_partner', 'spiritual_guide', 'intimate_companion'];
+      
+      for (const type of relationshipTypes) {
+        const promptText = relationshipPrompts[type];
+        if (!promptText) continue;
+
+        const { error } = await supabase
+          .from('relationship_prompts')
+          .upsert({
+            relationship_type: type,
+            prompt_text: promptText
+          }, {
+            onConflict: 'relationship_type'
+          });
+
+        if (error) throw error;
+      }
+
+      toast.success('Relationship prompts saved successfully');
+    } catch (error) {
+      console.error('Error saving relationship prompts:', error);
+      toast.error('Failed to save relationship prompts');
+    } finally {
+      setSavingPrompts(false);
+    }
+  };
+
+  const updateRelationshipPrompt = (type: string, text: string) => {
+    setRelationshipPrompts(prev => ({
+      ...prev,
+      [type]: text
+    }));
   };
 
   const toggleEdit = (companionId: string) => {
@@ -349,6 +412,7 @@ export const AdminPanel = () => {
   
   useEffect(() => {
     loadCompanions();
+    loadRelationshipPrompts();
   }, []);
   
   return (
@@ -375,13 +439,101 @@ export const AdminPanel = () => {
       </div>
 
       <Tabs defaultValue="bulk-operations" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="image-manager">Image Manager</TabsTrigger>
           <TabsTrigger value="bulk-operations">Manage Companions</TabsTrigger>
+          <TabsTrigger value="relationship-prompts">Relationship Prompts</TabsTrigger>
         </TabsList>
         
         <TabsContent value="image-manager" className="space-y-4">
           <CompanionImageManager />
+        </TabsContent>
+        
+        <TabsContent value="relationship-prompts" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Relationship Prompts</CardTitle>
+              <CardDescription>
+                Configure conversation prompts for different relationship types. These prompts determine how companions behave based on the user's chosen relationship style.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2 mb-4">
+                <Button 
+                  onClick={loadRelationshipPrompts} 
+                  disabled={promptsLoading}
+                  variant="outline"
+                  className="mb-4"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${promptsLoading ? 'animate-spin' : ''}`} />
+                  Load Current Prompts
+                </Button>
+                
+                <Button 
+                  onClick={saveRelationshipPrompts} 
+                  disabled={savingPrompts}
+                  className="ml-2"
+                >
+                  <Save className={`w-4 h-4 mr-2${savingPrompts ? ' animate-pulse' : ''}`} />
+                  {savingPrompts ? 'Saving...' : 'Save All Prompts'}
+                </Button>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Casual Friend</label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    For users seeking friendly, platonic companionship and casual conversation
+                  </p>
+                  <Textarea
+                    value={relationshipPrompts.casual_friend || ''}
+                    onChange={(e) => updateRelationshipPrompt('casual_friend', e.target.value)}
+                    placeholder="Enter prompt for casual friend relationships..."
+                    className="min-h-[120px]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Romantic Partner</label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    For users seeking romantic connection and emotional intimacy
+                  </p>
+                  <Textarea
+                    value={relationshipPrompts.romantic_partner || ''}
+                    onChange={(e) => updateRelationshipPrompt('romantic_partner', e.target.value)}
+                    placeholder="Enter prompt for romantic partner relationships..."
+                    className="min-h-[120px]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Spiritual Guide</label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    For users seeking wisdom, guidance, and spiritual growth
+                  </p>
+                  <Textarea
+                    value={relationshipPrompts.spiritual_guide || ''}
+                    onChange={(e) => updateRelationshipPrompt('spiritual_guide', e.target.value)}
+                    placeholder="Enter prompt for spiritual guide relationships..."
+                    className="min-h-[120px]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Intimate Companion</label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    For users seeking deep emotional and physical connection
+                  </p>
+                  <Textarea
+                    value={relationshipPrompts.intimate_companion || ''}
+                    onChange={(e) => updateRelationshipPrompt('intimate_companion', e.target.value)}
+                    placeholder="Enter prompt for intimate companion relationships..."
+                    className="min-h-[120px]"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
         
         <TabsContent value="bulk-operations" className="space-y-4">

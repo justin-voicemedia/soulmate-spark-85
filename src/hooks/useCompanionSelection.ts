@@ -9,7 +9,7 @@ export const useCompanionSelection = () => {
   const [selectedVoice, setSelectedVoice] = useState<string>('alloy'); // Default to Rachel
   const [isCreatingAgent, setIsCreatingAgent] = useState(false);
 
-  const selectCompanion = async (companionId: string, voiceId?: string) => {
+  const selectCompanion = async (companionId: string, voiceId?: string, relationshipType?: string) => {
     if (!user) {
       toast.error('Please sign in first');
       return;
@@ -22,7 +22,8 @@ export const useCompanionSelection = () => {
       const { data, error } = await supabase.functions.invoke('create-vapi-agent', {
         body: { 
           companionId,
-          voiceId: voiceId || selectedVoice 
+          voiceId: voiceId || selectedVoice,
+          relationshipType: relationshipType || 'casual_friend'
         }
       });
 
