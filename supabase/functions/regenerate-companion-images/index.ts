@@ -120,12 +120,6 @@ serve(async (req) => {
         // Generate image prompt based on companion details
         const personalityStr = companion.personality?.join(', ') || 'friendly';
         const hobbiesStr = companion.hobbies?.slice(0, 3).join(', ') || 'various interests';
-        
-        const prompt = `Professional portrait photo of a ${companion.age}-year-old ${companion.gender.toLowerCase()} person named ${companion.name}. ${personalityStr} personality. Interested in ${hobbiesStr}. High quality, professional lighting, warm and approachable expression, modern casual attire, clean background. Ultra high resolution, photorealistic.`;
-
-        // Build robust prompt with safe fallbacks
-        const personalityStr = companion.personality?.join(', ') || 'friendly';
-        const hobbiesStr = companion.hobbies?.slice(0, 3).join(', ') || 'various interests';
         const genderStr = companion.gender ? companion.gender.toLowerCase() : 'person';
         const ageStr = Number.isFinite(companion.age as number) ? `${companion.age}-year-old` : '';
         const prompt = `Professional portrait photo of a ${ageStr} ${genderStr} named ${companion.name}. ${personalityStr} personality. Interested in ${hobbiesStr}. High quality, professional lighting, warm and approachable expression, modern casual attire, clean background. Ultra high resolution, photorealistic.`.replace(/\s+/g, ' ').trim();
