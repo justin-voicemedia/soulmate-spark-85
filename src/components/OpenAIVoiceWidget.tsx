@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Mic, Phone, PhoneOff, Volume2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useMemoryManager } from '@/hooks/useMemoryManager';
+import { useConversationMemory } from '@/hooks/useConversationMemory';
 import { toast } from 'sonner';
 import { RealtimeChat } from '@/utils/RealtimeWebRTC';
 
@@ -17,6 +19,8 @@ interface VoiceWidgetProps {
 
 export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, companionName, companionImage }) => {
   const { user } = useAuth();
+  const { getCompanionMemories, generateContextPrompt } = useMemoryManager();
+  const { addMessage, forceSave } = useConversationMemory(companionId, companionName);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [companionVoice, setCompanionVoice] = useState('alloy');
@@ -58,9 +62,11 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Force save any pending conversation before unmounting
+      forceSave();
       endCall();
     };
-  }, []);
+  }, [forceSave]);
 
   const startCall = async () => {
     if (!user) {
@@ -84,8 +90,17 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
       if (startErr) throw startErr;
       sessionIdRef.current = startData?.sessionId ?? null;
 
-      // Build simple persona prompt
-      const instructions = `You are ${companionName}. Keep responses natural and conversational (1-2 sentences). Be friendly and stay in character.`;
+      // Get companion memories and build enhanced instructions
+      const memories = await getCompanionMemories(companionId);
+      const memoryContext = memories ? generateContextPrompt(memories) : '';
+      
+      // Build enhanced persona prompt with memory context
+      let instructions = `You are ${companionName}, an AI companion. Keep responses natural and conversational (1-3 sentences). Be friendly, engaging, and stay in character.`;
+      
+      if (memoryContext) {
+        instructions += `\n\n${memoryContext}`;
+        instructions += '\n\nReference past conversations and personal details naturally. Show that you remember and care about the user.';
+      }
 
       // Connect via WebRTC using ephemeral token
       chatRef.current = new RealtimeChat(handleMessage);
@@ -189,6 +204,23 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
         setIsListening(true);
       } else if (event.type === 'input_audio_buffer.speech_stopped') {
         setIsListening(false);
+      } else if (event.type === 'response.audio_transcript.delta') {
+        // Track AI responses for memory
+        if (event.delta) {
+          // We'll collect these deltas and create complete messages
+          // For now, just log that AI is responding
+          console.log('AI speaking:', event.delta);
+        }
+      } else if (event.type === 'input_audio_buffer.transcript') {
+        // Track user input for memory
+        if (event.transcript) {
+          addMessage('user', event.transcript);
+          console.log('User said:', event.transcript);
+        }
+      } else if (event.type === 'response.done') {
+        // When AI finishes responding, we can track the complete response
+        // This would require collecting the transcript deltas above
+        console.log('AI response complete');
       } else if (event.type === 'error') {
         console.error('OpenAI error:', event.message || event);
         toast.error(`Voice chat error: ${event.message || 'Unknown error'}`);

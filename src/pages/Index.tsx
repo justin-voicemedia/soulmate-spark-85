@@ -10,6 +10,7 @@ import { MatchResults } from "@/components/MatchResults";
 import { CompanionBuilder } from "@/components/CompanionBuilder";
 import { UsageDashboard } from "@/components/UsageDashboard";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { useMemoryManager } from "@/hooks/useMemoryManager";
 import { CompanionMatchingService } from "@/services/companionMatching";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -47,6 +48,7 @@ interface CompanionMatch extends Companion {
 
 const AppContent = () => {
   const { user, loading } = useAuth();
+  const { saveQuestionnaireToMemory } = useMemoryManager();
   const [currentState, setCurrentState] = useState<AppState>('landing');
   const [questionnaireData, setQuestionnaireData] = useState<QuestionnaireData | null>(null);
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
@@ -134,12 +136,23 @@ const AppContent = () => {
     setCurrentState('auth');
   };
 
-  const handleQuestionnaireComplete = async (data: QuestionnaireData) => {
+  const handleQuestionnaireComplete = async (data: QuestionnaireData, companionId?: string) => {
     setQuestionnaireData(data);
     
-    // If we have a selected companion (from browsing), proceed to auth
-    // If not, show matching results as before
-    if (selectedCompanion) {
+    // If we have a selected companion (from browsing), save questionnaire data and proceed to auth
+    if (selectedCompanion || companionId) {
+      const targetCompanionId = companionId || selectedCompanion?.id;
+      if (targetCompanionId && data.companionType) {
+        // Save questionnaire responses to memory
+        await saveQuestionnaireToMemory(
+          targetCompanionId,
+          data,
+          data.companionType === 'casual' ? 'casual_friend' :
+          data.companionType === 'romantic' ? 'romantic_partner' :
+          data.companionType === 'spiritual' ? 'spiritual_guide' :
+          data.companionType === 'intimate' ? 'intimate_companion' : 'casual_friend'
+        );
+      }
       setCurrentState('auth');
       return;
     }

@@ -44,7 +44,7 @@ serve(async (req) => {
     }
     const user = userData.user;
 
-    // Get companion details
+    // Get companion details and user memories
     const { data: companion, error: companionError } = await supabaseClient
       .from("companions")
       .select("*")
@@ -55,8 +55,61 @@ serve(async (req) => {
       return new Response("Companion not found", { status: 404 });
     }
 
-    // Create system prompt based on companion
-    const systemPrompt = `You are ${companion.name}, a ${companion.age}-year-old ${companion.gender} from ${companion.location || "unknown location"}. 
+    // Get user's memories with this companion
+    const { data: userCompanion } = await supabaseClient
+      .from("user_companions")
+      .select("custom_memories")
+      .eq("user_id", user.id)
+      .eq("companion_id", companionId)
+      .maybeSingle();
+
+    // Build memory context
+    let memoryContext = "";
+    if (userCompanion?.custom_memories) {
+      const memories = userCompanion.custom_memories as any;
+      
+      // Add questionnaire info
+      if (memories.questionnaire) {
+        const q = memories.questionnaire;
+        memoryContext += `\n**USER PREFERENCES:** ${q.name || 'User'} is looking for ${q.companionType} companionship. They prefer ${q.relationshipGoals}. Age range: ${q.ageRange}. `;
+        
+        if (q.hobbies?.length > 0) {
+          memoryContext += `Hobbies: ${q.hobbies.join(', ')}. `;
+        }
+        
+        if (q.personality?.length > 0) {
+          memoryContext += `Values these traits: ${q.personality.join(', ')}.\n`;
+        }
+      }
+
+      // Add recent conversation summaries
+      if (memories.conversations?.length > 0) {
+        memoryContext += `\n**RECENT CONVERSATIONS:**\n`;
+        memories.conversations.slice(-3).forEach((conv: any, index: number) => {
+          memoryContext += `${index + 1}. ${conv.summary} (Mood: ${conv.mood})\n`;
+          
+          if (conv.personalInfo?.length > 0) {
+            memoryContext += `   Personal details: ${conv.personalInfo.join(', ')}\n`;
+          }
+          
+          if (conv.futureReferences?.length > 0) {
+            memoryContext += `   Remember: ${conv.futureReferences.join(', ')}\n`;
+          }
+        });
+      }
+
+      // Add relationship milestones
+      if (memories.relationshipMilestones?.length > 0) {
+        memoryContext += `\n**RELATIONSHIP MILESTONES:**\n${memories.relationshipMilestones.slice(-3).join('\n')}\n`;
+      }
+
+      if (memoryContext) {
+        memoryContext += '\n**Instructions:** Reference this context naturally. Build upon previous interactions and show growth in your relationship. Remember personal details and emotional states.\n';
+      }
+    }
+
+    // Create system prompt based on companion and memories
+    let systemPrompt = `You are ${companion.name}, a ${companion.age}-year-old ${companion.gender} from ${companion.location || "unknown location"}. 
 
 Bio: ${companion.bio}
 
@@ -66,6 +119,11 @@ Likes: ${companion.likes?.join(", ") || "many things"}
 Dislikes: ${companion.dislikes?.join(", ") || "negativity"}
 
 You are having a voice conversation with someone who has chosen to talk with you. Stay in character throughout the conversation. Be engaging, empathetic, and maintain personality consistency. Keep responses natural and conversational, typically 1-2 sentences unless the situation calls for more detail. Remember details from the conversation to build a personal connection. Show genuine interest in what they're sharing.`;
+
+    // Add memory context if available
+    if (memoryContext) {
+      systemPrompt += `\n${memoryContext}`;
+    }
 
     const { socket, response } = Deno.upgradeWebSocket(req);
     

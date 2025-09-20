@@ -33,7 +33,7 @@ interface Companion {
 
 interface QuestionnaireProps {
   onBack: () => void;
-  onComplete: (data: QuestionnaireData) => void;
+  onComplete: (data: QuestionnaireData, companionId?: string) => void;
   selectedCompanion?: Companion | null;
 }
 
@@ -55,7 +55,7 @@ export const Questionnaire = ({ onBack, onComplete, selectedCompanion }: Questio
     if (step < totalSteps) {
       setStep(step + 1);
     } else {
-      onComplete(data);
+      onComplete(data, selectedCompanion?.id);
     }
   };
 
