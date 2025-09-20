@@ -42,14 +42,12 @@ serve(async (req) => {
       try {
         console.log("Connecting to OpenAI Realtime API for voice preview...");
         
-        // Use the required subprotocols for OpenAI Realtime
-        openAISocket = new WebSocket("wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17", {
-          headers: {
-            "Authorization": `Bearer ${openAIApiKey}`,
-            "OpenAI-Beta": "realtime=v1"
-          },
-          protocols: ["realtime", "openai-insecure-api-key", "openai-beta.realtime-v1"]
-        });
+        // Connect to OpenAI Realtime API with proper Deno WebSocket syntax
+        const wsUrl = `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17`;
+        openAISocket = new WebSocket(wsUrl, [
+          `authorization.bearer.${openAIApiKey}`,
+          "openai-beta.realtime-v1"
+        ]);
 
         openAISocket.onopen = () => {
           console.log("Connected to OpenAI Realtime API for preview");
