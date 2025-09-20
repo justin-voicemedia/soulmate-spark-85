@@ -8,15 +8,11 @@ import { useToast } from '@/hooks/use-toast';
 
 export const AVAILABLE_VOICES = [
   { id: 'alloy', name: 'Alloy', description: 'Balanced and natural', gender: 'Female' },
-  { id: 'ash', name: 'Ash', description: 'Calm and conversational', gender: 'Male' },
-  { id: 'ballad', name: 'Ballad', description: 'Warm and expressive', gender: 'Female' },
-  { id: 'coral', name: 'Coral', description: 'Friendly and bright', gender: 'Female' },
   { id: 'echo', name: 'Echo', description: 'Clear and articulate', gender: 'Male' },
-  { id: 'sage', name: 'Sage', description: 'Confident and steady', gender: 'Male' },
-  { id: 'shimmer', name: 'Shimmer', description: 'Gentle and soothing', gender: 'Female' },
-  { id: 'verse', name: 'Verse', description: 'Engaging and upbeat', gender: 'Female' },
-  { id: 'marin', name: 'Marin', description: 'Natural and conversational', gender: 'Female' },
-  { id: 'cedar', name: 'Cedar', description: 'Warm and articulate', gender: 'Male' }
+  { id: 'fable', name: 'Fable', description: 'Expressive and dynamic', gender: 'Male' },
+  { id: 'onyx', name: 'Onyx', description: 'Deep and authoritative', gender: 'Male' },
+  { id: 'nova', name: 'Nova', description: 'Bright and energetic', gender: 'Female' },
+  { id: 'shimmer', name: 'Shimmer', description: 'Gentle and soothing', gender: 'Female' }
 ];
 
 interface VoiceSelectorProps {
@@ -32,9 +28,18 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   disabled = false,
   companionName = "your companion"
 }) => {
-  const selectedVoice = AVAILABLE_VOICES.find(voice => voice.id === value);
+  // Ensure we have a valid voice ID, fallback to 'alloy' if not supported
+  const validVoiceId = AVAILABLE_VOICES.find(voice => voice.id === value) ? value : 'alloy';
+  const selectedVoice = AVAILABLE_VOICES.find(voice => voice.id === validVoiceId);
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Update to valid voice if needed
+  React.useEffect(() => {
+    if (value !== validVoiceId) {
+      onValueChange(validVoiceId);
+    }
+  }, [value, validVoiceId, onValueChange]);
 
   const playVoicePreview = async (voiceId: string) => {
     if (playingVoice) return; // Prevent multiple simultaneous plays
@@ -95,7 +100,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
       
       <div className="flex gap-2 items-end">
         <div className="flex-1">
-          <Select value={value} onValueChange={onValueChange} disabled={disabled}>
+          <Select value={validVoiceId} onValueChange={onValueChange} disabled={disabled}>
             <SelectTrigger id="voice-selector">
               <SelectValue placeholder="Select a voice">
                 {selectedVoice && `${selectedVoice.name} (${selectedVoice.gender}) - ${selectedVoice.description}`}
