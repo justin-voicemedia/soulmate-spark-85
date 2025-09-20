@@ -40,6 +40,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     if (playingVoice) return; // Prevent multiple simultaneous plays
     
     setPlayingVoice(voiceId);
+    console.log('Playing voice preview for:', voiceId, 'with name:', companionName);
     
     try {
       const { data, error } = await supabase.functions.invoke('text-to-speech', {
@@ -49,15 +50,30 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
         }
       });
 
+      console.log('TTS response:', { data, error });
+
       if (error) throw error;
 
       // Create audio element and play
       const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
-      await audio.play();
       
-      // Wait for audio to finish
-      audio.onended = () => setPlayingVoice(null);
-      audio.onerror = () => setPlayingVoice(null);
+      audio.onloadeddata = () => {
+        console.log('Audio loaded, attempting to play');
+        audio.play().catch(e => {
+          console.error('Audio play failed:', e);
+          setPlayingVoice(null);
+        });
+      };
+      
+      audio.onended = () => {
+        console.log('Audio playback ended');
+        setPlayingVoice(null);
+      };
+      
+      audio.onerror = (e) => {
+        console.error('Audio error:', e);
+        setPlayingVoice(null);
+      };
       
     } catch (error) {
       console.error('Error playing voice preview:', error);
@@ -71,47 +87,56 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <Label htmlFor="voice-selector" className="flex items-center gap-2">
         <Volume2 className="h-4 w-4" />
         Voice Selection
       </Label>
-      <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-        <SelectTrigger id="voice-selector">
-          <SelectValue placeholder="Select a voice">
-            {selectedVoice && `${selectedVoice.name} (${selectedVoice.gender}) - ${selectedVoice.description}`}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {AVAILABLE_VOICES.map((voice) => (
-            <SelectItem key={voice.id} value={voice.id}>
-              <div className="flex items-center justify-between w-full">
-                <div className="flex-1">
-                  <div className="font-medium">{voice.name} ({voice.gender})</div>
-                  <div className="text-sm text-muted-foreground">{voice.description}</div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="ml-2 h-8 w-8 p-0"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    playVoicePreview(voice.id);
-                  }}
-                  disabled={playingVoice !== null}
-                >
-                  {playingVoice === voice.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Play className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      
+      <div className="flex gap-2 items-end">
+        <div className="flex-1">
+          <Select value={value} onValueChange={onValueChange} disabled={disabled}>
+            <SelectTrigger id="voice-selector">
+              <SelectValue placeholder="Select a voice">
+                {selectedVoice && `${selectedVoice.name} (${selectedVoice.gender}) - ${selectedVoice.description}`}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {AVAILABLE_VOICES.map((voice) => (
+                <SelectItem key={voice.id} value={voice.id}>
+                  <div>
+                    <div className="font-medium">{voice.name} ({voice.gender})</div>
+                    <div className="text-sm text-muted-foreground">{voice.description}</div>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {selectedVoice && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => playVoicePreview(selectedVoice.id)}
+            disabled={playingVoice !== null || disabled}
+            className="flex items-center gap-2"
+          >
+            {playingVoice === selectedVoice.id ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
+            Preview
+          </Button>
+        )}
+      </div>
+      
+      {selectedVoice && (
+        <p className="text-sm text-muted-foreground">
+          Click Preview to hear "{selectedVoice.name}" say: "Hi, I'm {companionName}. So happy to meet you!"
+        </p>
+      )}
     </div>
   );
 };
