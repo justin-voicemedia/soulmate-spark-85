@@ -72,7 +72,7 @@ serve(async (req) => {
                 silence_duration_ms: 500
               },
               temperature: 0.8,
-              max_response_output_tokens: 100
+              max_response_output_tokens: 200
             }
           };
           
