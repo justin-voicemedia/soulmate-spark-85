@@ -8,13 +8,13 @@ import { useToast } from '@/hooks/use-toast';
 export const AVAILABLE_VOICES = [
   // OpenAI Realtime Voices
   { id: 'alloy', name: 'Alloy', description: 'Balanced and versatile voice', gender: 'Neutral' },
-  { id: 'ash', name: 'Ash', description: 'Clear and articulate voice', gender: 'Neutral' },
-  { id: 'ballad', name: 'Ballad', description: 'Melodic and expressive voice', gender: 'Female' },
+  { id: 'ash', name: 'Ash', description: 'Clear and articulate voice', gender: 'Male' },
+  { id: 'ballad', name: 'Ballad', description: 'Melodic and expressive voice', gender: 'Male' },
   { id: 'cedar', name: 'Cedar', description: 'Rich and natural voice', gender: 'Male' },
   { id: 'coral', name: 'Coral', description: 'Warm and friendly voice', gender: 'Female' },
   { id: 'echo', name: 'Echo', description: 'Deep and resonant voice', gender: 'Male' },
   { id: 'marin', name: 'Marin', description: 'Fresh and modern voice', gender: 'Female' },
-  { id: 'sage', name: 'Sage', description: 'Wise and calming voice', gender: 'Male' },
+  { id: 'sage', name: 'Sage', description: 'Wise and calming voice', gender: 'Female' },
   { id: 'shimmer', name: 'Shimmer', description: 'Bright and energetic voice', gender: 'Female' },
   { id: 'verse', name: 'Verse', description: 'Smooth and conversational voice', gender: 'Male' }
 ];
