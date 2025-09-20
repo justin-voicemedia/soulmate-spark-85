@@ -7,12 +7,28 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export const AVAILABLE_VOICES = [
-  { id: 'alloy', name: 'Alloy', description: 'Balanced and natural', gender: 'Female' },
-  { id: 'echo', name: 'Echo', description: 'Clear and articulate', gender: 'Male' },
-  { id: 'fable', name: 'Fable', description: 'Expressive and dynamic', gender: 'Male' },
-  { id: 'onyx', name: 'Onyx', description: 'Deep and authoritative', gender: 'Male' },
-  { id: 'nova', name: 'Nova', description: 'Bright and energetic', gender: 'Female' },
-  { id: 'shimmer', name: 'Shimmer', description: 'Gentle and soothing', gender: 'Female' }
+  // Female Voices
+  { id: '9BWtsMINqrJLrRacOk9x', name: 'Aria', description: 'Warm and expressive American female', gender: 'Female' },
+  { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah', description: 'Clear and professional American female', gender: 'Female' },
+  { id: 'XB0fDUnXU5powFXDhCwa', name: 'Charlotte', description: 'Elegant British female', gender: 'Female' },
+  { id: 'Xb7hH8MSUJpSbSDYk0k2', name: 'Alice', description: 'Youthful and energetic female', gender: 'Female' },
+  { id: 'XrExE9yKIg1WjnnlVkGX', name: 'Matilda', description: 'Sophisticated and articulate female', gender: 'Female' },
+  { id: 'cgSgspJ2msm6clMCkdW9', name: 'Jessica', description: 'Friendly and approachable female', gender: 'Female' },
+  { id: 'pFZP5JQG7iQjIQuC4Bku', name: 'Lily', description: 'Gentle and soothing female', gender: 'Female' },
+  { id: 'SAz9YHcvj6GT2YYXdXww', name: 'River', description: 'Calm and peaceful female', gender: 'Female' },
+  
+  // Male Voices  
+  { id: 'CwhRBWXzGAHq8TQ4Fs17', name: 'Roger', description: 'Deep and authoritative American male', gender: 'Male' },
+  { id: 'IKne3meq5aSn9XLyUdCD', name: 'Charlie', description: 'Casual and friendly male', gender: 'Male' },
+  { id: 'JBFqnCBsd6RMkjVDRZzb', name: 'George', description: 'Distinguished British male', gender: 'Male' },
+  { id: 'N2lVS1w4EtoT3dr4eOWO', name: 'Callum', description: 'Young and energetic male', gender: 'Male' },
+  { id: 'TX3LPaxmHKxFdv7VOQHJ', name: 'Liam', description: 'Confident and clear male', gender: 'Male' },
+  { id: 'bIHbv24MWmeRgasZH58o', name: 'Will', description: 'Smooth and articulate male', gender: 'Male' },
+  { id: 'cjVigY5qzO86Huf0OWal', name: 'Eric', description: 'Professional and reliable male', gender: 'Male' },
+  { id: 'iP95p4xoKVk53GoZ742B', name: 'Chris', description: 'Warm and conversational male', gender: 'Male' },
+  { id: 'nPczCjzI2devNBz1zQrb', name: 'Brian', description: 'Mature and trustworthy male', gender: 'Male' },
+  { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel', description: 'Versatile and expressive male', gender: 'Male' },
+  { id: 'pqHfZKP75CvOlQylNhV4', name: 'Bill', description: 'Experienced and wise male', gender: 'Male' }
 ];
 
 interface VoiceSelectorProps {
@@ -28,8 +44,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   disabled = false,
   companionName = "your companion"
 }) => {
-  // Ensure we have a valid voice ID, fallback to 'alloy' if not supported
-  const validVoiceId = AVAILABLE_VOICES.find(voice => voice.id === value) ? value : 'alloy';
+  // Ensure we have a valid voice ID, fallback to 'Aria' if not supported
+  const validVoiceId = AVAILABLE_VOICES.find(voice => voice.id === value) ? value : '9BWtsMINqrJLrRacOk9x';
   const selectedVoice = AVAILABLE_VOICES.find(voice => voice.id === validVoiceId);
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   const { toast } = useToast();
@@ -48,10 +64,10 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     console.log('Playing voice preview for:', voiceId, 'with name:', companionName);
     
     try {
-      const { data, error } = await supabase.functions.invoke('text-to-speech', {
+      const { data, error } = await supabase.functions.invoke('elevenlabs-tts', {
         body: { 
           text: `Hi, I'm ${companionName}. So happy to meet you!`,
-          voice: voiceId 
+          voiceId: voiceId 
         }
       });
 
@@ -60,7 +76,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
       if (error) throw error;
 
       // Create audio element and play
-      const audio = new Audio(`data:audio/mp3;base64,${data.audioContent}`);
+      const audio = new Audio(`data:audio/mpeg;base64,${data.audioContent}`);
       
       audio.onloadeddata = () => {
         console.log('Audio loaded, attempting to play');
@@ -106,7 +122,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                 {selectedVoice && `${selectedVoice.name} (${selectedVoice.gender}) - ${selectedVoice.description}`}
               </SelectValue>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-60">
               {AVAILABLE_VOICES.map((voice) => (
                 <SelectItem key={voice.id} value={voice.id}>
                   <div>
