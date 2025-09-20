@@ -513,6 +513,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
                   value={selectedVoice}
                   onValueChange={setSelectedVoice}
                   disabled={creating || uploading}
+                  companionName={formData.name || "your companion"}
                 />
               </div>
 

@@ -373,6 +373,7 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
                           value={selectedVoiceForCompanion}
                           onValueChange={setSelectedVoiceForCompanion}
                           disabled={isCreatingAgent}
+                          companionName={selectedCompanion?.name}
                         />
                       </div>
                     </div>
