@@ -58,7 +58,7 @@ serve(async (req) => {
             type: "session.update",
             session: {
               modalities: ["text", "audio"],
-              instructions: `You are ${companionName}. Say exactly: "Hi, I am ${companionName}. It's nice to talk to you today, how may I help you?" Then stop talking.`,
+              instructions: `You are ${companionName}. Say exactly: "Hi my name is ${companionName}, its nice to meet you, Im looking forward to getting to know you better." Then stop talking.`,
               voice: voiceId,
               input_audio_format: "pcm16",
               output_audio_format: "pcm16",
