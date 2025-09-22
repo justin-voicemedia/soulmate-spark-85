@@ -104,7 +104,7 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
 
       // Connect via WebRTC using ephemeral token
       chatRef.current = new RealtimeChat(handleMessage, handleConnectionStateChange);
-      await chatRef.current.init(companionVoice, instructions, 'gpt-4o-mini-realtime-preview-2024-12-17');
+      await chatRef.current.init(companionVoice, instructions);
 
       setIsConnecting(false);
       setIsConnected(true);
@@ -238,32 +238,18 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
   };
 
   // Handle connection state changes
-  const disconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const lastConnStateRef = useRef<string>('new');
   const handleConnectionStateChange = (state: string) => {
     console.log('Connection state changed to:', state);
-    lastConnStateRef.current = state;
     
-    if (state === 'failed' || state === 'closed') {
-      toast.error(`Voice chat connection ${state}`);
+    if (state === 'connected') {
+      setIsConnected(true);
+      setIsConnecting(false);
+    } else if (state === 'failed') {
+      toast.error('Voice chat connection failed');
       endCall();
-      return;
-    }
-
-    if (state === 'disconnected') {
-      // Allow longer grace period for transient network hiccups before ending the call
-      if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current);
-      disconnectTimerRef.current = setTimeout(() => {
-        if (lastConnStateRef.current === 'disconnected') {
-          toast.error('Voice chat connection lost');
-          endCall();
-        }
-      }, 8000);
-    } else if (state === 'connected') {
-      if (disconnectTimerRef.current) {
-        clearTimeout(disconnectTimerRef.current);
-        disconnectTimerRef.current = null;
-      }
+    } else if (state === 'disconnected') {
+      toast.error('Voice chat connection lost');
+      endCall();
     }
   };
 
