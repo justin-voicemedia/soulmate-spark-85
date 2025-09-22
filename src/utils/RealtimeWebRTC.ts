@@ -13,102 +13,162 @@ export class RealtimeChat {
   }
 
   async init(voice: string, instructions: string, model = 'gpt-4o-mini-realtime-preview') {
-    // Get ephemeral token from our Supabase Edge Function
-    const { data, error } = await supabase.functions.invoke('openai-realtime-session', {
-      body: { voice, instructions, model }
-    });
+    try {
+      // Get ephemeral token from our Supabase Edge Function
+      console.log('Getting ephemeral token for voice chat...');
+      const { data, error } = await supabase.functions.invoke('openai-realtime-session', {
+        body: { voice, instructions, model }
+      });
 
-    if (error) throw error;
-    const EPHEMERAL_KEY = data?.client_secret?.value;
-    if (!EPHEMERAL_KEY) throw new Error('Failed to get ephemeral token');
-
-    // Create peer connection
-    this.pc = new RTCPeerConnection();
-
-    // Monitor connection states
-    this.pc.onconnectionstatechange = () => {
-      const state = this.pc?.connectionState;
-      console.log(`WebRTC connection state: ${state}`);
-      this.onConnectionStateChange?.(state || 'unknown');
-      
-      if (state === 'failed' || state === 'disconnected') {
-        console.error('WebRTC connection failed or disconnected');
-        this.onMessage({ type: 'error', message: `Connection ${state}` });
+      if (error) {
+        console.error('Failed to get ephemeral token:', error);
+        throw new Error(`Failed to get ephemeral token: ${error.message}`);
       }
-    };
 
-    this.pc.oniceconnectionstatechange = () => {
-      const state = this.pc?.iceConnectionState;
-      console.log(`ICE connection state: ${state}`);
-      
-      if (state === 'failed' || state === 'closed') {
-        console.error('ICE connection failed or closed');
-        this.onMessage({ type: 'error', message: `ICE connection ${state}` });
+      const EPHEMERAL_KEY = data?.client_secret?.value;
+      if (!EPHEMERAL_KEY) {
+        console.error('No ephemeral key in response:', data);
+        throw new Error('Failed to get ephemeral token from response');
       }
-    };
 
-    this.pc.onicegatheringstatechange = () => {
-      console.log(`ICE gathering state: ${this.pc?.iceGatheringState}`);
-    };
+      console.log('Got ephemeral token, creating WebRTC connection...');
 
-    // Set up remote audio
-    this.pc.ontrack = (e) => {
-      this.audioEl.srcObject = e.streams[0];
-    };
+      // Create peer connection with ICE servers for better connectivity
+      this.pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      });
 
-    // Add local audio track
-    const ms = await navigator.mediaDevices.getUserMedia({ audio: true });
-    ms.getTracks().forEach((track) => this.pc!.addTrack(track, ms));
+      // Monitor connection states with more detailed logging
+      this.pc.onconnectionstatechange = () => {
+        const state = this.pc?.connectionState;
+        console.log(`WebRTC connection state: ${state}`);
+        this.onConnectionStateChange?.(state || 'unknown');
+        
+        if (state === 'failed') {
+          console.error('WebRTC connection failed');
+          this.onMessage({ type: 'error', message: 'WebRTC connection failed' });
+        } else if (state === 'disconnected') {
+          console.warn('WebRTC connection disconnected');
+          this.onMessage({ type: 'error', message: 'Connection lost' });
+        }
+      };
 
-    // Set up data channel
-    this.dc = this.pc.createDataChannel("oai-events");
-    
-    // Monitor data channel state
-    this.dc.onopen = () => {
-      console.log('Data channel opened');
-    };
-    
-    this.dc.onclose = () => {
-      console.log('Data channel closed');
-      this.onMessage({ type: 'error', message: 'Data channel closed' });
-    };
-    
-    this.dc.onerror = (error) => {
-      console.error('Data channel error:', error);
-      this.onMessage({ type: 'error', message: 'Data channel error' });
-    };
-    
-    this.dc.addEventListener("message", (e) => {
+      this.pc.oniceconnectionstatechange = () => {
+        const state = this.pc?.iceConnectionState;
+        console.log(`ICE connection state: ${state}`);
+        
+        if (state === 'failed') {
+          console.error('ICE connection failed');
+          this.onMessage({ type: 'error', message: 'Network connection failed' });
+        } else if (state === 'closed') {
+          console.warn('ICE connection closed');
+        }
+      };
+
+      this.pc.onicegatheringstatechange = () => {
+        console.log(`ICE gathering state: ${this.pc?.iceGatheringState}`);
+      };
+
+      // Set up remote audio
+      this.pc.ontrack = (e) => {
+        console.log('Received remote audio track');
+        this.audioEl.srcObject = e.streams[0];
+      };
+
+      // Add local audio track with better error handling
       try {
-        const event = JSON.parse(e.data);
-        this.onMessage(event);
-      } catch (err) {
-        console.error('Failed to parse data channel message', err);
+        console.log('Requesting microphone access...');
+        const ms = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            sampleRate: 24000,
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+        console.log('Got microphone access, adding tracks...');
+        ms.getTracks().forEach((track) => this.pc!.addTrack(track, ms));
+      } catch (micError) {
+        console.error('Microphone access denied:', micError);
+        throw new Error('Microphone access is required for voice chat');
       }
-    });
 
-    // Create and set local description
-    const offer = await this.pc.createOffer();
-    await this.pc.setLocalDescription(offer);
+      // Set up data channel with more detailed logging
+      console.log('Creating data channel...');
+      this.dc = this.pc.createDataChannel("oai-events");
+      
+      // Monitor data channel state
+      this.dc.onopen = () => {
+        console.log('Data channel opened successfully');
+      };
+      
+      this.dc.onclose = () => {
+        console.log('Data channel closed unexpectedly');
+        this.onMessage({ type: 'error', message: 'Data channel closed unexpectedly' });
+      };
+      
+      this.dc.onerror = (error) => {
+        console.error('Data channel error:', error);
+        this.onMessage({ type: 'error', message: 'Data channel error occurred' });
+      };
+      
+      this.dc.addEventListener("message", (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          this.onMessage(event);
+        } catch (err) {
+          console.error('Failed to parse data channel message:', err, 'Raw data:', e.data);
+        }
+      });
 
-    // Connect to OpenAI's Realtime API via WebRTC
-    const baseUrl = "https://api.openai.com/v1/realtime";
-    const sdpResponse = await fetch(`${baseUrl}?model=${encodeURIComponent(model)}`, {
-      method: "POST",
-      body: offer.sdp!,
-      headers: {
-        Authorization: `Bearer ${EPHEMERAL_KEY}`,
-        "Content-Type": "application/sdp",
-      },
-    });
+      // Create and set local description
+      console.log('Creating WebRTC offer...');
+      const offer = await this.pc.createOffer();
+      await this.pc.setLocalDescription(offer);
 
-    const answer = {
-      type: "answer" as RTCSdpType,
-      sdp: await sdpResponse.text(),
-    };
+      // Connect to OpenAI's Realtime API via WebRTC
+      console.log('Connecting to OpenAI Realtime API...');
+      const baseUrl = "https://api.openai.com/v1/realtime";
+      const sdpResponse = await fetch(`${baseUrl}?model=${encodeURIComponent(model)}`, {
+        method: "POST",
+        body: offer.sdp!,
+        headers: {
+          Authorization: `Bearer ${EPHEMERAL_KEY}`,
+          "Content-Type": "application/sdp",
+        },
+      });
 
-    await this.pc.setRemoteDescription(answer);
-    console.log("WebRTC connection established");
+      if (!sdpResponse.ok) {
+        const errorText = await sdpResponse.text();
+        console.error('OpenAI SDP exchange failed:', sdpResponse.status, errorText);
+        throw new Error(`OpenAI connection failed: ${sdpResponse.status} - ${errorText}`);
+      }
+
+      const answer = {
+        type: "answer" as RTCSdpType,
+        sdp: await sdpResponse.text(),
+      };
+
+      console.log('Setting remote description...');
+      await this.pc.setRemoteDescription(answer);
+      console.log("WebRTC connection established successfully");
+      
+      // Add a timeout to detect if connection doesn't work
+      setTimeout(() => {
+        if (this.pc?.connectionState === 'new' || this.pc?.connectionState === 'connecting') {
+          console.warn('Connection taking too long, may have failed silently');
+          this.onMessage({ type: 'error', message: 'Connection timeout - please try again' });
+        }
+      }, 15000); // 15 second timeout
+
+    } catch (error) {
+      console.error('Error in WebRTC init:', error);
+      throw error;
+    }
   }
 
   disconnect() {
