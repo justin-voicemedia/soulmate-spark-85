@@ -198,7 +198,10 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
   // Handle OpenAI events from data channel
   const handleMessage = (event: any) => {
     try {
-      if (event.type === 'response.audio.delta') {
+      if (event.type === 'session_ready') {
+        toast.success('Voice session ready');
+        console.log('Voice session is ready for conversation');
+      } else if (event.type === 'response.audio.delta') {
         setIsSpeaking(true);
       } else if (event.type === 'response.audio.done') {
         setIsSpeaking(false);

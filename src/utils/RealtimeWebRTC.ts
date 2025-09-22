@@ -5,10 +5,16 @@ export class RealtimeChat {
   private dc: RTCDataChannel | null = null;
   private audioEl: HTMLAudioElement;
   private onConnectionStateChange?: (state: string) => void;
+  private keepaliveInterval?: NodeJS.Timeout;
+  private sessionReady = false;
 
   constructor(private onMessage: (message: any) => void, onConnectionStateChange?: (state: string) => void) {
     this.audioEl = document.createElement("audio");
     this.audioEl.autoplay = true;
+    this.audioEl.setAttribute('playsinline', 'true');
+    // Attach to DOM to help with autoplay policies
+    this.audioEl.style.display = 'none';
+    document.body.appendChild(this.audioEl);
     this.onConnectionStateChange = onConnectionStateChange;
   }
 
@@ -167,16 +173,20 @@ export class RealtimeChat {
 
     this.dc.onopen = () => {
       console.log('Data channel opened successfully');
+      this.startKeepalive();
       this.onConnectionStateChange?.('connected');
     };
 
-    this.dc.onclose = () => {
-      console.log('Data channel closed');
+    this.dc.onclose = (event) => {
+      console.log('Data channel closed:', (event as CloseEvent).code || 'unknown', (event as CloseEvent).reason || 'no reason');
+      this.stopKeepalive();
+      this.sessionReady = false;
       this.onConnectionStateChange?.('disconnected');
     };
 
     this.dc.onerror = (error) => {
       console.error('Data channel error:', error);
+      this.stopKeepalive();
       this.onConnectionStateChange?.('failed');
     };
 
@@ -187,6 +197,7 @@ export class RealtimeChat {
 
         // After session is created, configure server VAD and audio formats
         if (evt.type === 'session.created') {
+          console.log('Session created, configuring...');
           const update = {
             type: 'session.update',
             session: {
@@ -210,8 +221,16 @@ export class RealtimeChat {
             this.dc?.send(JSON.stringify({ type: 'response.create' }));
             console.log('Sent response.create');
           } catch (sendErr) {
-            console.warn('Failed to send session.update/response.create:', sendErr);
+            console.error('Failed to send session.update/response.create:', sendErr);
+            this.onConnectionStateChange?.('failed');
           }
+        }
+
+        // Track when session is updated and ready
+        if (evt.type === 'session.updated') {
+          console.log('Session updated and ready');
+          this.sessionReady = true;
+          this.onMessage({ type: 'session_ready' });
         }
 
         this.onMessage(evt);
@@ -221,8 +240,30 @@ export class RealtimeChat {
     });
   }
 
+  private startKeepalive() {
+    this.stopKeepalive();
+    this.keepaliveInterval = setInterval(() => {
+      if (this.dc?.readyState === 'open') {
+        try {
+          // Send a ping to keep connection alive
+          this.dc.send(JSON.stringify({ type: 'ping' }));
+          console.log('Sent keepalive ping');
+        } catch (err) {
+          console.warn('Keepalive ping failed:', err);
+        }
+      }
+    }, 30000); // Every 30 seconds
+  }
+
+  private stopKeepalive() {
+    if (this.keepaliveInterval) {
+      clearInterval(this.keepaliveInterval);
+      this.keepaliveInterval = undefined;
+    }
+  }
+
   sendMessage(message: string) {
-    if (this.dc && this.dc.readyState === 'open') {
+    if (this.dc && this.dc.readyState === 'open' && this.sessionReady) {
       const event = {
         type: 'conversation.item.create',
         item: {
@@ -234,19 +275,30 @@ export class RealtimeChat {
       
       this.dc.send(JSON.stringify(event));
       this.dc.send(JSON.stringify({ type: 'response.create' }));
+    } else {
+      console.warn('Cannot send message - data channel not ready:', {
+        dcState: this.dc?.readyState,
+        sessionReady: this.sessionReady
+      });
     }
   }
 
   disconnect() {
     try {
+      this.stopKeepalive();
       this.dc?.close();
       this.pc?.getSenders().forEach((sender) => sender.track?.stop());
       this.pc?.close();
+      // Remove audio element from DOM
+      if (this.audioEl.parentNode) {
+        this.audioEl.parentNode.removeChild(this.audioEl);
+      }
     } catch (e) {
       console.error('Error closing WebRTC connection', e);
     } finally {
       this.dc = null;
       this.pc = null;
+      this.sessionReady = false;
     }
   }
 }
