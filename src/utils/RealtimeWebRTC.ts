@@ -103,32 +103,33 @@ export class RealtimeChat {
         throw new Error('Microphone access is required for voice chat');
       }
 
-      // Create client data channel immediately; server will also use this
-      console.log('Creating data channel...');
-      this.dc = this.pc.createDataChannel('oai-events');
+      // Wait for server to create the data channel
+      console.log('Waiting for server data channel...');
+      this.pc.ondatachannel = (e) => {
+        console.log('Received data channel from server:', e.channel.label);
+        this.dc = e.channel;
+        
+        this.dc.onopen = () => {
+          console.log('Data channel opened successfully');
+        };
 
-      this.dc.onopen = () => {
-        console.log('Data channel opened successfully');
+        this.dc.onclose = () => {
+          console.log('Data channel closed - this is normal for OpenAI Realtime');
+        };
+
+        this.dc.onerror = (error) => {
+          console.error('Data channel error:', error);
+        };
+
+        this.dc.addEventListener('message', (e) => {
+          try {
+            const evt = JSON.parse(e.data);
+            this.onMessage(evt);
+          } catch (err) {
+            console.error('Failed to parse data channel message:', err, 'Raw data:', e.data);
+          }
+        });
       };
-
-      this.dc.onclose = () => {
-        console.log('Data channel closed');
-        this.onMessage({ type: 'error', message: 'Data channel closed' });
-      };
-
-      this.dc.onerror = (error) => {
-        console.error('Data channel error:', error);
-        this.onMessage({ type: 'error', message: 'Data channel error occurred' });
-      };
-
-      this.dc.addEventListener('message', (e) => {
-        try {
-          const evt = JSON.parse(e.data);
-          this.onMessage(evt);
-        } catch (err) {
-          console.error('Failed to parse data channel message:', err, 'Raw data:', e.data);
-        }
-      });
 
       // Create and set local description
       console.log('Creating WebRTC offer...');
