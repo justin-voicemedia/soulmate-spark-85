@@ -17,7 +17,7 @@ export class RealtimeChat {
       // Get ephemeral token from our Supabase Edge Function
       console.log('Getting ephemeral token for voice chat...');
       const { data, error } = await supabase.functions.invoke('openai-realtime-session', {
-        body: { voice, instructions, model: 'gpt-4o-realtime-preview-2024-12-17' }
+        body: { voice, instructions, model: 'gpt-4o-mini-realtime-preview-2024-12-17' }
       });
 
       if (error) {
@@ -96,7 +96,7 @@ export class RealtimeChat {
       // Connect to OpenAI's Realtime API via WebRTC
       console.log('Connecting to OpenAI Realtime API...');
       const baseUrl = "https://api.openai.com/v1/realtime";
-      const model = 'gpt-4o-realtime-preview-2024-12-17';
+      const model = 'gpt-4o-mini-realtime-preview-2024-12-17';
       const sdpResponse = await fetch(`${baseUrl}?model=${encodeURIComponent(model)}`, {
         method: "POST",
         body: offer.sdp!,
