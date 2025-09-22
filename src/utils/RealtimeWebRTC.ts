@@ -150,6 +150,36 @@ export class RealtimeChat {
       try {
         const evt = JSON.parse(e.data);
         console.log('Received message:', evt.type);
+
+        // After session is created, configure server VAD and audio formats
+        if (evt.type === 'session.created') {
+          const update = {
+            type: 'session.update',
+            session: {
+              modalities: ['text', 'audio'],
+              input_audio_format: 'pcm16',
+              output_audio_format: 'pcm16',
+              input_audio_transcription: { model: 'whisper-1' },
+              turn_detection: {
+                type: 'server_vad',
+                threshold: 0.5,
+                prefix_padding_ms: 300,
+                silence_duration_ms: 1000,
+                interrupt_response: true
+              }
+            }
+          };
+          try {
+            this.dc?.send(JSON.stringify(update));
+            console.log('Sent session.update');
+            // Kick off initial response so the session stays active
+            this.dc?.send(JSON.stringify({ type: 'response.create' }));
+            console.log('Sent response.create');
+          } catch (sendErr) {
+            console.warn('Failed to send session.update/response.create:', sendErr);
+          }
+        }
+
         this.onMessage(evt);
       } catch (err) {
         console.error('Failed to parse data channel message:', err, 'Raw data:', e.data);

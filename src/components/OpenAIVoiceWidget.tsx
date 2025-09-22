@@ -32,6 +32,8 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
   const sessionIdRef = useRef<string | null>(null);
   const sessionStartTimeRef = useRef<Date | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const disconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastConnStateRef = useRef<string>('new');
 
   // Load companion's voice setting
   useEffect(() => {
@@ -240,16 +242,30 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
   // Handle connection state changes
   const handleConnectionStateChange = (state: string) => {
     console.log('Connection state changed to:', state);
+    lastConnStateRef.current = state;
     
-    if (state === 'connected') {
+    if (state === 'failed' || state === 'closed') {
+      toast.error(`Voice chat connection ${state}`);
+      endCall();
+      return;
+    }
+
+    if (state === 'disconnected') {
+      // Allow grace period for transient network hiccups before ending the call
+      if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current);
+      disconnectTimerRef.current = setTimeout(() => {
+        if (lastConnStateRef.current === 'disconnected') {
+          toast.error('Voice chat connection lost');
+          endCall();
+        }
+      }, 6000);
+    } else if (state === 'connected') {
+      if (disconnectTimerRef.current) {
+        clearTimeout(disconnectTimerRef.current);
+        disconnectTimerRef.current = null;
+      }
       setIsConnected(true);
       setIsConnecting(false);
-    } else if (state === 'failed') {
-      toast.error('Voice chat connection failed');
-      endCall();
-    } else if (state === 'disconnected') {
-      toast.error('Voice chat connection lost');
-      endCall();
     }
   };
 
