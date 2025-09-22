@@ -66,10 +66,15 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
   useEffect(() => {
     return () => {
       // Force save any pending conversation before unmounting
-      forceSave();
+      try {
+        forceSave();
+      } catch (e) {
+        console.error('forceSave failed on unmount', e);
+      }
       endCall();
     };
-  }, [forceSave]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const startCall = async () => {
     if (!user) {
