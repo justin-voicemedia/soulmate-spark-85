@@ -232,21 +232,26 @@ export class RealtimeChat {
           };
           try {
             this.dc?.send(JSON.stringify(update));
-            console.log('Sent session.update');
-            // Kick off initial response so the session stays active
-            this.dc?.send(JSON.stringify({ type: 'response.create' }));
-            console.log('Sent response.create');
+            console.log('Sent session.update - waiting for session.updated...');
           } catch (sendErr) {
-            console.error('Failed to send session.update/response.create:', sendErr);
+            console.error('Failed to send session.update:', sendErr);
             this.onConnectionStateChange?.('failed');
           }
         }
 
         // Track when session is updated and ready
         if (evt.type === 'session.updated') {
-          console.log('Session updated and ready');
+          console.log('Session updated and ready - sending initial response.create');
           this.sessionReady = true;
           this.onMessage({ type: 'session_ready' });
+          
+          // Now that session is properly configured, send initial response to keep it active
+          try {
+            this.dc?.send(JSON.stringify({ type: 'response.create' }));
+            console.log('Sent initial response.create');
+          } catch (sendErr) {
+            console.error('Failed to send initial response.create:', sendErr);
+          }
         }
 
         this.onMessage(evt);
