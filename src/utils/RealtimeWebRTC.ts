@@ -204,8 +204,11 @@ export class RealtimeChat {
           try {
             this.dc?.send(JSON.stringify(update));
             console.log('Sent session.update');
+            // Kick off initial response to keep session active
+            this.dc?.send(JSON.stringify({ type: 'response.create' }));
+            console.log('Sent response.create');
           } catch (sendErr) {
-            console.warn('Failed to send session.update:', sendErr);
+            console.warn('Failed to send session.update/response.create:', sendErr);
           }
         }
 
