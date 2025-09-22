@@ -7,6 +7,10 @@ export class RealtimeChat {
   private onConnectionStateChange?: (state: string) => void;
   private keepaliveInterval?: NodeJS.Timeout;
   private sessionReady = false;
+  private lastVoice: string | null = null;
+  private lastInstructions: string | null = null;
+  private reconnectAttempted = false;
+  private reconnectTimer?: NodeJS.Timeout;
 
   constructor(private onMessage: (message: any) => void, onConnectionStateChange?: (state: string) => void) {
     this.audioEl = document.createElement("audio");
@@ -20,6 +24,10 @@ export class RealtimeChat {
 
   async init(voice: string, instructions: string) {
     try {
+      // Remember params for possible reconnect
+      this.lastVoice = voice;
+      this.lastInstructions = instructions;
+
       // Get ephemeral token from our Supabase Edge Function
       console.log('Getting ephemeral token for voice chat...');
       const { data, error } = await supabase.functions.invoke('openai-realtime-session', {
@@ -51,6 +59,10 @@ export class RealtimeChat {
         const state = this.pc?.connectionState;
         console.log(`WebRTC connection state: ${state}`);
         this.onConnectionStateChange?.(state || 'unknown');
+        if ((state === 'disconnected' || state === 'failed') && !this.reconnectAttempted) {
+          console.warn('Connection lost, scheduling one reconnect attempt...');
+          this.scheduleReconnect();
+        }
       };
 
       this.pc.oniceconnectionstatechange = () => {
@@ -129,7 +141,7 @@ export class RealtimeChat {
              this.pc?.removeEventListener?.('icegatheringstatechange', check as any);
            } catch {}
            resolve();
-         }, 2000);
+         }, 5000);
       });
 
       // Connect to OpenAI's Realtime API via WebRTC
@@ -182,6 +194,10 @@ export class RealtimeChat {
       this.stopKeepalive();
       this.sessionReady = false;
       this.onConnectionStateChange?.('disconnected');
+      if (!this.reconnectAttempted) {
+        console.warn('Data channel closed before session ready, attempting reconnect...');
+        this.scheduleReconnect();
+      }
     };
 
     this.dc.onerror = (error) => {
@@ -260,6 +276,31 @@ export class RealtimeChat {
       clearInterval(this.keepaliveInterval);
       this.keepaliveInterval = undefined;
     }
+  }
+
+  private scheduleReconnect() {
+    if (this.reconnectAttempted) {
+      console.log('Reconnect already attempted, skipping.');
+      return;
+    }
+    this.reconnectAttempted = true;
+    try {
+      this.disconnect();
+    } catch (e) {
+      console.warn('Error during pre-reconnect disconnect:', e);
+    }
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = setTimeout(() => {
+      if (this.lastVoice && this.lastInstructions) {
+        console.log('Attempting reconnect with stored params...');
+        this.init(this.lastVoice, this.lastInstructions).catch((err) => {
+          console.error('Reconnect failed:', err);
+          this.onConnectionStateChange?.('failed');
+        });
+      } else {
+        console.warn('No stored params for reconnect; giving up.');
+      }
+    }, 500);
   }
 
   sendMessage(message: string) {
