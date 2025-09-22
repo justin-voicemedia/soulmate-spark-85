@@ -11,6 +11,7 @@ export class RealtimeChat {
   private lastInstructions: string | null = null;
   private reconnectAttempted = false;
   private reconnectTimer?: NodeJS.Timeout;
+  private manualClose = false;
 
   constructor(private onMessage: (message: any) => void, onConnectionStateChange?: (state: string) => void) {
     this.audioEl = document.createElement("audio");
@@ -24,6 +25,8 @@ export class RealtimeChat {
 
   async init(voice: string, instructions: string) {
     try {
+      this.manualClose = false;
+      this.reconnectAttempted = false;
       // Remember params for possible reconnect
       this.lastVoice = voice;
       this.lastInstructions = instructions;
@@ -59,7 +62,7 @@ export class RealtimeChat {
         const state = this.pc?.connectionState;
         console.log(`WebRTC connection state: ${state}`);
         this.onConnectionStateChange?.(state || 'unknown');
-        if ((state === 'disconnected' || state === 'failed') && !this.reconnectAttempted) {
+        if ((state === 'disconnected' || state === 'failed') && !this.reconnectAttempted && !this.manualClose) {
           console.warn('Connection lost, scheduling one reconnect attempt...');
           this.scheduleReconnect();
         }
@@ -189,16 +192,18 @@ export class RealtimeChat {
       this.onConnectionStateChange?.('connected');
     };
 
-    this.dc.onclose = (event) => {
-      console.log('Data channel closed:', (event as CloseEvent).code || 'unknown', (event as CloseEvent).reason || 'no reason');
-      this.stopKeepalive();
-      this.sessionReady = false;
-      this.onConnectionStateChange?.('disconnected');
-      if (!this.reconnectAttempted) {
-        console.warn('Data channel closed before session ready, attempting reconnect...');
-        this.scheduleReconnect();
-      }
-    };
+      this.dc.onclose = (event) => {
+        console.log('Data channel closed:', (event as CloseEvent).code || 'unknown', (event as CloseEvent).reason || 'no reason');
+        this.stopKeepalive();
+        this.sessionReady = false;
+        this.onConnectionStateChange?.('disconnected');
+        if (!this.reconnectAttempted && !this.manualClose) {
+          console.warn('Data channel closed before session ready, attempting reconnect...');
+          this.scheduleReconnect();
+        } else {
+          console.log('Not reconnecting (manualClose or already attempted).');
+        }
+      };
 
     this.dc.onerror = (error) => {
       console.error('Data channel error:', error);
@@ -284,6 +289,10 @@ export class RealtimeChat {
   }
 
   private scheduleReconnect() {
+    if (this.manualClose) {
+      console.log('Manual close in progress; not scheduling reconnect.');
+      return;
+    }
     if (this.reconnectAttempted) {
       console.log('Reconnect already attempted, skipping.');
       return;
@@ -331,6 +340,11 @@ export class RealtimeChat {
 
   disconnect() {
     try {
+      this.manualClose = true;
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = undefined;
+      }
       this.stopKeepalive();
       this.dc?.close();
       this.pc?.getSenders().forEach((sender) => sender.track?.stop());
