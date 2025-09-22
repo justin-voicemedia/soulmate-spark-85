@@ -130,21 +130,37 @@ export const AdminPanel = () => {
   const loadClients = async () => {
     setClientsLoading(true);
     try {
-      // Load profiles with subscription and subscriber data
+      // Load profiles first
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          subscriptions(*),
-          subscribers(*)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (profilesError) throw profilesError;
 
-      // Load usage stats for each user
+      if (!profiles || profiles.length === 0) {
+        setClients([]);
+        return;
+      }
+
+      // Load subscriptions and subscribers data separately for each user
       const clientsWithStats = await Promise.all(
-        (profiles || []).map(async (profile) => {
+        profiles.map(async (profile) => {
+          // Load subscription data
+          const { data: subscriptions } = await supabase
+            .from('subscriptions')
+            .select('*')
+            .eq('user_id', profile.user_id)
+            .limit(1);
+
+          // Load subscriber data
+          const { data: subscribers } = await supabase
+            .from('subscribers')
+            .select('*')
+            .eq('user_id', profile.user_id)
+            .limit(1);
+
+          // Load usage stats
           const { data: usageData } = await supabase
             .from('conversation_usage')
             .select('minutes_used, session_start, session_end')
@@ -155,9 +171,6 @@ export const AdminPanel = () => {
           const totalSessions = usageData?.length || 0;
           const lastSession = usageData?.[0]?.session_start;
 
-          const subscriptions = Array.isArray(profile.subscriptions) ? profile.subscriptions : [];
-          const subscribers = Array.isArray(profile.subscribers) ? profile.subscribers : [];
-
           return {
             id: profile.id,
             email: profile.email,
@@ -166,7 +179,7 @@ export const AdminPanel = () => {
             created_at: profile.created_at,
             updated_at: profile.updated_at,
             user_id: profile.user_id,
-            subscription: subscriptions[0] ? {
+            subscription: subscriptions?.[0] ? {
               id: subscriptions[0].id,
               status: subscriptions[0].status,
               plan_type: subscriptions[0].plan_type,
@@ -175,7 +188,7 @@ export const AdminPanel = () => {
               stripe_customer_id: subscriptions[0].stripe_customer_id,
               spicy_unlocked: subscriptions[0].spicy_unlocked
             } : undefined,
-            subscriber: subscribers[0] ? {
+            subscriber: subscribers?.[0] ? {
               id: subscribers[0].id,
               subscribed: subscribers[0].subscribed,
               subscription_tier: subscribers[0].subscription_tier,
