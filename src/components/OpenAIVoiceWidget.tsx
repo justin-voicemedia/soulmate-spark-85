@@ -81,7 +81,7 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
       toast.error('Please sign in to use voice chat');
       return;
     }
-    if (isConnecting || isConnected) return;
+    if (isConnecting || inCall) return;
 
     console.log('Starting voice call...');
     setIsConnecting(true);
@@ -147,7 +147,7 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
   };
 
   const endCall = async () => {
-    if (!isConnected && !isConnecting) return;
+    if (!inCall) return;
 
     console.log('Ending voice call...');
     
@@ -296,6 +296,10 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
       console.log('WebRTC connection established');
       setIsConnecting(false);
       setIsConnected(true);
+      // Only keep inCall true if we're actually in a call session
+      if (!inCall) {
+        console.log('WebRTC connected but not in active call session');
+      }
     }
   };
 
