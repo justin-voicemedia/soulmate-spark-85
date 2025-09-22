@@ -222,10 +222,15 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
         // This would require collecting the transcript deltas above
         console.log('AI response complete');
       } else if (event.type === 'error') {
-        console.error('OpenAI error:', event.message || event);
-        toast.error(`Voice chat error: ${event.message || 'Unknown error'}`);
-        // Automatically end the call on error
-        endCall();
+        const msg = event.message || event;
+        console.error('OpenAI error:', msg);
+        if (typeof msg === 'string' && msg.toLowerCase().includes('data channel closed')) {
+          // Non-fatal: keep the call running, just notify
+          toast.warning('Data channel closed; continuing audio');
+        } else {
+          toast.error(`Voice chat error: ${typeof msg === 'string' ? msg : 'Unknown error'}`);
+          endCall();
+        }
       }
     } catch (e) {
       console.error('Failed to process event', e);
