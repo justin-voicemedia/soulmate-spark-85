@@ -104,7 +104,7 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
 
       // Connect via WebRTC using ephemeral token
       chatRef.current = new RealtimeChat(handleMessage, handleConnectionStateChange);
-      await chatRef.current.init(companionVoice, instructions, 'gpt-4o-mini-realtime-preview');
+      await chatRef.current.init(companionVoice, instructions, 'gpt-4o-mini-realtime-preview-2024-12-17');
 
       setIsConnecting(false);
       setIsConnected(true);

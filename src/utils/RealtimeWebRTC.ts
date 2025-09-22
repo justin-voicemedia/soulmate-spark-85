@@ -134,7 +134,6 @@ export class RealtimeChat {
                 session: {
                   modalities: ['text', 'audio'],
                   instructions: this.currentInstructions || '',
-                  voice: this.currentVoice || 'alloy',
                   input_audio_format: 'pcm16',
                   output_audio_format: 'pcm16',
                   input_audio_transcription: { model: 'whisper-1' },
@@ -181,7 +180,6 @@ export class RealtimeChat {
                   session: {
                     modalities: ['text', 'audio'],
                     instructions: this.currentInstructions || '',
-                    voice: this.currentVoice || 'alloy',
                     input_audio_format: 'pcm16',
                     output_audio_format: 'pcm16',
                     input_audio_transcription: { model: 'whisper-1' },
