@@ -23,6 +23,7 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
   const { addMessage, forceSave } = useConversationMemory(companionId, companionName);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [inCall, setInCall] = useState(false);
   const [companionVoice, setCompanionVoice] = useState('alloy');
   const [sessionDuration, setSessionDuration] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -80,6 +81,7 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
     console.log('Starting voice call...');
     setIsConnecting(true);
     setIsConnected(false);
+    setInCall(true);
 
     try {
       // Start usage tracking
@@ -176,6 +178,7 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
     console.log('Cleaning up voice chat state...');
     setIsConnected(false);
     setIsConnecting(false);
+    setInCall(false);
     setIsSpeaking(false);
     setIsListening(false);
 
@@ -262,14 +265,14 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
   const handleConnectionStateChange = (state: string) => {
     console.log('WebRTC connection state changed to:', state);
     lastConnStateRef.current = state;
-    
+
     if (state === 'failed') {
       console.log('Connection failed, ending call');
       toast.error('Voice chat connection failed');
       endCall();
       return;
     }
-    
+
     if (state === 'closed') {
       console.log('Connection closed, ending call');
       toast.error('Voice chat connection closed');
@@ -278,25 +281,16 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
     }
 
     if (state === 'disconnected') {
-      console.log('Connection disconnected, starting grace period...');
-      // Allow grace period for transient network hiccups before ending the call
-      if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current);
-      disconnectTimerRef.current = setTimeout(() => {
-        if (lastConnStateRef.current === 'disconnected') {
-          console.log('Grace period expired, connection still disconnected');
-          toast.error('Voice chat connection lost');
-          endCall();
-        }
-      }, 8000); // slightly longer grace period
-    } else if (state === 'connected') {
-      console.log('WebRTC connection established, clearing disconnect timer');
-      if (disconnectTimerRef.current) {
-        clearTimeout(disconnectTimerRef.current);
-        disconnectTimerRef.current = null;
-      }
-      // Ensure UI shows the End Call button when connection is active
-      setIsConnected(true);
+      console.log('Transient disconnect detected; keeping call active and showing reconnecting state');
+      setIsConnecting(true);
+      // Do NOT auto end the call on transient disconnect
+      return;
+    }
+
+    if (state === 'connected') {
+      console.log('WebRTC connection established');
       setIsConnecting(false);
+      setIsConnected(true);
     }
   };
 
@@ -403,7 +397,7 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
         </div>
 
         <div className="flex justify-center space-x-3">
-          {!isConnected ? (
+          {!inCall ? (
             <Button onClick={startCall} disabled={isConnecting} size="lg" className="bg-green-600 hover:bg-green-700">
               {isConnecting ? (
                 <>
