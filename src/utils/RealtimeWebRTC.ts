@@ -51,7 +51,17 @@ export class RealtimeChat {
         const state = this.pc?.iceConnectionState;
         console.log(`ICE connection state: ${state}`);
       };
-
+      this.pc.onicegatheringstatechange = () => {
+        const state = this.pc?.iceGatheringState;
+        console.log(`ICE gathering state changed: ${state}`);
+      };
+      this.pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          console.log('New ICE candidate:', event.candidate.candidate);
+        } else {
+          console.log('All ICE candidates gathered.');
+        }
+      };
       // Set up remote audio
       this.pc.ontrack = (e) => {
         console.log('Received remote audio track');
@@ -88,10 +98,32 @@ export class RealtimeChat {
         this.attachDataChannel(e.channel);
       };
 
-      // Create and set local description
+      // Create and set local description (wait for ICE gathering to complete)
       console.log('Creating WebRTC offer...');
-      const offer = await this.pc.createOffer();
+      const offer = await this.pc.createOffer({ offerToReceiveAudio: true });
       await this.pc.setLocalDescription(offer);
+
+      // Wait for ICE gathering to complete to avoid early disconnects
+      await new Promise<void>((resolve) => {
+        if (this.pc!.iceGatheringState === 'complete') {
+          resolve();
+          return;
+        }
+        const check = () => {
+          const state = this.pc!.iceGatheringState;
+          console.log(`ICE gathering state: ${state}`);
+          if (state === 'complete') {
+            this.pc!.removeEventListener('icegatheringstatechange', check);
+            resolve();
+          }
+        };
+        this.pc!.addEventListener('icegatheringstatechange', check);
+        // Fallback timeout
+        setTimeout(() => {
+          this.pc!.removeEventListener('icegatheringstatechange', check);
+          resolve();
+        }, 2000);
+      });
 
       // Connect to OpenAI's Realtime API via WebRTC
       console.log('Connecting to OpenAI Realtime API...');
@@ -99,10 +131,11 @@ export class RealtimeChat {
       const model = 'gpt-4o-mini-realtime-preview-2024-12-17';
       const sdpResponse = await fetch(`${baseUrl}?model=${encodeURIComponent(model)}`, {
         method: "POST",
-        body: offer.sdp!,
+        body: this.pc.localDescription?.sdp || offer.sdp!,
         headers: {
           Authorization: `Bearer ${EPHEMERAL_KEY}`,
           "Content-Type": "application/sdp",
+          "OpenAI-Beta": "realtime=v1",
         },
       });
 
