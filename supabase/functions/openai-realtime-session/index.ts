@@ -47,7 +47,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             model: attemptModel,
-            voice,
+            voice: voiceToUse,
             instructions,
           }),
         });

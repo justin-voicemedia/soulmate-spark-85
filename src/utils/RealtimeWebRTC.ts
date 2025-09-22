@@ -71,15 +71,14 @@ export class RealtimeChat {
       // Add local audio track
       try {
         console.log('Requesting microphone access...');
-        const ms = await navigator.mediaDevices.getUserMedia({ 
-          audio: {
-            sampleRate: 24000,
-            channelCount: 1,
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-          }
-        });
+         const ms = await navigator.mediaDevices.getUserMedia({ 
+           audio: {
+             channelCount: 1,
+             echoCancellation: true,
+             noiseSuppression: true,
+             autoGainControl: true
+           }
+         });
         console.log('Got microphone access, adding tracks...');
         ms.getTracks().forEach((track) => this.pc!.addTrack(track, ms));
       } catch (micError) {
@@ -109,20 +108,22 @@ export class RealtimeChat {
           resolve();
           return;
         }
-        const check = () => {
-          const state = this.pc!.iceGatheringState;
-          console.log(`ICE gathering state: ${state}`);
-          if (state === 'complete') {
-            this.pc!.removeEventListener('icegatheringstatechange', check);
-            resolve();
-          }
-        };
-        this.pc!.addEventListener('icegatheringstatechange', check);
-        // Fallback timeout
-        setTimeout(() => {
-          this.pc!.removeEventListener('icegatheringstatechange', check);
-          resolve();
-        }, 2000);
+         const check = () => {
+           const state = this.pc?.iceGatheringState;
+           console.log(`ICE gathering state: ${state}`);
+           if (state === 'complete') {
+             try { this.pc?.removeEventListener?.('icegatheringstatechange', check as any); } catch {}
+             resolve();
+           }
+         };
+         try { this.pc?.addEventListener?.('icegatheringstatechange', check as any); } catch {}
+         // Fallback timeout
+         setTimeout(() => {
+           try {
+             this.pc?.removeEventListener?.('icegatheringstatechange', check as any);
+           } catch {}
+           resolve();
+         }, 2000);
       });
 
       // Connect to OpenAI's Realtime API via WebRTC
