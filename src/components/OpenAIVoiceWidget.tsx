@@ -287,14 +287,16 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
           toast.error('Voice chat connection lost');
           endCall();
         }
-      }, 6000);
+      }, 8000); // slightly longer grace period
     } else if (state === 'connected') {
       console.log('WebRTC connection established, clearing disconnect timer');
       if (disconnectTimerRef.current) {
         clearTimeout(disconnectTimerRef.current);
         disconnectTimerRef.current = null;
       }
-      // Don't override UI state - startCall manages the connected state
+      // Ensure UI shows the End Call button when connection is active
+      setIsConnected(true);
+      setIsConnecting(false);
     }
   };
 
