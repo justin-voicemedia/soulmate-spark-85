@@ -55,10 +55,10 @@ export class RealtimeChat {
         
         if (state === 'failed') {
           console.error('WebRTC connection failed');
-          this.onMessage({ type: 'error', message: 'WebRTC connection failed' });
+          // Let UI handle via onConnectionStateChange
         } else if (state === 'disconnected') {
           console.warn('WebRTC connection disconnected');
-          this.onMessage({ type: 'error', message: 'Connection lost' });
+          // Grace period handled in UI; no error event here
         }
       };
 
@@ -103,33 +103,19 @@ export class RealtimeChat {
         throw new Error('Microphone access is required for voice chat');
       }
 
-      // Wait for server to create the data channel
-      console.log('Waiting for server data channel...');
+      // Create client data channel expected by OpenAI and also listen for server-provided one
+      console.log('Creating data channel and listening for server channel...');
+
+      // Handle server-created channel if provided
       this.pc.ondatachannel = (e) => {
         console.log('Received data channel from server:', e.channel.label);
-        this.dc = e.channel;
-        
-        this.dc.onopen = () => {
-          console.log('Data channel opened successfully');
-        };
-
-        this.dc.onclose = () => {
-          console.log('Data channel closed - this is normal for OpenAI Realtime');
-        };
-
-        this.dc.onerror = (error) => {
-          console.error('Data channel error:', error);
-        };
-
-        this.dc.addEventListener('message', (e) => {
-          try {
-            const evt = JSON.parse(e.data);
-            this.onMessage(evt);
-          } catch (err) {
-            console.error('Failed to parse data channel message:', err, 'Raw data:', e.data);
-          }
-        });
+        this.attachDataChannel(e.channel);
       };
+
+      // Proactively create client data channel
+      const clientDc = this.pc.createDataChannel('oai-events');
+      this.attachDataChannel(clientDc);
+
 
       // Create and set local description
       console.log('Creating WebRTC offer...');
@@ -175,6 +161,59 @@ export class RealtimeChat {
       console.error('Error in WebRTC init:', error);
       throw error;
     }
+  }
+
+  private attachDataChannel(channel: RTCDataChannel) {
+    this.dc = channel;
+
+    this.dc.onopen = () => {
+      console.log('Data channel opened successfully');
+    };
+
+    this.dc.onclose = () => {
+      console.log('Data channel closed - continuing audio without DC');
+      // Do not treat as fatal
+    };
+
+    this.dc.onerror = (error) => {
+      console.error('Data channel error:', error);
+    };
+
+    this.dc.addEventListener('message', (e) => {
+      try {
+        const evt = JSON.parse(e.data);
+
+        // When session is created, update configuration if needed
+        if (evt.type === 'session.created') {
+          const update = {
+            type: 'session.update',
+            session: {
+              modalities: ['text', 'audio'],
+              instructions: this.currentInstructions || undefined,
+              input_audio_format: 'pcm16',
+              output_audio_format: 'pcm16',
+              turn_detection: {
+                type: 'server_vad',
+                threshold: 0.5,
+                prefix_padding_ms: 300,
+                silence_duration_ms: 800,
+                interrupt_response: true
+              }
+            }
+          };
+          try {
+            this.dc?.send(JSON.stringify(update));
+            console.log('Sent session.update');
+          } catch (sendErr) {
+            console.warn('Failed to send session.update:', sendErr);
+          }
+        }
+
+        this.onMessage(evt);
+      } catch (err) {
+        console.error('Failed to parse data channel message:', err, 'Raw data:', e.data);
+      }
+    });
   }
 
   disconnect() {
