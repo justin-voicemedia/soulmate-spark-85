@@ -108,14 +108,16 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
       chatRef.current = new RealtimeChat(handleMessage, handleConnectionStateChange);
       await chatRef.current.init(companionVoice, instructions);
 
+      // Only set connected after successful WebRTC init
       setIsConnecting(false);
       setIsConnected(true);
       startSessionTracking();
-      toast.success('Connected to voice chat');
+      console.log('Voice chat connected successfully');
     } catch (error: any) {
       console.error('Failed to start voice call:', error);
       toast.error(error?.message || 'Failed to start voice chat');
       setIsConnecting(false);
+      setIsConnected(false);
       // If tracking started, end it immediately (0 minutes)
       if (sessionIdRef.current) {
         await supabase.functions.invoke('track-usage', {
@@ -135,6 +137,8 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
   const endCall = async () => {
     if (!isConnected && !isConnecting) return;
 
+    console.log('Ending voice call...');
+    
     // Stop WebRTC
     chatRef.current?.disconnect();
     chatRef.current = null;
@@ -160,6 +164,7 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
     }
 
     cleanup();
+    toast.success('Voice chat ended');
   };
 
   const cleanup = () => {
@@ -267,8 +272,8 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
         clearTimeout(disconnectTimerRef.current);
         disconnectTimerRef.current = null;
       }
-      setIsConnected(true);
-      setIsConnecting(false);
+      // Don't override isConnected state here - let startCall manage it
+      console.log('WebRTC connection established');
     }
   };
 
