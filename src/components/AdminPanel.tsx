@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useImageGeneration } from '@/hooks/useImageGeneration';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { RefreshCw, Image as ImageIcon, Sparkles, Upload, Settings, Home, Edit3, Save, X } from 'lucide-react';
+import { RefreshCw, Image as ImageIcon, Sparkles, Upload, Settings, Home, Edit3, Save, X, Users, Mail, Calendar, CreditCard, Crown } from 'lucide-react';
 import { CompanionImageManager } from './CompanionImageManager';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,6 +26,39 @@ interface Companion {
   image_url: string;
 }
 
+interface ClientData {
+  id: string;
+  email: string;
+  name?: string;
+  avatar_url?: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  subscription?: {
+    id: string;
+    status: string;
+    plan_type: string;
+    current_period_start?: string;
+    current_period_end?: string;
+    stripe_customer_id?: string;
+    spicy_unlocked?: boolean;
+  };
+  subscriber?: {
+    id: string;
+    subscribed: boolean;
+    subscription_tier?: string;
+    trial_start?: string;
+    trial_minutes_used?: number;
+    trial_minutes_limit?: number;
+    stripe_customer_id?: string;
+  };
+  usage_stats?: {
+    total_sessions: number;
+    total_minutes: number;
+    last_session?: string;
+  };
+}
+
 export const AdminPanel = () => {
   const [companions, setCompanions] = useState<Companion[]>([]);
   const [companionsLoading, setCompanionsLoading] = useState(false);
@@ -39,6 +72,14 @@ export const AdminPanel = () => {
   const [relationshipPrompts, setRelationshipPrompts] = useState<Record<string, string>>({});
   const [promptsLoading, setPromptsLoading] = useState(false);
   const [savingPrompts, setSavingPrompts] = useState(false);
+  
+  // Client management state
+  const [clients, setClients] = useState<ClientData[]>([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
+  const [editingClients, setEditingClients] = useState<string[]>([]);
+  const [savingClients, setSavingClients] = useState<string[]>([]);
+  const [clientEditFormData, setClientEditFormData] = useState<Record<string, Partial<ClientData>>>({});
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const { generateCompanionImage } = useImageGeneration();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -82,6 +123,216 @@ export const AdminPanel = () => {
       toast.error('Failed to load relationship prompts');
     } finally {
       setPromptsLoading(false);
+    }
+  };
+
+  // Client management functions
+  const loadClients = async () => {
+    setClientsLoading(true);
+    try {
+      // Load profiles with subscription and subscriber data
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          subscriptions(*),
+          subscribers(*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (profilesError) throw profilesError;
+
+      // Load usage stats for each user
+      const clientsWithStats = await Promise.all(
+        (profiles || []).map(async (profile) => {
+          const { data: usageData } = await supabase
+            .from('conversation_usage')
+            .select('minutes_used, session_start, session_end')
+            .eq('user_id', profile.user_id)
+            .order('session_start', { ascending: false });
+
+          const totalMinutes = usageData?.reduce((sum, session) => sum + (session.minutes_used || 0), 0) || 0;
+          const totalSessions = usageData?.length || 0;
+          const lastSession = usageData?.[0]?.session_start;
+
+          const subscriptions = Array.isArray(profile.subscriptions) ? profile.subscriptions : [];
+          const subscribers = Array.isArray(profile.subscribers) ? profile.subscribers : [];
+
+          return {
+            id: profile.id,
+            email: profile.email,
+            name: profile.name,
+            avatar_url: profile.avatar_url,
+            created_at: profile.created_at,
+            updated_at: profile.updated_at,
+            user_id: profile.user_id,
+            subscription: subscriptions[0] ? {
+              id: subscriptions[0].id,
+              status: subscriptions[0].status,
+              plan_type: subscriptions[0].plan_type,
+              current_period_start: subscriptions[0].current_period_start,
+              current_period_end: subscriptions[0].current_period_end,
+              stripe_customer_id: subscriptions[0].stripe_customer_id,
+              spicy_unlocked: subscriptions[0].spicy_unlocked
+            } : undefined,
+            subscriber: subscribers[0] ? {
+              id: subscribers[0].id,
+              subscribed: subscribers[0].subscribed,
+              subscription_tier: subscribers[0].subscription_tier,
+              trial_start: subscribers[0].trial_start,
+              trial_minutes_used: subscribers[0].trial_minutes_used,
+              trial_minutes_limit: subscribers[0].trial_minutes_limit,
+              stripe_customer_id: subscribers[0].stripe_customer_id
+            } : undefined,
+            usage_stats: {
+              total_sessions: totalSessions,
+              total_minutes: totalMinutes,
+              last_session: lastSession
+            }
+          } as ClientData;
+        })
+      );
+
+      setClients(clientsWithStats);
+    } catch (error) {
+      console.error('Error loading clients:', error);
+      toast.error('Failed to load clients');
+    } finally {
+      setClientsLoading(false);
+    }
+  };
+
+  const toggleClientEdit = (clientId: string) => {
+    const client = clients.find(c => c.id === clientId);
+    if (!client) return;
+
+    if (editingClients.includes(clientId)) {
+      // Cancel editing
+      setEditingClients(prev => prev.filter(id => id !== clientId));
+      setClientEditFormData(prev => {
+        const newData = { ...prev };
+        delete newData[clientId];
+        return newData;
+      });
+    } else {
+      // Start editing
+      setEditingClients(prev => [...prev, clientId]);
+      setClientEditFormData(prev => ({
+        ...prev,
+        [clientId]: {
+          name: client.name,
+          email: client.email,
+          subscriber: client.subscriber ? {
+            ...client.subscriber,
+            trial_minutes_limit: client.subscriber.trial_minutes_limit,
+            subscribed: client.subscriber.subscribed
+          } : undefined
+        }
+      }));
+    }
+  };
+
+  const saveClient = async (clientId: string) => {
+    const formData = clientEditFormData[clientId];
+    if (!formData) return;
+
+    setSavingClients(prev => [...prev, clientId]);
+    try {
+      // Update profile
+      if (formData.name !== undefined || formData.email !== undefined) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            name: formData.name,
+            email: formData.email,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', clientId);
+
+        if (profileError) throw profileError;
+      }
+
+      // Update subscriber if data exists
+      if (formData.subscriber) {
+        const client = clients.find(c => c.id === clientId);
+        if (client?.subscriber) {
+          const { error: subscriberError } = await supabase
+            .from('subscribers')
+            .update({
+              trial_minutes_limit: formData.subscriber.trial_minutes_limit,
+              subscribed: formData.subscriber.subscribed,
+              subscription_tier: formData.subscriber.subscription_tier,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', client.subscriber.id);
+
+          if (subscriberError) throw subscriberError;
+        }
+      }
+
+      // Update local state
+      setClients(prev =>
+        prev.map(c =>
+          c.id === clientId
+            ? { 
+                ...c, 
+                name: formData.name || c.name,
+                email: formData.email || c.email,
+                subscriber: formData.subscriber ? { ...c.subscriber!, ...formData.subscriber } : c.subscriber
+              }
+            : c
+        )
+      );
+
+      // Exit edit mode
+      setEditingClients(prev => prev.filter(id => id !== clientId));
+      setClientEditFormData(prev => {
+        const newData = { ...prev };
+        delete newData[clientId];
+        return newData;
+      });
+
+      toast.success('Client updated successfully');
+    } catch (error) {
+      console.error('Error saving client:', error);
+      toast.error('Failed to save client');
+    } finally {
+      setSavingClients(prev => prev.filter(id => id !== clientId));
+    }
+  };
+
+  const updateClientFormData = (clientId: string, field: string, value: any) => {
+    setClientEditFormData(prev => ({
+      ...prev,
+      [clientId]: {
+        ...prev[clientId],
+        [field]: field === 'subscriber' 
+          ? {
+              ...prev[clientId]?.subscriber,
+              ...value
+            }
+          : value
+      }
+    }));
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getStatusBadgeColor = (status?: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800';
+      case 'canceled': return 'bg-red-100 text-red-800';
+      case 'past_due': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -413,6 +664,7 @@ export const AdminPanel = () => {
   useEffect(() => {
     loadCompanions();
     loadRelationshipPrompts();
+    loadClients();
   }, []);
   
   return (
@@ -439,14 +691,253 @@ export const AdminPanel = () => {
       </div>
 
       <Tabs defaultValue="bulk-operations" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="image-manager">Image Manager</TabsTrigger>
           <TabsTrigger value="bulk-operations">Manage Companions</TabsTrigger>
+          <TabsTrigger value="clients">Client Management</TabsTrigger>
           <TabsTrigger value="relationship-prompts">Relationship Prompts</TabsTrigger>
         </TabsList>
         
         <TabsContent value="image-manager" className="space-y-4">
           <CompanionImageManager />
+        </TabsContent>
+        
+        <TabsContent value="clients" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Users className="w-6 h-6" />
+                <div>
+                  <CardTitle>Client Management</CardTitle>
+                  <CardDescription>
+                    View and manage all registered clients, their subscriptions, and usage statistics
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2 flex-wrap">
+                <Button 
+                  onClick={loadClients} 
+                  disabled={clientsLoading}
+                  variant="outline"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${clientsLoading ? 'animate-spin' : ''}`} />
+                  Load Clients ({clients.length})
+                </Button>
+              </div>
+
+              {clients.length > 0 && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {clients.map((client) => {
+                      const isEditing = editingClients.includes(client.id);
+                      const isSaving = savingClients.includes(client.id);
+                      const formData = clientEditFormData[client.id] || {};
+                      
+                      return (
+                        <Card key={client.id} className="border">
+                          <CardContent className="p-4">
+                            <div className="space-y-3">
+                              {/* Header */}
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Mail className="w-4 h-4 text-muted-foreground" />
+                                  <div className="flex-1 min-w-0">
+                                    {isEditing ? (
+                                      <Input
+                                        value={formData.email || client.email}
+                                        onChange={(e) => updateClientFormData(client.id, 'email', e.target.value)}
+                                        className="h-7 text-sm"
+                                        placeholder="Email"
+                                      />
+                                    ) : (
+                                      <p className="text-sm font-medium truncate">{client.email}</p>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <div className="flex gap-1">
+                                  {isEditing ? (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => saveClient(client.id)}
+                                        disabled={isSaving}
+                                        className="h-7 px-2"
+                                      >
+                                        {isSaving ? (
+                                          <RefreshCw className="w-3 h-3 animate-spin" />
+                                        ) : (
+                                          <Save className="w-3 h-3" />
+                                        )}
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => toggleClientEdit(client.id)}
+                                        disabled={isSaving}
+                                        className="h-7 px-2"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => toggleClientEdit(client.id)}
+                                      className="h-7 px-2"
+                                    >
+                                      <Edit3 className="w-3 h-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Name */}
+                              <div>
+                                <label className="text-xs text-muted-foreground">Name</label>
+                                {isEditing ? (
+                                  <Input
+                                    value={formData.name || client.name || ''}
+                                    onChange={(e) => updateClientFormData(client.id, 'name', e.target.value)}
+                                    className="h-7 text-sm mt-1"
+                                    placeholder="Full name"
+                                  />
+                                ) : (
+                                  <p className="text-sm">{client.name || 'No name set'}</p>
+                                )}
+                              </div>
+
+                              {/* Subscription Status */}
+                              <div>
+                                <label className="text-xs text-muted-foreground">Subscription</label>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {client.subscription ? (
+                                    <>
+                                      <span className={`text-xs px-2 py-1 rounded ${getStatusBadgeColor(client.subscription.status)}`}>
+                                        {client.subscription.status}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {client.subscription.plan_type}
+                                      </span>
+                                      {client.subscription.spicy_unlocked && (
+                                        <Crown className="w-3 h-3 text-yellow-500" />
+                                      )}
+                                    </>
+                                  ) : client.subscriber?.subscribed ? (
+                                    <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-800">
+                                      {client.subscriber.subscription_tier || 'Active'}
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-800">
+                                      Trial
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Trial Info */}
+                              {client.subscriber && (
+                                <div>
+                                  <label className="text-xs text-muted-foreground">Trial Usage</label>
+                                  <div className="mt-1">
+                                    {isEditing ? (
+                                      <div className="space-y-2">
+                                        <Input
+                                          type="number"
+                                          value={formData.subscriber?.trial_minutes_limit || client.subscriber.trial_minutes_limit || 500}
+                                          onChange={(e) => updateClientFormData(client.id, 'subscriber', {
+                                            ...formData.subscriber,
+                                            trial_minutes_limit: parseInt(e.target.value)
+                                          })}
+                                          className="h-7 text-sm"
+                                          placeholder="Trial limit"
+                                        />
+                                        <div className="flex items-center gap-2">
+                                          <input
+                                            type="checkbox"
+                                            checked={formData.subscriber?.subscribed ?? client.subscriber.subscribed}
+                                            onChange={(e) => updateClientFormData(client.id, 'subscriber', {
+                                              ...formData.subscriber,
+                                              subscribed: e.target.checked
+                                            })}
+                                            className="w-3 h-3"
+                                          />
+                                          <label className="text-xs">Subscribed</label>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="text-xs space-y-1">
+                                        <p>{client.subscriber.trial_minutes_used || 0} / {client.subscriber.trial_minutes_limit || 500} minutes</p>
+                                        <div className="w-full bg-gray-200 rounded-full h-1">
+                                          <div 
+                                            className="bg-primary h-1 rounded-full" 
+                                            style={{
+                                              width: `${Math.min(100, ((client.subscriber.trial_minutes_used || 0) / (client.subscriber.trial_minutes_limit || 500)) * 100)}%`
+                                            }}
+                                          ></div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Usage Stats */}
+                              {client.usage_stats && (
+                                <div>
+                                  <label className="text-xs text-muted-foreground">Usage Statistics</label>
+                                  <div className="text-xs space-y-1 mt-1">
+                                    <p>{client.usage_stats.total_sessions} sessions</p>
+                                    <p>{client.usage_stats.total_minutes} total minutes</p>
+                                    {client.usage_stats.last_session && (
+                                      <p className="text-muted-foreground">
+                                        Last: {formatDate(client.usage_stats.last_session)}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Dates */}
+                              <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>Joined: {formatDate(client.created_at)}</span>
+                                </div>
+                                {client.subscription?.current_period_end && (
+                                  <div className="flex items-center gap-1">
+                                    <CreditCard className="w-3 h-3" />
+                                    <span>Expires: {formatDate(client.subscription.current_period_end)}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {clientsLoading && (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                  <p className="text-sm text-muted-foreground">Loading clients...</p>
+                </div>
+              )}
+
+              {!clientsLoading && clients.length === 0 && (
+                <div className="text-center py-8">
+                  <Users className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No clients found</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
         
         <TabsContent value="relationship-prompts" className="space-y-4">
