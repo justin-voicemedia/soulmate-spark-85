@@ -103,7 +103,7 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
       }
 
       // Connect via WebRTC using ephemeral token
-      chatRef.current = new RealtimeChat(handleMessage);
+      chatRef.current = new RealtimeChat(handleMessage, handleConnectionStateChange);
       await chatRef.current.init(companionVoice, instructions, 'gpt-4o-mini-realtime-preview');
 
       setIsConnecting(false);
@@ -224,9 +224,21 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
       } else if (event.type === 'error') {
         console.error('OpenAI error:', event.message || event);
         toast.error(`Voice chat error: ${event.message || 'Unknown error'}`);
+        // Automatically end the call on error
+        endCall();
       }
     } catch (e) {
       console.error('Failed to process event', e);
+    }
+  };
+
+  // Handle connection state changes
+  const handleConnectionStateChange = (state: string) => {
+    console.log('Connection state changed to:', state);
+    
+    if (state === 'failed' || state === 'disconnected' || state === 'closed') {
+      toast.error(`Voice chat connection ${state}`);
+      endCall();
     }
   };
 

@@ -4,10 +4,12 @@ export class RealtimeChat {
   private pc: RTCPeerConnection | null = null;
   private dc: RTCDataChannel | null = null;
   private audioEl: HTMLAudioElement;
+  private onConnectionStateChange?: (state: string) => void;
 
-  constructor(private onMessage: (message: any) => void) {
+  constructor(private onMessage: (message: any) => void, onConnectionStateChange?: (state: string) => void) {
     this.audioEl = document.createElement("audio");
     this.audioEl.autoplay = true;
+    this.onConnectionStateChange = onConnectionStateChange;
   }
 
   async init(voice: string, instructions: string, model = 'gpt-4o-mini-realtime-preview') {
@@ -23,6 +25,32 @@ export class RealtimeChat {
     // Create peer connection
     this.pc = new RTCPeerConnection();
 
+    // Monitor connection states
+    this.pc.onconnectionstatechange = () => {
+      const state = this.pc?.connectionState;
+      console.log(`WebRTC connection state: ${state}`);
+      this.onConnectionStateChange?.(state || 'unknown');
+      
+      if (state === 'failed' || state === 'disconnected') {
+        console.error('WebRTC connection failed or disconnected');
+        this.onMessage({ type: 'error', message: `Connection ${state}` });
+      }
+    };
+
+    this.pc.oniceconnectionstatechange = () => {
+      const state = this.pc?.iceConnectionState;
+      console.log(`ICE connection state: ${state}`);
+      
+      if (state === 'failed' || state === 'closed') {
+        console.error('ICE connection failed or closed');
+        this.onMessage({ type: 'error', message: `ICE connection ${state}` });
+      }
+    };
+
+    this.pc.onicegatheringstatechange = () => {
+      console.log(`ICE gathering state: ${this.pc?.iceGatheringState}`);
+    };
+
     // Set up remote audio
     this.pc.ontrack = (e) => {
       this.audioEl.srcObject = e.streams[0];
@@ -34,6 +62,22 @@ export class RealtimeChat {
 
     // Set up data channel
     this.dc = this.pc.createDataChannel("oai-events");
+    
+    // Monitor data channel state
+    this.dc.onopen = () => {
+      console.log('Data channel opened');
+    };
+    
+    this.dc.onclose = () => {
+      console.log('Data channel closed');
+      this.onMessage({ type: 'error', message: 'Data channel closed' });
+    };
+    
+    this.dc.onerror = (error) => {
+      console.error('Data channel error:', error);
+      this.onMessage({ type: 'error', message: 'Data channel error' });
+    };
+    
     this.dc.addEventListener("message", (e) => {
       try {
         const event = JSON.parse(e.data);
