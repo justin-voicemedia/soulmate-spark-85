@@ -103,106 +103,32 @@ export class RealtimeChat {
         throw new Error('Microphone access is required for voice chat');
       }
 
-      // Prefer using server-created data channel; listen for it
-      console.log('Waiting for server data channel...');
-      this.pc.ondatachannel = (event) => {
-        console.log('Received data channel from server:', event.channel.label);
-        this.dc = event.channel;
+      // Create client data channel immediately; server will also use this
+      console.log('Creating data channel...');
+      this.dc = this.pc.createDataChannel('oai-events');
 
-        this.dc.onopen = () => {
-          console.log('Server data channel opened');
-        };
-        
-        this.dc.onclose = () => {
-          console.log('Server data channel closed');
-          this.onMessage({ type: 'error', message: 'Data channel closed unexpectedly' });
-        };
-        
-        this.dc.onerror = (error) => {
-          console.error('Data channel error:', error);
-          this.onMessage({ type: 'error', message: 'Data channel error occurred' });
-        };
-        
-        this.dc.addEventListener("message", (e) => {
-          try {
-            const evt = JSON.parse(e.data);
-
-            if (evt.type === 'session.created') {
-              console.log('Session created, sending session.update');
-              const update = {
-                type: 'session.update',
-                session: {
-                  modalities: ['text', 'audio'],
-                  instructions: this.currentInstructions || '',
-                  input_audio_format: 'pcm16',
-                  output_audio_format: 'pcm16',
-                  input_audio_transcription: { model: 'whisper-1' },
-                  turn_detection: {
-                    type: 'server_vad',
-                    threshold: 0.5,
-                    prefix_padding_ms: 300,
-                    silence_duration_ms: 800,
-                  },
-                },
-              };
-              this.dc?.send(JSON.stringify(update));
-            }
-
-            this.onMessage(evt);
-          } catch (err) {
-            console.error('Failed to parse data channel message:', err, 'Raw data:', e.data);
-          }
-        });
+      this.dc.onopen = () => {
+        console.log('Data channel opened successfully');
       };
 
-      // Fallback: if no server channel after 5s, create one
-      setTimeout(() => {
-        if (!this.dc && this.pc) {
-          console.warn('No server data channel received, creating client data channel');
-          this.dc = this.pc.createDataChannel('oai-events');
-          this.dc.onopen = () => console.log('Client data channel opened');
-          this.dc.onclose = () => {
-            console.log('Client data channel closed');
-            this.onMessage({ type: 'error', message: 'Data channel closed' });
-          };
-          this.dc.onerror = (error) => {
-            console.error('Client data channel error:', error);
-            this.onMessage({ type: 'error', message: 'Data channel error' });
-          };
-          this.dc.addEventListener('message', (e) => {
-            try {
-              const evt = JSON.parse(e.data);
+      this.dc.onclose = () => {
+        console.log('Data channel closed');
+        this.onMessage({ type: 'error', message: 'Data channel closed' });
+      };
 
-              if (evt.type === 'session.created') {
-                console.log('Session created (client channel), sending session.update');
-                const update = {
-                  type: 'session.update',
-                  session: {
-                    modalities: ['text', 'audio'],
-                    instructions: this.currentInstructions || '',
-                    input_audio_format: 'pcm16',
-                    output_audio_format: 'pcm16',
-                    input_audio_transcription: { model: 'whisper-1' },
-                    turn_detection: {
-                      type: 'server_vad',
-                      threshold: 0.5,
-                      prefix_padding_ms: 300,
-                      silence_duration_ms: 800,
-                    },
-                  },
-                };
-                this.dc?.send(JSON.stringify(update));
-              }
+      this.dc.onerror = (error) => {
+        console.error('Data channel error:', error);
+        this.onMessage({ type: 'error', message: 'Data channel error occurred' });
+      };
 
-              this.onMessage(evt);
-            } catch (err) {
-              console.error('Failed to parse data (client channel):', err);
-            }
-          });
+      this.dc.addEventListener('message', (e) => {
+        try {
+          const evt = JSON.parse(e.data);
+          this.onMessage(evt);
+        } catch (err) {
+          console.error('Failed to parse data channel message:', err, 'Raw data:', e.data);
         }
-      }, 5000);
-      // Data channel handlers are set when the channel is created (server or client)
-
+      });
 
       // Create and set local description
       console.log('Creating WebRTC offer...');
