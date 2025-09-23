@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Heart, MessageCircle, Shield, Star, MapPin, Calendar } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { HeroRotating } from "@/components/HeroRotating";
 
 interface Companion {
   id: string;
@@ -92,34 +93,11 @@ export const LandingPage = ({ onStartQuestionnaire, onBrowseCompanions, onBuildC
       </header>
 
       {/* Hero Section */}
-      <section className="px-6 py-20 text-center">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-6">
-            Find Your Perfect AI Companion
-          </h1>
-          <p className="text-xl text-muted-foreground mb-6 max-w-2xl mx-auto">
-            Connect with personalized AI companions through text, voice, and video. 
-            Experience meaningful conversations tailored just for you.
-          </p>
-          
-          {/* Free Trial Badge */}
-          <div className="bg-gradient-to-r from-primary to-accent text-primary-foreground rounded-full px-6 py-3 inline-block mb-8 text-lg font-semibold">
-            🎉 7-Day Free Trial • 500 Minutes Included
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" onClick={onStartQuestionnaire} className="text-lg px-8 py-6">
-              Start Questionnaire
-            </Button>
-            <Button size="lg" variant="outline" onClick={onBrowseCompanions} className="text-lg px-8 py-6">
-              Browse & Choose Companions
-            </Button>
-            <Button size="lg" variant="secondary" onClick={onBuildCompanion} className="text-lg px-8 py-6">
-              Build Your Own
-            </Button>
-          </div>
-        </div>
-      </section>
+      <HeroRotating 
+        onStartQuestionnaire={onStartQuestionnaire}
+        onBrowseCompanions={onBrowseCompanions}
+        onBuildCompanion={onBuildCompanion}
+      />
 
       {/* Featured Companions Section */}
       <section className="px-6 py-16">
