@@ -10,6 +10,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ArrowLeft, Sparkles, Trash2, Image as ImageIcon, Upload } from 'lucide-react';
 import { useImageGeneration } from '@/hooks/useImageGeneration';
 import { VoiceSelector } from '@/components/VoiceSelector';
+import { RelationshipSelector } from '@/components/RelationshipSelector';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -54,6 +56,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
   const [uploading, setUploading] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [selectedVoice, setSelectedVoice] = useState<string>('alloy');
+  const [currentRelationshipType, setCurrentRelationshipType] = useState<string>('casual_friend');
   
   const [formData, setFormData] = useState({
     name: editingCompanion?.name || '',
@@ -74,27 +77,26 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
       setGeneratedImageUrl(editingCompanion.image_url);
     }
     
-    // Load companion's voice if editing
-    const loadCompanionVoice = async () => {
+    // Load companion settings if editing
+    const loadCompanionSettings = async () => {
       if (!editingCompanion || !user) return;
-      
       try {
         const { data, error } = await supabase
           .from('user_companions')
-          .select('voice_id')
+          .select('voice_id, relationship_type')
           .eq('user_id', user.id)
           .eq('companion_id', editingCompanion.id)
           .maybeSingle();
-          
-        if (!error && data?.voice_id) {
-          setSelectedVoice(data.voice_id);
+        if (!error && data) {
+          if (data.voice_id) setSelectedVoice(data.voice_id);
+          if (data.relationship_type) setCurrentRelationshipType(data.relationship_type);
         }
       } catch (error) {
-        console.error('Error loading companion voice:', error);
+        console.error('Error loading companion settings:', error);
       }
     };
-    
-    loadCompanionVoice();
+
+    loadCompanionSettings();
   }, [editingCompanion, user]);
 
   const handlePersonalityChange = (trait: string, checked: boolean) => {
@@ -350,6 +352,29 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {editingCompanion && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>Edit Companion Details</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue="relationship" className="w-full">
+                    <TabsList className="w-full flex">
+                      <TabsTrigger value="relationship" className="flex-1">Relationship</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="relationship" className="mt-4">
+                      <RelationshipSelector
+                        companionId={editingCompanion.id}
+                        companionName={editingCompanion.name}
+                        currentRelationshipType={currentRelationshipType}
+                        onRelationshipChange={(t) => setCurrentRelationshipType(t)}
+                        showTitle={false}
+                      />
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+            )}
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Basic Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
