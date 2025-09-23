@@ -29,6 +29,9 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useTrialStatus } from "@/hooks/useTrialStatus";
 import { OpenAIVoiceWidget } from "@/components/OpenAIVoiceWidget";
+import { RelationshipSelector } from "@/components/RelationshipSelector";
+import { VoiceSelector } from "@/components/VoiceSelector";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 interface MobileAppProps {
@@ -67,7 +70,8 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
   const [newMessage, setNewMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+const messagesEndRef = useRef<HTMLDivElement>(null);
+const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relationship_type: string } | null>(null);
 
   useEffect(() => {
     scrollToBottom();
@@ -137,6 +141,30 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
   }, [user, companion.id]);
 
   useEffect(() => {
+    const load = async () => {
+      if (!user) return;
+      try {
+        const { data, error } = await supabase
+          .from('user_companions')
+          .select('voice_id, relationship_type')
+          .eq('user_id', user.id)
+          .eq('companion_id', companion.id)
+          .maybeSingle();
+        if (error) throw error;
+        if (data) {
+          setUserCompanion({
+            voice_id: data.voice_id || 'alloy',
+            relationship_type: data.relationship_type || 'casual_friend',
+          });
+        }
+      } catch (e) {
+        console.error('Error loading companion settings:', e);
+      }
+    };
+    load();
+  }, [user, companion.id]);
+
+  useEffect(() => {
     // Start tracking session time when chat tab is opened
     if (activeTab === 'chat' && !sessionStartTime) {
       setSessionStartTime(new Date());
@@ -180,7 +208,24 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
     setActiveTab(newTab);
   };
 
-  const scrollToBottom = () => {
+const handleVoiceChange = async (newVoiceId: string) => {
+  if (!user) return;
+  try {
+    const { error } = await supabase
+      .from('user_companions')
+      .update({ voice_id: newVoiceId, updated_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .eq('companion_id', companion.id);
+    if (error) throw error;
+    setUserCompanion(prev => prev ? { ...prev, voice_id: newVoiceId } : prev);
+    toast.success('Voice updated successfully');
+  } catch (e) {
+    console.error('Error updating voice:', e);
+    toast.error('Failed to update voice');
+  }
+};
+
+const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
@@ -529,6 +574,41 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
           >
             View Profile
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Edit Companion Details</CardTitle>
+          <CardDescription>Configure relationship and voice</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="relationship" className="w-full">
+            <TabsList className="w-full flex">
+              <TabsTrigger value="relationship" className="flex-1">Relationship</TabsTrigger>
+              <TabsTrigger value="voice" className="flex-1">Voice</TabsTrigger>
+            </TabsList>
+            <TabsContent value="relationship" className="mt-4">
+              {userCompanion && (
+                <RelationshipSelector
+                  companionId={companion.id}
+                  companionName={companion.name}
+                  currentRelationshipType={userCompanion.relationship_type || 'casual_friend'}
+                  onRelationshipChange={(newType) => setUserCompanion(prev => prev ? { ...prev, relationship_type: newType } : prev)}
+                  showTitle={false}
+                />
+              )}
+            </TabsContent>
+            <TabsContent value="voice" className="mt-4">
+              {userCompanion && (
+                <VoiceSelector
+                  value={userCompanion.voice_id}
+                  onValueChange={handleVoiceChange}
+                  companionName={companion.name}
+                />
+              )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
