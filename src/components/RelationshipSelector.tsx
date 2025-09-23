@@ -59,7 +59,6 @@ export const RelationshipSelector = ({
   const { user } = useAuth();
   const { trialStatus } = useTrialStatus();
   const [selectedType, setSelectedType] = useState(currentRelationshipType);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -96,7 +95,8 @@ export const RelationshipSelector = ({
 
       if (error) throw error;
 
-      toast.success(`Relationship type updated to ${relationshipTypes.find(t => t.id === selectedType)?.name}`);
+      const relationshipName = relationshipTypes.find(t => t.id === selectedType)?.name;
+      toast.success(`Relationship type updated to ${relationshipName}`);
       onRelationshipChange?.(selectedType);
     } catch (error) {
       console.error('Error updating relationship type:', error);
