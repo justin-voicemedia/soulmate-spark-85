@@ -12,6 +12,8 @@ import { useImageGeneration } from "@/hooks/useImageGeneration";
 import { useCompanionSelection } from "@/hooks/useCompanionSelection";
 import { useAuth } from "@/hooks/useAuth";
 import { VoiceSelector } from "@/components/VoiceSelector";
+import { RelationshipSelector } from "@/components/RelationshipSelector";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 interface Companion {
@@ -391,15 +393,42 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion, onCustomizeCompani
                         </div>
                       </div>
                       
-                      <div>
-                        <h3 className="font-semibold mb-2">Voice</h3>
-                        <VoiceSelector
-                          value={selectedVoiceForCompanion}
-                          onValueChange={setSelectedVoiceForCompanion}
-                          disabled={isCreatingAgent}
-                          companionName={selectedCompanion?.name}
-                        />
-                      </div>
+                      <Card className="mt-2">
+                        <CardHeader>
+                          <CardTitle>Edit Companion Details</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <Tabs defaultValue="relationship" className="w-full">
+                            <TabsList className="w-full flex">
+                              <TabsTrigger value="relationship" className="flex-1">Relationship</TabsTrigger>
+                              <TabsTrigger value="voice" className="flex-1">Voice</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="relationship" className="mt-4">
+                              <RelationshipSelector
+                                companionId={selectedCompanion.id}
+                                companionName={selectedCompanion.name}
+                                currentRelationshipType={
+                                  userCompanions.find((uc) => uc.companion_id === selectedCompanion.id)?.relationship_type || 'casual_friend'
+                                }
+                                onRelationshipChange={(newType) => {
+                                  setUserCompanions((prev) => prev.map((uc) =>
+                                    uc.companion_id === selectedCompanion.id ? { ...uc, relationship_type: newType } : uc
+                                  ));
+                                }}
+                                showTitle={false}
+                              />
+                            </TabsContent>
+                            <TabsContent value="voice" className="mt-4">
+                              <VoiceSelector
+                                value={selectedVoiceForCompanion}
+                                onValueChange={setSelectedVoiceForCompanion}
+                                disabled={isCreatingAgent}
+                                companionName={selectedCompanion?.name}
+                              />
+                            </TabsContent>
+                          </Tabs>
+                        </CardContent>
+                      </Card>
                     </div>
                   </div>
                 </div>
