@@ -5,11 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Heart, MapPin, Calendar, Sparkles, Search, Filter, Loader2 } from "lucide-react";
+import { ArrowLeft, Heart, MapPin, Calendar, Sparkles, Search, Filter, Loader2, Settings } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useImageGeneration } from "@/hooks/useImageGeneration";
 import { useCompanionSelection } from "@/hooks/useCompanionSelection";
+import { useAuth } from "@/hooks/useAuth";
 import { VoiceSelector } from "@/components/VoiceSelector";
 import { toast } from "sonner";
 
@@ -30,9 +31,12 @@ interface Companion {
 interface CompanionBrowserProps {
   onBack: () => void;
   onSelectCompanion: (companion: Companion) => void;
+  onCustomizeCompanion?: (companion: Companion) => void;
+  onConfigureCompanion?: (companion: Companion) => void;
 }
 
-export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowserProps) => {
+export const CompanionBrowser = ({ onBack, onSelectCompanion, onCustomizeCompanion, onConfigureCompanion }: CompanionBrowserProps) => {
+  const { user } = useAuth();
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
   const [companions, setCompanions] = useState<Companion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,10 +67,14 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
   const [selectedHobbies, setSelectedHobbies] = useState<string[]>([]);
   const [selectedPersonality, setSelectedPersonality] = useState<string[]>([]);
   const [selectedVoiceForCompanion, setSelectedVoiceForCompanion] = useState<string>('alloy');
+  const [userCompanions, setUserCompanions] = useState<any[]>([]);
 
   useEffect(() => {
     loadCompanions();
-  }, []);
+    if (user) {
+      loadUserCompanions();
+    }
+  }, [user]);
 
   // Get unique values for filter options
   const uniqueLocations = useMemo(() => {
@@ -132,6 +140,22 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
       return true;
     });
   }, [companions, searchTerm, selectedGender, ageRange, selectedLocation, selectedHobbies, selectedPersonality]);
+
+  const loadUserCompanions = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_companions')
+        .select('companion_id, relationship_type, voice_id')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      setUserCompanions(data || []);
+    } catch (error) {
+      console.error('Error loading user companions:', error);
+    }
+  };
 
   const loadCompanions = async () => {
     try {
@@ -660,23 +684,61 @@ export const CompanionBrowser = ({ onBack, onSelectCompanion }: CompanionBrowser
                             )}
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+                       </div>
+                       
+                       <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                         <Button 
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             handleSelectCompanion(companion);
+                           }}
+                           className="flex-1"
+                           size="sm"
+                         >
+                           Connect
+                         </Button>
+                         {onCustomizeCompanion && (
+                           <Button 
+                             variant="outline" 
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               onCustomizeCompanion(companion);
+                             }}
+                             className="flex-1"
+                             size="sm"
+                           >
+                             Customize
+                           </Button>
+                         )}
+                         {user && userCompanions?.some(uc => uc.companion_id === companion.id) && onConfigureCompanion && (
+                           <Button 
+                             variant="secondary" 
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               onConfigureCompanion(companion);
+                             }}
+                             size="sm"
+                           >
+                             <Settings className="h-4 w-4" />
+                           </Button>
+                         )}
+                       </div>
+                     </div>
+                   </CardContent>
+                 </Card>
+               ))
+             )}
+           </div>
 
-          {/* Back Button */}
-          <div className="text-center">
-            <Button variant="outline" onClick={onBack}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+           {/* Back Button */}
+           <div className="text-center">
+             <Button variant="outline" onClick={onBack}>
+               <ArrowLeft className="w-4 h-4 mr-2" />
+               Back to Home
+             </Button>
+           </div>
+         </div>
+       </div>
+     </div>
+   );
+ };

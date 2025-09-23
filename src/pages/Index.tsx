@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import { LandingPage } from "@/components/LandingPage";
 import { Questionnaire } from "@/components/Questionnaire";
 import { CompanionBrowser } from "@/components/CompanionBrowser";
+import { CompanionBuilder } from "@/components/CompanionBuilder";
+import { CompanionSettings } from "@/components/CompanionSettings";
 import { AuthForm } from "@/components/AuthForm";
 import { PaymentForm } from "@/components/PaymentForm";
 import { MobileApp } from "@/components/MobileApp";
 import { AdminPanel } from "@/components/AdminPanel";
 import { MatchResults } from "@/components/MatchResults";
-import { CompanionBuilder } from "@/components/CompanionBuilder";
 import { UsageDashboard } from "@/components/UsageDashboard";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { useMemoryManager } from "@/hooks/useMemoryManager";
@@ -15,7 +16,7 @@ import { CompanionMatchingService } from "@/services/companionMatching";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type AppState = 'landing' | 'questionnaire' | 'matches' | 'companions' | 'builder' | 'auth' | 'payment' | 'app' | 'admin' | 'edit-companion' | 'usage';
+type AppState = 'landing' | 'questionnaire' | 'matches' | 'companions' | 'builder' | 'settings' | 'auth' | 'payment' | 'app' | 'admin' | 'edit-companion' | 'usage';
 
 interface QuestionnaireData {
   companionType: string;
@@ -53,6 +54,7 @@ const AppContent = () => {
   const [questionnaireData, setQuestionnaireData] = useState<QuestionnaireData | null>(null);
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
   const [editingCompanion, setEditingCompanion] = useState<Companion | null>(null);
+  const [configuringCompanion, setConfiguringCompanion] = useState<Companion | null>(null);
   const [matches, setMatches] = useState<CompanionMatch[]>([]);
   const [matchingSummary, setMatchingSummary] = useState<string>('');
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
@@ -269,8 +271,31 @@ const AppContent = () => {
     setCurrentState('landing');
   };
 
+  const handleCustomizeCompanion = (companion: Companion) => {
+    setEditingCompanion(companion);
+    setCurrentState('builder');
+  };
+
+  const handleConfigureCompanion = (companion: Companion) => {
+    setConfiguringCompanion(companion);
+    setCurrentState('settings');
+  };
+
   const handleCompanionCreated = (companion: Companion) => {
     setSelectedCompanion(companion);
+    
+    // If we were editing, clear the editing state
+    if (editingCompanion) {
+      setEditingCompanion(null);
+    }
+    
+    // Go directly to app - users can try before they pay
+    if (user) {
+      setCurrentState('app');
+    } else {
+      setCurrentState('auth');
+    }
+  };
     
     // If we were editing, clear the editing state
     if (editingCompanion) {
@@ -312,6 +337,8 @@ const AppContent = () => {
       <CompanionBrowser
         onBack={handleBackToLanding}
         onSelectCompanion={handleCompanionSelect}
+        onCustomizeCompanion={handleCustomizeCompanion}
+        onConfigureCompanion={handleConfigureCompanion}
       />
     );
   }
@@ -323,6 +350,130 @@ const AppContent = () => {
         onCompanionCreated={handleCompanionCreated}
       />
     );
+  }
+
+  if (currentState === 'settings') {
+    return configuringCompanion ? (
+      <CompanionSettings
+        companionId={configuringCompanion.id}
+        companionName={configuringCompanion.name}
+        onBack={() => setCurrentState('companions')}
+      />
+    ) : null;
+  }
+
+  if (currentState === 'edit-companion') {
+    return (
+      <CompanionBuilder
+        onBack={() => setCurrentState('app')}
+        onCompanionCreated={handleCompanionCreated}
+        editingCompanion={editingCompanion}
+      />
+    );
+  }
+
+  if (currentState === 'auth') {
+    return (
+      <AuthForm
+        onBack={handleBackToLanding}
+        onSuccess={handleAuthSuccess}
+      />
+    );
+  }
+
+  if (currentState === 'payment') {
+    return (
+      <PaymentForm
+        onSuccess={handlePaymentSuccess}
+        onBack={handleBackToLanding}
+      />
+    );
+  }
+
+  // Usage dashboard
+  if (currentState === 'usage') {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="max-w-7xl mx-auto p-4">
+          <div className="mb-6">
+            <button 
+              onClick={() => setCurrentState('app')}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              ← Back to App
+            </button>
+          </div>
+          <UsageDashboard />
+        </div>
+      </div>
+    );
+  }
+
+  // Temporary admin mode - remove this in production  
+  if (currentState === 'admin') {
+    return <AdminPanel />;
+  }
+
+  return (
+    <div>
+      <LandingPage
+        onStartQuestionnaire={handleStartQuestionnaire}
+        onBrowseCompanions={handleBrowseCompanions}
+        onBuildCompanion={handleBuildCompanion}
+        onSignIn={handleSignIn}
+      />
+      {/* Temporary admin access - remove in production */}
+      <div className="fixed bottom-4 right-4">
+        <button 
+          onClick={() => setCurrentState('admin')}
+          className="bg-red-500 text-white px-3 py-1 rounded text-xs opacity-50 hover:opacity-100"
+        >
+          Admin
+        </button>
+      </div>
+    </div>
+  );
+
+  if (currentState === 'matches') {
+    return (
+      <MatchResults
+        matches={matches}
+        userData={questionnaireData!}
+        onSelectCompanion={handleCompanionSelect}
+        onBack={() => setCurrentState('questionnaire')}
+        recommendationSummary={matchingSummary}
+      />
+    );
+  }
+
+  if (currentState === 'companions') {
+    return (
+      <CompanionBrowser
+        onBack={handleBackToLanding}
+        onSelectCompanion={handleCompanionSelect}
+        onCustomizeCompanion={handleCustomizeCompanion}
+        onConfigureCompanion={handleConfigureCompanion}
+      />
+    );
+  }
+
+  if (currentState === 'builder') {
+    return (
+      <CompanionBuilder
+        onBack={handleBackToLanding}
+        onCompanionCreated={handleCompanionCreated}
+      />
+    );
+  }
+
+  if (currentState === 'settings') {
+    return configuringCompanion ? (
+      <CompanionSettings
+        companionId={configuringCompanion.id}
+        companionName={configuringCompanion.name}
+        onBack={() => setCurrentState('companions')}
+      />
+    ) : null;
   }
 
   if (currentState === 'edit-companion') {
