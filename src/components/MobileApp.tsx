@@ -261,14 +261,24 @@ const scrollToBottom = () => {
         if (error) throw error;
 
         if (data.success) {
-          const aiMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            content: data.response,
-            sender: 'companion',
-            timestamp: new Date()
-          };
-
-          setMessages(prev => [...prev, aiMessage]);
+          // Use the updated conversation history from the API response
+          // This ensures we stay in sync with the database
+          if (data.conversationHistory && Array.isArray(data.conversationHistory)) {
+            const updatedMessages = data.conversationHistory.map((msg: any) => ({
+              ...msg,
+              timestamp: new Date(msg.timestamp)
+            }));
+            setMessages(updatedMessages);
+          } else {
+            // Fallback to manual message addition if no history returned
+            const aiMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              content: data.response,
+              sender: 'companion',
+              timestamp: new Date()
+            };
+            setMessages(prev => [...prev, aiMessage]);
+          }
         } else {
           throw new Error('Failed to get AI response');
         }

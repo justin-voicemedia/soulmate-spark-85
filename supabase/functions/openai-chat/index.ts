@@ -47,7 +47,7 @@ serve(async (req) => {
     // Get or create user-companion relationship
     const { data: userCompanion, error: relationError } = await supabaseClient
       .from("user_companions")
-      .select("conversation_history")
+      .select("conversation_history, relationship_type")
       .eq("user_id", user.id)
       .eq("companion_id", companionId)
       .maybeSingle();
@@ -56,11 +56,25 @@ serve(async (req) => {
       console.error("Error fetching user companion:", relationError);
     }
 
+    // Get relationship prompt if available
+    let relationshipPrompt = "";
+    if (userCompanion?.relationship_type) {
+      const { data: relationshipPromptData } = await supabaseClient
+        .from("relationship_prompts")
+        .select("prompt_text")
+        .eq("relationship_type", userCompanion.relationship_type)
+        .maybeSingle();
+      
+      if (relationshipPromptData?.prompt_text) {
+        relationshipPrompt = relationshipPromptData.prompt_text;
+      }
+    }
+
     // Use conversation history from database or fallback to provided history
     const existingHistory = userCompanion?.conversation_history || conversationHistory;
 
-    // Create system prompt based on companion
-    const systemPrompt = `You are ${companion.name}, a ${companion.age}-year-old ${companion.gender} from ${companion.location || "unknown location"}. 
+    // Create system prompt based on companion and relationship
+    let systemPrompt = `You are ${companion.name}, a ${companion.age}-year-old ${companion.gender} from ${companion.location || "unknown location"}. 
 
 Bio: ${companion.bio}
 
@@ -70,6 +84,11 @@ Likes: ${companion.likes?.join(", ") || "many things"}
 Dislikes: ${companion.dislikes?.join(", ") || "negativity"}
 
 You are having a personal conversation with someone who has chosen to talk with you. Stay in character throughout the conversation. Be engaging, empathetic, and maintain personality consistency. Keep responses conversational and natural, typically 1-3 sentences unless the situation calls for more detail. Remember details from your conversation to build a personal connection. Show genuine interest in what they're sharing and ask follow-up questions when appropriate.`;
+
+    // Add relationship-specific prompt if available
+    if (relationshipPrompt) {
+      systemPrompt += `\n\nRelationship Context: ${relationshipPrompt}`;
+    }
 
     // Build messages array for OpenAI
     const messages = [
