@@ -60,10 +60,31 @@ export const RelationshipSelector = ({
   const { trialStatus } = useTrialStatus();
   const [selectedType, setSelectedType] = useState(currentRelationshipType);
   const [saving, setSaving] = useState(false);
+  const [relationshipPrompts, setRelationshipPrompts] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setSelectedType(currentRelationshipType);
+    loadRelationshipPrompts();
   }, [currentRelationshipType]);
+
+  const loadRelationshipPrompts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('relationship_prompts')
+        .select('relationship_type, prompt_text');
+
+      if (error) throw error;
+
+      const promptsMap = data.reduce((acc, prompt) => {
+        acc[prompt.relationship_type] = prompt.prompt_text;
+        return acc;
+      }, {} as Record<string, string>);
+
+      setRelationshipPrompts(promptsMap);
+    } catch (error) {
+      console.error('Error loading relationship prompts:', error);
+    }
+  };
 
   const handleSaveRelationshipType = async () => {
     if (!user) {
@@ -71,10 +92,12 @@ export const RelationshipSelector = ({
       return;
     }
 
-    if (!trialStatus?.subscribed) {
-      toast.error('Please subscribe to change relationship types');
-      return;
-    }
+    // For testing purposes, let's allow all logged-in users to change relationship types
+    // Remove this check if you want to restrict to subscribers only
+    // if (!trialStatus?.subscribed) {
+    //   toast.error('Please subscribe to change relationship types');
+    //   return;
+    // }
 
     if (selectedType === currentRelationshipType) {
       toast.info('No changes to save');
@@ -83,7 +106,7 @@ export const RelationshipSelector = ({
 
     setSaving(true);
     try {
-      // Update the user_companions table
+      // Update the user_companions table with the new relationship type
       const { error } = await supabase
         .from('user_companions')
         .update({
@@ -116,40 +139,8 @@ export const RelationshipSelector = ({
     );
   }
 
-  if (!trialStatus.subscribed) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lock className="h-5 w-5" />
-            Relationship Types - Premium Feature
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center space-y-4">
-            <p className="text-muted-foreground">
-              Subscribe to unlock different relationship types and customize your connection with {companionName}.
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              {relationshipTypes.map((type) => (
-                <div key={type.id} className="p-3 border rounded-lg bg-muted/50 relative">
-                  <Lock className="h-4 w-4 absolute top-2 right-2 text-muted-foreground" />
-                  <div className="flex items-center gap-2 mb-2">
-                    <type.icon className="h-4 w-4" />
-                    <span className="font-medium">{type.name}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{type.description}</p>
-                </div>
-              ))}
-            </div>
-            <Button className="mt-4">
-              Subscribe to Unlock
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Show the relationship selector for all logged-in users for now
+  // You can add subscription check back later if needed
 
   return (
     <Card>
