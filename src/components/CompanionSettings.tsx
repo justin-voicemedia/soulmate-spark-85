@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Settings, Volume2, Heart } from 'lucide-react';
+import { ArrowLeft, Settings, Volume2, Heart, Brain } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useTrialStatus } from '@/hooks/useTrialStatus';
 import { toast } from 'sonner';
 import { VoiceSelector } from './VoiceSelector';
 import { RelationshipSelector } from './RelationshipSelector';
+import { MemoryManager } from './MemoryManager';
 
 interface CompanionSettingsProps {
   companionId: string;
@@ -30,6 +31,7 @@ export const CompanionSettings = ({ companionId, companionName, onBack }: Compan
   const { trialStatus } = useTrialStatus();
   const [userCompanion, setUserCompanion] = useState<UserCompanion | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showMemoryManager, setShowMemoryManager] = useState(false);
 
   useEffect(() => {
     loadUserCompanion();
@@ -137,14 +139,18 @@ export const CompanionSettings = ({ companionId, companionName, onBack }: Compan
 
         {/* Settings Tabs */}
         <Tabs defaultValue="relationship" className="w-full">
-          <TabsList className="w-full flex">
-            <TabsTrigger value="relationship" className="flex-1 flex items-center gap-2">
+          <TabsList className="w-full grid grid-cols-3">
+            <TabsTrigger value="relationship" className="flex items-center gap-2">
               <Heart className="h-4 w-4" />
               Relationship
             </TabsTrigger>
-            <TabsTrigger value="voice" className="flex-1 flex items-center gap-2">
+            <TabsTrigger value="voice" className="flex items-center gap-2">
               <Volume2 className="h-4 w-4" />
               Voice
+            </TabsTrigger>
+            <TabsTrigger value="memory" className="flex items-center gap-2">
+              <Brain className="h-4 w-4" />
+              Memory
             </TabsTrigger>
           </TabsList>
 
@@ -179,7 +185,33 @@ export const CompanionSettings = ({ companionId, companionName, onBack }: Compan
               </CardContent>
             </Card>
           </TabsContent>
+          <TabsContent value="memory" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Memory Management</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Manage what {companionName} remembers about you and your conversations
+                </p>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={() => setShowMemoryManager(true)}>
+                  <Brain className="h-4 w-4 mr-2" />
+                  Open Memory Manager
+                </Button>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Add personal details like family members, pets, important dates, and preferences that you'd like {companionName} to remember.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
+
+        {/* Memory Manager Modal */}
+        <MemoryManager 
+          companionId={companionId}
+          isOpen={showMemoryManager}
+          onClose={() => setShowMemoryManager(false)}
+        />
 
         {/* Additional Info */}
         {trialStatus && !trialStatus.subscribed && (

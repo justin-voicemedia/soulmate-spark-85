@@ -45,16 +45,16 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a memory assistant for an AI companion system. Your job is to summarize conversations and extract important information that the AI companion should remember for future interactions.
+            content: `You are a memory assistant for an AI companion system. Your job is to summarize conversations and extract important structured information that the AI companion should remember for future interactions.
 
-Create a structured summary that includes:
+Create a detailed summary that extracts:
 
-1. **Key Topics Discussed**: Main subjects of conversation
-2. **Emotional State**: How the user was feeling during the conversation
-3. **Important Personal Info**: Any personal details, preferences, or experiences shared
-4. **Relationship Development**: How the relationship between user and companion evolved
-5. **Future References**: Things to remember for next conversations
-6. **Important Dates/Events**: Any mentioned dates, events, or milestones
+1. **Key Topics**: Main conversation subjects
+2. **Emotional State**: User's feelings during the conversation  
+3. **Personal Information**: Names of family/friends, pets, work details, hobbies, preferences
+4. **Important Dates**: Birthdays, anniversaries, events, deadlines
+5. **Structured Personal Data**: Extract specific categories of information
+6. **Future References**: Things to remember for next conversations
 
 Format the response as a JSON object with these fields:
 - summary: Brief overall summary (2-3 sentences)
@@ -63,10 +63,18 @@ Format the response as a JSON object with these fields:
 - personalInfo: Array of personal details learned about the user
 - relationshipNotes: Notes about relationship development
 - futureReferences: Array of things to remember for future
-- importantDates: Array of any dates or events mentioned
-- mood: Overall mood of the conversation (positive/negative/neutral)
+- importantDates: Array of any dates or events mentioned (format as "YYYY-MM-DD: description")
+- mood: Overall mood (positive/negative/neutral)
+- structuredData: Object with categorized information:
+  {
+    "familyMembers": [{"name": "string", "relationship": "string", "notes": "string"}],
+    "pets": [{"name": "string", "type": "string", "notes": "string"}],
+    "workInfo": {"company": "string", "position": "string", "industry": "string"},
+    "preferences": {"food": ["string"], "activities": ["string"], "places": ["string"]},
+    "basicInfo": {"fullName": "string", "nickname": "string", "location": "string"}
+  }
 
-Be concise but capture the essence of what would be important for maintaining relationship continuity.`
+Extract specific names, relationships, and details. Be thorough in identifying personal information that helps build a comprehensive profile.`
           },
           {
             role: 'user',

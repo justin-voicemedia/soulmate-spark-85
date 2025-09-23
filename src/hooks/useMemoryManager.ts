@@ -29,9 +29,31 @@ interface ConversationMemory {
   [key: string]: any;
 }
 
+interface PersonalProfile {
+  family: { name: string; relationship: string; notes?: string }[];
+  pets: { name: string; type: string; notes?: string }[];
+  work: { company?: string; position?: string; industry?: string };
+  importantDates: { date: string; type: string; description: string }[];
+  preferences: {
+    food: string[];
+    activities: string[];
+    places: string[];
+  };
+  currentEvents: { event: string; date: string; significance: string }[];
+  basicInfo: {
+    fullName?: string;
+    nickname?: string;
+    birthday?: string;
+    location?: string;
+    interests?: string[];
+  };
+  [key: string]: any;
+}
+
 interface CompanionMemories {
   questionnaire?: QuestionnaireMemory;
   conversations: ConversationMemory[];
+  personalProfile?: PersonalProfile;
   lastInteraction?: string;
   relationshipMilestones: string[];
   [key: string]: any;
@@ -73,7 +95,16 @@ export const useMemoryManager = () => {
 
       let customMemories: CompanionMemories = {
         conversations: [],
-        relationshipMilestones: []
+        relationshipMilestones: [],
+        personalProfile: {
+          family: [],
+          pets: [],
+          work: {},
+          importantDates: [],
+          preferences: { food: [], activities: [], places: [] },
+          currentEvents: [],
+          basicInfo: {}
+        }
       };
 
       // If record exists, preserve existing memories
@@ -177,7 +208,16 @@ export const useMemoryManager = () => {
 
       let customMemories: CompanionMemories = {
         conversations: [],
-        relationshipMilestones: []
+        relationshipMilestones: [],
+        personalProfile: {
+          family: [],
+          pets: [],
+          work: {},
+          importantDates: [],
+          preferences: { food: [], activities: [], places: [] },
+          currentEvents: [],
+          basicInfo: {}
+        }
       };
 
       if (currentRecord?.custom_memories) {
@@ -187,6 +227,76 @@ export const useMemoryManager = () => {
       // Add new conversation memory
       customMemories.conversations.push(memorySummary);
       customMemories.lastInteraction = new Date().toISOString();
+
+      // Extract and merge structured data from conversation
+      if (memorySummary.structuredData) {
+        const structuredData = memorySummary.structuredData;
+        
+        // Merge family members
+        if (structuredData.familyMembers?.length > 0) {
+          structuredData.familyMembers.forEach((newMember: any) => {
+            if (newMember.name && !customMemories.personalProfile?.family.some(f => f.name.toLowerCase() === newMember.name.toLowerCase())) {
+              customMemories.personalProfile?.family.push({
+                name: newMember.name,
+                relationship: newMember.relationship || '',
+                notes: newMember.notes || ''
+              });
+            }
+          });
+        }
+
+        // Merge pets
+        if (structuredData.pets?.length > 0) {
+          structuredData.pets.forEach((newPet: any) => {
+            if (newPet.name && !customMemories.personalProfile?.pets.some(p => p.name.toLowerCase() === newPet.name.toLowerCase())) {
+              customMemories.personalProfile?.pets.push({
+                name: newPet.name,
+                type: newPet.type || '',
+                notes: newPet.notes || ''
+              });
+            }
+          });
+        }
+
+        // Merge work info
+        if (structuredData.workInfo) {
+          if (structuredData.workInfo.company && !customMemories.personalProfile?.work?.company) {
+            customMemories.personalProfile!.work.company = structuredData.workInfo.company;
+          }
+          if (structuredData.workInfo.position && !customMemories.personalProfile?.work?.position) {
+            customMemories.personalProfile!.work.position = structuredData.workInfo.position;
+          }
+          if (structuredData.workInfo.industry && !customMemories.personalProfile?.work?.industry) {
+            customMemories.personalProfile!.work.industry = structuredData.workInfo.industry;
+          }
+        }
+
+        // Merge preferences
+        if (structuredData.preferences) {
+          ['food', 'activities', 'places'].forEach(category => {
+            if (structuredData.preferences[category]?.length > 0) {
+              structuredData.preferences[category].forEach((pref: string) => {
+                if (!customMemories.personalProfile?.preferences[category as keyof typeof customMemories.personalProfile.preferences].includes(pref)) {
+                  customMemories.personalProfile?.preferences[category as keyof typeof customMemories.personalProfile.preferences].push(pref);
+                }
+              });
+            }
+          });
+        }
+
+        // Merge basic info
+        if (structuredData.basicInfo) {
+          if (structuredData.basicInfo.fullName && !customMemories.personalProfile?.basicInfo?.fullName) {
+            customMemories.personalProfile!.basicInfo.fullName = structuredData.basicInfo.fullName;
+          }
+          if (structuredData.basicInfo.nickname && !customMemories.personalProfile?.basicInfo?.nickname) {
+            customMemories.personalProfile!.basicInfo.nickname = structuredData.basicInfo.nickname;
+          }
+          if (structuredData.basicInfo.location && !customMemories.personalProfile?.basicInfo?.location) {
+            customMemories.personalProfile!.basicInfo.location = structuredData.basicInfo.location;
+          }
+        }
+      }
 
       // Keep only last 10 conversation summaries to prevent memory bloat
       if (customMemories.conversations.length > 10) {
@@ -275,6 +385,49 @@ export const useMemoryManager = () => {
     }
   };
 
+  const updatePersonalProfile = async (
+    companionId: string, 
+    profileUpdate: Partial<PersonalProfile>
+  ) => {
+    if (!user) return;
+
+    try {
+      const memories = await getCompanionMemories(companionId);
+      
+      if (memories) {
+        const updatedProfile = {
+          ...memories.personalProfile,
+          ...profileUpdate
+        };
+
+        const updatedMemories = {
+          ...memories,
+          personalProfile: updatedProfile,
+          lastInteraction: new Date().toISOString()
+        };
+
+        const { error } = await supabase
+          .from('user_companions')
+          .update({
+            custom_memories: updatedMemories as Json,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', user.id)
+          .eq('companion_id', companionId);
+
+        if (error) {
+          console.error('Error updating personal profile:', error);
+          toast.error('Failed to update personal information');
+        } else {
+          toast.success('Personal information updated');
+        }
+      }
+    } catch (error) {
+      console.error('Error updating personal profile:', error);
+      toast.error('Failed to update personal information');
+    }
+  };
+
   const generateContextPrompt = (memories: CompanionMemories): string => {
     if (!memories) return '';
 
@@ -291,6 +444,43 @@ export const useMemoryManager = () => {
       
       if (q.personality?.length > 0) {
         contextPrompt += `Values these traits: ${q.personality.join(', ')}.\n`;
+      }
+    }
+
+    // Add personal profile information
+    if (memories.personalProfile) {
+      const profile = memories.personalProfile;
+      
+      if (profile.basicInfo?.fullName) {
+        contextPrompt += `\n**Personal Info:** User's name is ${profile.basicInfo.fullName}`;
+        if (profile.basicInfo.nickname) {
+          contextPrompt += ` (prefers to be called ${profile.basicInfo.nickname})`;
+        }
+        contextPrompt += '. ';
+      }
+
+      if (profile.basicInfo?.birthday) {
+        contextPrompt += `Birthday: ${profile.basicInfo.birthday}. `;
+      }
+
+      if (profile.work?.company || profile.work?.position) {
+        contextPrompt += `Work: ${profile.work.position || ''} ${profile.work.company ? `at ${profile.work.company}` : ''}. `;
+      }
+
+      if (profile.family?.length > 0) {
+        contextPrompt += `Family: ${profile.family.map(f => `${f.name} (${f.relationship})`).join(', ')}. `;
+      }
+
+      if (profile.pets?.length > 0) {
+        contextPrompt += `Pets: ${profile.pets.map(p => `${p.name} (${p.type})`).join(', ')}. `;
+      }
+
+      if (profile.preferences?.food?.length > 0) {
+        contextPrompt += `Food preferences: ${profile.preferences.food.join(', ')}. `;
+      }
+
+      if (profile.importantDates?.length > 0) {
+        contextPrompt += `\nImportant dates: ${profile.importantDates.map(d => `${d.description} on ${d.date}`).join(', ')}.\n`;
       }
     }
 
@@ -319,7 +509,7 @@ export const useMemoryManager = () => {
       contextPrompt += `\n**Relationship Milestones:**\n${memories.relationshipMilestones.slice(-5).join('\n')}\n`;
     }
 
-    contextPrompt += '\n**Instructions:** Reference this context naturally in conversation. Build upon previous interactions and show growth in your relationship. Remember personal details and emotional states.\n';
+    contextPrompt += '\n**Instructions:** Reference this context naturally in conversation. Build upon previous interactions and show growth in your relationship. Remember personal details and emotional states. Use specific names, dates, and preferences when relevant.\n';
 
     return contextPrompt;
   };
@@ -329,6 +519,7 @@ export const useMemoryManager = () => {
     saveConversationSummary,
     getCompanionMemories,
     addRelationshipMilestone,
+    updatePersonalProfile,
     generateContextPrompt,
     isProcessing
   };
