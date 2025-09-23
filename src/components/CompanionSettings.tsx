@@ -137,12 +137,12 @@ export const CompanionSettings = ({ companionId, companionName, onBack }: Compan
 
         {/* Settings Tabs */}
         <Tabs defaultValue="relationship" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="relationship" className="flex items-center gap-2">
+          <TabsList className="w-full flex">
+            <TabsTrigger value="relationship" className="flex-1 flex items-center gap-2">
               <Heart className="h-4 w-4" />
               Relationship
             </TabsTrigger>
-            <TabsTrigger value="voice" className="flex items-center gap-2">
+            <TabsTrigger value="voice" className="flex-1 flex items-center gap-2">
               <Volume2 className="h-4 w-4" />
               Voice
             </TabsTrigger>
