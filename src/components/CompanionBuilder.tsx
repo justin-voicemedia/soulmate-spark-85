@@ -703,12 +703,12 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
                 {creating ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Creating Your Companion...
+                    {editingCompanion ? 'Saving Changes...' : 'Creating Your Companion...'}
                   </>
                 ) : (
                   <>
                     <Sparkles className="h-4 w-4 mr-2" />
-                    Create Companion
+                    {editingCompanion ? 'Save Companion Changes' : 'Create Companion'}
                   </>
                 )}
               </Button>
