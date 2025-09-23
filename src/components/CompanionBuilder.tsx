@@ -277,7 +277,6 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
           .from('companions')
           .update(companionData)
           .eq('id', editingCompanion.id)
-          .eq('user_id', user.id)
           .select()
           .single();
 
