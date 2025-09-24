@@ -35,6 +35,9 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const disconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastConnStateRef = useRef<string>('new');
+  
+  // Track AI responses for memory
+  const aiResponseBufferRef = useRef<string>('');
 
   // Load companion's voice setting
   useEffect(() => {
@@ -187,6 +190,9 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
     setIsSpeaking(false);
     setIsListening(false);
 
+    // Clear AI response buffer
+    aiResponseBufferRef.current = '';
+
     if (durationIntervalRef.current) {
       clearInterval(durationIntervalRef.current);
       durationIntervalRef.current = null;
@@ -234,11 +240,10 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
       } else if (event.type === 'input_audio_buffer.speech_stopped') {
         setIsListening(false);
       } else if (event.type === 'response.audio_transcript.delta') {
-        // Track AI responses for memory
+        // Accumulate AI response transcript for memory
         if (event.delta) {
-          // We'll collect these deltas and create complete messages
-          // For now, just log that AI is responding
-          console.log('AI speaking:', event.delta);
+          aiResponseBufferRef.current += event.delta;
+          console.log('AI speaking delta:', event.delta);
         }
       } else if (event.type === 'input_audio_buffer.transcript') {
         // Track user input for memory
@@ -247,9 +252,12 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
           console.log('User said:', event.transcript);
         }
       } else if (event.type === 'response.done') {
-        // When AI finishes responding, we can track the complete response
-        // This would require collecting the transcript deltas above
-        console.log('AI response complete');
+        // When AI finishes responding, save the complete response to memory
+        if (aiResponseBufferRef.current.trim()) {
+          addMessage('assistant', aiResponseBufferRef.current.trim());
+          console.log('AI response complete:', aiResponseBufferRef.current);
+          aiResponseBufferRef.current = ''; // Reset buffer
+        }
       } else if (event.type === 'error') {
         const msg = event.message || event;
         console.error('OpenAI error:', msg);
