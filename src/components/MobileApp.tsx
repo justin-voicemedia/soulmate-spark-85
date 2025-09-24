@@ -464,7 +464,7 @@ const scrollToBottom = () => {
         {/* Hobbies */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Hobbies</CardTitle>
+            <CardTitle className="text-lg">Hobbies & Interests</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
@@ -478,7 +478,7 @@ const scrollToBottom = () => {
         {/* Personality */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Personality</CardTitle>
+            <CardTitle className="text-lg">Personality Traits</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
@@ -493,7 +493,7 @@ const scrollToBottom = () => {
         <div className="grid grid-cols-1 gap-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg text-green-700">Likes</CardTitle>
+              <CardTitle className="text-lg text-green-700">What They Like</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
@@ -508,7 +508,7 @@ const scrollToBottom = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg text-red-700">Dislikes</CardTitle>
+              <CardTitle className="text-lg text-red-700">What They Dislike</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
