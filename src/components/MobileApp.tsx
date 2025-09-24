@@ -24,7 +24,8 @@ import {
   Clock,
   AlertCircle,
   Crown,
-  BarChart3
+  BarChart3,
+  Trash2
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTrialStatus } from "@/hooks/useTrialStatus";
@@ -332,6 +333,10 @@ const scrollToBottom = () => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const handleClearChat = () => {
+    setMessages([]);
+  };
+
   const renderProfile = () => (
     <div className="flex flex-col h-full">
       {/* Companion Profile Header */}
@@ -620,6 +625,9 @@ const scrollToBottom = () => {
             </div>
           </div>
           <div className="flex items-center space-x-2">
+            <Button size="sm" variant="outline" onClick={handleClearChat} title="Clear chat">
+              <Trash2 className="w-4 h-4" />
+            </Button>
             <Button size="sm" variant="outline" onClick={handleVoiceCall}>
               <Phone className="w-4 h-4" />
             </Button>
