@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,16 +36,16 @@ interface CompanionBuilderProps {
 
 const sexOptions = ['Male', 'Female', 'Non-binary'];
 const raceOptions = ['Asian', 'Black', 'Hispanic/Latino', 'White', 'Middle Eastern', 'Mixed', 'Other'];
-const personalityTraits = [
+const DEFAULT_PERSONALITY_TRAITS = [
   'Adventurous', 'Calm', 'Creative', 'Funny', 'Intelligent', 'Kind', 'Mysterious', 'Passionate', 'Romantic', 'Spontaneous'
 ];
-const hobbyOptions = [
+const DEFAULT_HOBBY_OPTIONS = [
   'Reading', 'Cooking', 'Traveling', 'Gaming', 'Sports', 'Music', 'Art', 'Dancing', 'Hiking', 'Photography'
 ];
-const likeOptions = [
+const DEFAULT_LIKE_OPTIONS = [
   'Meaningful conversations', 'Quality time', 'Adventure', 'Romance', 'Humor', 'Deep discussions', 'Spontaneous fun', 'Intellectual talks', 'Physical affection', 'Emotional support'
 ];
-const dislikeOptions = [
+const DEFAULT_DISLIKE_OPTIONS = [
   'Negativity', 'Dishonesty', 'Rudeness', 'Shallow conversations', 'Drama', 'Arrogance', 'Jealousy', 'Disrespect', 'Pessimism', 'Being ignored'
 ];
 
@@ -70,6 +70,23 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
     likes: editingCompanion?.likes || [] as string[],
     dislikes: editingCompanion?.dislikes || [] as string[]
   });
+  // Dynamic option lists include existing values so users can remove pre-existing items
+  const personalityTraits = useMemo(
+    () => Array.from(new Set([...DEFAULT_PERSONALITY_TRAITS, ...(editingCompanion?.personality || [])])),
+    [editingCompanion]
+  );
+  const hobbyOptions = useMemo(
+    () => Array.from(new Set([...DEFAULT_HOBBY_OPTIONS, ...(editingCompanion?.hobbies || [])])),
+    [editingCompanion]
+  );
+  const likeOptions = useMemo(
+    () => Array.from(new Set([...DEFAULT_LIKE_OPTIONS, ...(editingCompanion?.likes || [])])),
+    [editingCompanion]
+  );
+  const dislikeOptions = useMemo(
+    () => Array.from(new Set([...DEFAULT_DISLIKE_OPTIONS, ...(editingCompanion?.dislikes || [])])),
+    [editingCompanion]
+  );
 
   // Set initial image and load companion's voice if editing
   useEffect(() => {
