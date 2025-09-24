@@ -97,12 +97,27 @@ Extract specific names, relationships, and details. Be thorough in identifying p
 
     console.log('Raw summary from OpenAI:', summaryContent);
 
-    // Try to parse as JSON, fallback to text format if needed
+    // Try to parse as JSON, handling markdown code blocks
     let memorySummary;
     try {
-      memorySummary = JSON.parse(summaryContent);
+      // Clean up markdown code blocks and extra whitespace
+      let cleanContent = summaryContent.trim();
+      
+      // Remove markdown JSON code blocks if present
+      if (cleanContent.startsWith('```json')) {
+        cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanContent.startsWith('```')) {
+        cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      console.log('Cleaned content for parsing:', cleanContent.substring(0, 200) + '...');
+      
+      memorySummary = JSON.parse(cleanContent);
+      console.log('Successfully parsed JSON summary');
     } catch (parseError) {
       console.log('Failed to parse as JSON, creating structured format:', parseError);
+      console.log('Original content:', summaryContent.substring(0, 500));
+      
       memorySummary = {
         summary: summaryContent,
         keyTopics: [],
@@ -112,6 +127,13 @@ Extract specific names, relationships, and details. Be thorough in identifying p
         futureReferences: [],
         importantDates: [],
         mood: 'neutral',
+        structuredData: {
+          familyMembers: [],
+          pets: [],
+          workInfo: {},
+          preferences: { food: [], activities: [], places: [] },
+          basicInfo: {}
+        },
         timestamp: new Date().toISOString()
       };
     }
