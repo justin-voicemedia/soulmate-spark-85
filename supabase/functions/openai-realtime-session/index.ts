@@ -18,7 +18,7 @@ serve(async (req) => {
       throw new Error('OPENAI_API_KEY is not set');
     }
 
-    const { voice = 'alloy', instructions = 'You are a helpful, friendly voice assistant.', model = 'gpt-4o-mini-realtime-preview-2024-12-17' } = await req.json().catch(() => ({}));
+    const { voice = 'alloy', instructions = 'You are a helpful, friendly companion who speaks naturally like a real person. Be genuine, casual, and conversational - never sound like a chatbot or virtual assistant. Keep responses natural and flowing, like talking to a friend.', model = 'gpt-4o-mini-realtime-preview-2024-12-17' } = await req.json().catch(() => ({}));
 
     // Validate voice against OpenAI supported list
     const allowedVoices = new Set(['alloy','ash','ballad','coral','echo','sage','shimmer','verse','marin','cedar']);

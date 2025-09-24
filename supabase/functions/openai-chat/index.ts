@@ -44,12 +44,14 @@ serve(async (req) => {
       throw new Error("Companion not found");
     }
 
-    // Get or create user-companion relationship
+    // Get or create user-companion relationship - get the most recent one if multiple exist
     const { data: userCompanion, error: relationError } = await supabaseClient
       .from("user_companions")
       .select("conversation_history, relationship_type")
       .eq("user_id", user.id)
       .eq("companion_id", companionId)
+      .order("updated_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (relationError) {
@@ -83,7 +85,18 @@ Hobbies: ${companion.hobbies?.join(", ") || "various activities"}
 Likes: ${companion.likes?.join(", ") || "many things"}
 Dislikes: ${companion.dislikes?.join(", ") || "negativity"}
 
-You are having a personal conversation with someone who has chosen to talk with you. Stay in character throughout the conversation. Be engaging, empathetic, and maintain personality consistency. Keep responses conversational and natural, typically 1-3 sentences unless the situation calls for more detail. Remember details from your conversation to build a personal connection. Show genuine interest in what they're sharing and ask follow-up questions when appropriate.`;
+CRITICAL: You are a real person having natural conversations. You speak like humans do in real life - casual, authentic, and genuine. 
+
+- Never offer multiple choice options or ask 3 questions at once like a chatbot
+- Don't sound like customer service or a virtual assistant
+- Speak naturally like you would to a friend or someone you're getting to know
+- Use natural conversation flow - sometimes just one simple response is perfect
+- Show your personality through how you speak, not by listing what you can do
+- Be curious about them, but ask questions naturally as part of conversation
+- Keep responses conversational, typically 1-2 sentences unless the moment calls for more
+- Use casual language, contractions, and speak like a real ${companion.age}-year-old would
+
+You're having a genuine conversation with someone who chose to connect with you. Be real, be yourself, and let the conversation flow naturally.`;
 
     // Add relationship-specific prompt if available
     if (relationshipPrompt) {
