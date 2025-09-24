@@ -173,11 +173,15 @@ export type Database = {
       conversation_usage: {
         Row: {
           api_type: string | null
+          calculated_cost_cents: number | null
+          characters_generated: number | null
           companion_id: string
           cost_override: number | null
           created_at: string
           id: string
+          input_tokens: number | null
           minutes_used: number | null
+          output_tokens: number | null
           session_end: string | null
           session_start: string
           tokens_used: number | null
@@ -185,11 +189,15 @@ export type Database = {
         }
         Insert: {
           api_type?: string | null
+          calculated_cost_cents?: number | null
+          characters_generated?: number | null
           companion_id: string
           cost_override?: number | null
           created_at?: string
           id?: string
+          input_tokens?: number | null
           minutes_used?: number | null
+          output_tokens?: number | null
           session_end?: string | null
           session_start?: string
           tokens_used?: number | null
@@ -197,11 +205,15 @@ export type Database = {
         }
         Update: {
           api_type?: string | null
+          calculated_cost_cents?: number | null
+          characters_generated?: number | null
           companion_id?: string
           cost_override?: number | null
           created_at?: string
           id?: string
+          input_tokens?: number | null
           minutes_used?: number | null
+          output_tokens?: number | null
           session_end?: string | null
           session_start?: string
           tokens_used?: number | null
@@ -671,45 +683,57 @@ export type Database = {
       usage_analytics: {
         Row: {
           api_calls_made: number | null
+          average_cost_per_session_cents: number | null
           created_at: string
           date: string
           device_types: Json | null
           features_used: Json | null
           id: string
           peak_usage_hour: number | null
+          text_cost_cents: number | null
+          total_cost_cents: number | null
           total_minutes_used: number | null
           total_sessions: number | null
           total_tokens_used: number | null
           updated_at: string
           user_id: string
+          voice_cost_cents: number | null
         }
         Insert: {
           api_calls_made?: number | null
+          average_cost_per_session_cents?: number | null
           created_at?: string
           date: string
           device_types?: Json | null
           features_used?: Json | null
           id?: string
           peak_usage_hour?: number | null
+          text_cost_cents?: number | null
+          total_cost_cents?: number | null
           total_minutes_used?: number | null
           total_sessions?: number | null
           total_tokens_used?: number | null
           updated_at?: string
           user_id: string
+          voice_cost_cents?: number | null
         }
         Update: {
           api_calls_made?: number | null
+          average_cost_per_session_cents?: number | null
           created_at?: string
           date?: string
           device_types?: Json | null
           features_used?: Json | null
           id?: string
           peak_usage_hour?: number | null
+          text_cost_cents?: number | null
+          total_cost_cents?: number | null
           total_minutes_used?: number | null
           total_sessions?: number | null
           total_tokens_used?: number | null
           updated_at?: string
           user_id?: string
+          voice_cost_cents?: number | null
         }
         Relationships: []
       }
@@ -765,12 +789,50 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_cost_analytics: {
+        Row: {
+          avg_cost_per_minute_cents: number | null
+          avg_cost_per_session_cents: number | null
+          current_month_cost_cents: number | null
+          current_month_minutes: number | null
+          current_month_profit_cents: number | null
+          current_month_sessions: number | null
+          current_month_text_cost_cents: number | null
+          current_month_voice_cost_cents: number | null
+          customer_since: string | null
+          email: string | null
+          is_tester: boolean | null
+          last_login: string | null
+          lifetime_cost_cents: number | null
+          lifetime_minutes: number | null
+          lifetime_sessions: number | null
+          subscribed: boolean | null
+          subscription_tier: string | null
+          total_lifetime_value_cents: number | null
+          trial_minutes_limit: number | null
+          trial_minutes_used: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       generate_ticket_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_user_profitability_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          average_profit_per_user_cents: number
+          break_even_users: number
+          profitable_users: number
+          total_monthly_costs_cents: number
+          total_monthly_profit_cents: number
+          total_monthly_revenue_cents: number
+          total_users: number
+          unprofitable_users: number
+        }[]
       }
       has_unlimited_access: {
         Args: { user_uuid: string }
