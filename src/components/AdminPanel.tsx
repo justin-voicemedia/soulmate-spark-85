@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useImageGeneration } from '@/hooks/useImageGeneration';
@@ -178,6 +179,17 @@ export const AdminPanel = () => {
   // Referral management state
   const [referrals, setReferrals] = useState<ReferralData[]>([]);
   const [referralsLoading, setReferralsLoading] = useState(false);
+  
+  // User profile modal state
+  const [selectedUser, setSelectedUser] = useState<ClientData | null>(null);
+  const [userProfileData, setUserProfileData] = useState<{
+    payments: PaymentRecord[];
+    tickets: SupportTicket[];
+    referrals: ReferralData[];
+    billingInfo: BillingInfo | null;
+    credits: AccountCredit[];
+  } | null>(null);
+  const [loadingUserProfile, setLoadingUserProfile] = useState(false);
   const { generateCompanionImage } = useImageGeneration();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -560,6 +572,65 @@ export const AdminPanel = () => {
     } finally {
       setReferralsLoading(false);
     }
+  };
+
+  // User profile functions
+  const loadUserProfile = async (user: ClientData) => {
+    setSelectedUser(user);
+    setLoadingUserProfile(true);
+    
+    try {
+      // Load all user-related data in parallel
+      const [paymentsResult, ticketsResult, referralsResult, billingResult, creditsResult] = await Promise.all([
+        supabase
+          .from('payment_history')
+          .select('*')
+          .eq('user_id', user.user_id)
+          .order('payment_date', { ascending: false }),
+          
+        supabase
+          .from('support_tickets')
+          .select('*')
+          .eq('user_id', user.user_id)
+          .order('created_at', { ascending: false }),
+          
+        supabase
+          .from('referrals')
+          .select('*')
+          .or(`referrer_user_id.eq.${user.user_id},referred_user_id.eq.${user.user_id}`)
+          .order('created_at', { ascending: false }),
+          
+        supabase
+          .from('billing_info')
+          .select('*')
+          .eq('user_id', user.user_id)
+          .maybeSingle(),
+          
+        supabase
+          .from('account_credits')
+          .select('*')
+          .eq('user_id', user.user_id)
+          .order('created_at', { ascending: false })
+      ]);
+
+      setUserProfileData({
+        payments: paymentsResult.data || [],
+        tickets: ticketsResult.data || [],
+        referrals: referralsResult.data || [],
+        billingInfo: billingResult.data,
+        credits: creditsResult.data || []
+      });
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+      toast.error('Failed to load user profile data');
+    } finally {
+      setLoadingUserProfile(false);
+    }
+  };
+
+  const closeUserProfile = () => {
+    setSelectedUser(null);
+    setUserProfileData(null);
   };
 
   const getStatusBadgeColor = (status?: string) => {
@@ -997,7 +1068,7 @@ export const AdminPanel = () => {
                       const formData = clientEditFormData[client.id] || {};
                       
                       return (
-                        <Card key={client.id} className="border">
+                        <Card key={client.id} className="border cursor-pointer hover:shadow-md transition-shadow" onClick={() => loadUserProfile(client)}>
                           <CardContent className="p-4">
                             <div className="space-y-3">
                               {/* Header */}
@@ -1011,6 +1082,7 @@ export const AdminPanel = () => {
                                         onChange={(e) => updateClientFormData(client.id, 'email', e.target.value)}
                                         className="h-7 text-sm"
                                         placeholder="Email"
+                                        onClick={(e) => e.stopPropagation()}
                                       />
                                     ) : (
                                       <p className="text-sm font-medium truncate">{client.email}</p>
@@ -1018,7 +1090,7 @@ export const AdminPanel = () => {
                                   </div>
                                 </div>
                                 
-                                <div className="flex gap-1">
+                                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                                   {isEditing ? (
                                     <>
                                       <Button
@@ -1065,6 +1137,7 @@ export const AdminPanel = () => {
                                     onChange={(e) => updateClientFormData(client.id, 'name', e.target.value)}
                                     className="h-7 text-sm mt-1"
                                     placeholder="Full name"
+                                    onClick={(e) => e.stopPropagation()}
                                   />
                                 ) : (
                                   <p className="text-sm">{client.name || 'No name set'}</p>
@@ -1106,7 +1179,7 @@ export const AdminPanel = () => {
                                 
                                 {/* Tester Toggle */}
                                 {client.subscriber && (
-                                  <div className="mt-2">
+                                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                                     <Button
                                       size="sm"
                                       variant={client.subscriber.is_tester ? "destructive" : "default"}
@@ -1882,6 +1955,295 @@ export const AdminPanel = () => {
         onChange={handleFileInputChange}
         style={{ display: 'none' }}
       />
+      
+      {/* User Profile Modal */}
+      <Dialog open={!!selectedUser} onOpenChange={closeUserProfile}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              User Profile: {selectedUser?.email}
+            </DialogTitle>
+            <DialogDescription>
+              Comprehensive view of all user data and activity
+            </DialogDescription>
+          </DialogHeader>
+          
+          {loadingUserProfile ? (
+            <div className="flex justify-center py-8">
+              <RefreshCw className="w-8 h-8 animate-spin" />
+            </div>
+          ) : userProfileData && selectedUser ? (
+            <div className="space-y-6">
+              {/* User Overview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Account Overview</CardTitle>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Email</label>
+                    <p className="text-sm">{selectedUser.email}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Name</label>
+                    <p className="text-sm">{selectedUser.name || 'Not set'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Member Since</label>
+                    <p className="text-sm">{formatDate(selectedUser.created_at)}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Last Updated</label>
+                    <p className="text-sm">{formatDate(selectedUser.updated_at)}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Subscription Status</label>
+                    <div className="flex items-center gap-2 mt-1">
+                      {selectedUser.subscriber?.is_tester && (
+                        <span className="text-xs px-2 py-1 rounded bg-purple-100 text-purple-800">Tester</span>
+                      )}
+                      {selectedUser.subscription ? (
+                        <span className={`text-xs px-2 py-1 rounded ${getStatusBadgeColor(selectedUser.subscription.status)}`}>
+                          {selectedUser.subscription.status} - {selectedUser.subscription.plan_type}
+                        </span>
+                      ) : selectedUser.subscriber?.subscribed ? (
+                        <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-800">
+                          {selectedUser.subscriber.subscription_tier || 'Active'}
+                        </span>
+                      ) : (
+                        <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-800">Trial</span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Usage Stats</label>
+                    <p className="text-sm">
+                      {selectedUser.usage_stats?.total_sessions || 0} sessions, {selectedUser.usage_stats?.total_minutes || 0} minutes
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Payment History */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <CreditCard className="w-5 h-5" />
+                    Payment History ({userProfileData.payments.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {userProfileData.payments.length > 0 ? (
+                    <div className="border rounded-lg overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-muted">
+                            <tr>
+                              <th className="text-left p-2">Date</th>
+                              <th className="text-left p-2">Amount</th>
+                              <th className="text-left p-2">Status</th>
+                              <th className="text-left p-2">Method</th>
+                              <th className="text-left p-2">Description</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {userProfileData.payments.map((payment) => (
+                              <tr key={payment.id} className="border-t">
+                                <td className="p-2">{new Date(payment.payment_date).toLocaleDateString()}</td>
+                                <td className="p-2">${(payment.amount_cents / 100).toFixed(2)}</td>
+                                <td className="p-2">
+                                  <span className={`px-2 py-1 rounded text-xs ${
+                                    payment.status === 'succeeded' ? 'bg-green-100 text-green-800' :
+                                    payment.status === 'failed' ? 'bg-red-100 text-red-800' :
+                                    'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                    {payment.status}
+                                  </span>
+                                </td>
+                                <td className="p-2">{payment.payment_method || 'N/A'}</td>
+                                <td className="p-2">{payment.description || 'N/A'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">No payment history</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Support Tickets */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Ticket className="w-5 h-5" />
+                    Support Tickets ({userProfileData.tickets.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {userProfileData.tickets.length > 0 ? (
+                    <div className="space-y-3">
+                      {userProfileData.tickets.map((ticket) => (
+                        <div key={ticket.id} className="border rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">#{ticket.ticket_number}</span>
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                ticket.priority === 'high' ? 'bg-red-100 text-red-800' :
+                                ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                                {ticket.priority}
+                              </span>
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                ticket.status === 'open' ? 'bg-blue-100 text-blue-800' :
+                                ticket.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {ticket.status}
+                              </span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">{new Date(ticket.created_at).toLocaleDateString()}</span>
+                          </div>
+                          <h4 className="font-medium text-sm mb-1">{ticket.subject}</h4>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{ticket.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">No support tickets</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Account Credits */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Gift className="w-5 h-5" />
+                    Account Credits ({userProfileData.credits.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {userProfileData.credits.length > 0 ? (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {userProfileData.credits.map((credit) => (
+                        <div key={credit.id} className="border rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium">${(credit.amount_cents / 100).toFixed(2)}</span>
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              credit.status === 'active' ? 'bg-green-100 text-green-800' :
+                              credit.status === 'expired' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {credit.status}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-1">{credit.description}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Used: ${((credit.used_amount_cents || 0) / 100).toFixed(2)} / ${(credit.amount_cents / 100).toFixed(2)}
+                          </p>
+                          {credit.expires_at && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Expires: {new Date(credit.expires_at).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">No account credits</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Referrals */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5" />
+                    Referral Activity ({userProfileData.referrals.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {userProfileData.referrals.length > 0 ? (
+                    <div className="space-y-3">
+                      {userProfileData.referrals.map((referral) => (
+                        <div key={referral.id} className="border rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-mono">{referral.referral_code}</span>
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                referral.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                referral.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {referral.status}
+                              </span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">{new Date(referral.created_at).toLocaleDateString()}</span>
+                          </div>
+                          <p className="text-sm">
+                            {referral.referrer_user_id === selectedUser.user_id ? 
+                              `Referred: ${referral.referred_email || 'N/A'}` :
+                              `Referred by: ${referral.referrer_email || 'N/A'}`
+                            }
+                          </p>
+                          {referral.reward_amount_cents && (
+                            <p className="text-sm text-muted-foreground">
+                              Reward: ${(referral.reward_amount_cents / 100).toFixed(2)}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">No referral activity</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Billing Information */}
+              {userProfileData.billingInfo && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <FileText className="w-5 h-5" />
+                      Billing Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Payment Method</label>
+                      <p className="text-sm">
+                        {userProfileData.billingInfo.card_brand && userProfileData.billingInfo.card_last_four ?
+                          `${userProfileData.billingInfo.card_brand} **** ${userProfileData.billingInfo.card_last_four}` :
+                          'Not set'
+                        }
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Billing Email</label>
+                      <p className="text-sm">{userProfileData.billingInfo.billing_email || 'Not set'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Company</label>
+                      <p className="text-sm">{userProfileData.billingInfo.company_name || 'Not set'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Stripe Customer</label>
+                      <p className="text-sm font-mono text-xs">{userProfileData.billingInfo.stripe_customer_id || 'Not set'}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
