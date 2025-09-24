@@ -10,6 +10,7 @@ interface TrialStatus {
   trial_minutes_limit: number;
   subscribed: boolean;
   subscription_tier: string | null;
+  is_tester: boolean;
 }
 
 export const useTrialStatus = () => {
@@ -86,7 +87,7 @@ export const useTrialStatus = () => {
 
   const canUseService = () => {
     if (!trialStatus) return false;
-    return trialStatus.subscribed || (trialStatus.trial_active && getRemainingMinutes() > 0);
+    return trialStatus.subscribed || trialStatus.is_tester || (trialStatus.trial_active && getRemainingMinutes() > 0);
   };
 
   useEffect(() => {

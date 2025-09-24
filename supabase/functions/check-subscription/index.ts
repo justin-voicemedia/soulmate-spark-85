@@ -68,7 +68,8 @@ serve(async (req) => {
         trial_active: true,
         trial_start: trialStart,
         trial_minutes_used: 0,
-        trial_minutes_limit: 500
+        trial_minutes_limit: 500,
+        is_tester: false
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -105,10 +106,10 @@ serve(async (req) => {
       logStep("No active subscription found");
     }
 
-    // Get existing subscriber data to preserve trial info
+    // Get existing subscriber data to preserve trial info and check tester status
     const { data: existingSubscriber } = await supabaseClient
       .from("subscribers")
-      .select("trial_start, trial_minutes_used, trial_minutes_limit")
+      .select("trial_start, trial_minutes_used, trial_minutes_limit, is_tester")
       .eq("user_id", user.id)
       .single();
     
@@ -168,7 +169,8 @@ serve(async (req) => {
       trial_expired: trialExpired,
       trial_start: trialStart,
       trial_minutes_used: trialMinutesUsed,
-      trial_minutes_limit: trialMinutesLimit
+      trial_minutes_limit: trialMinutesLimit,
+      is_tester: existingSubscriber?.is_tester || false
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
