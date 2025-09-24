@@ -28,10 +28,13 @@ import {
   Trash2
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useMemoryManager } from '@/hooks/useMemoryManager';
+import { useConversationMemory } from '@/hooks/useConversationMemory';
 import { useTrialStatus } from "@/hooks/useTrialStatus";
 import { OpenAIVoiceWidget } from "@/components/OpenAIVoiceWidget";
 import { RelationshipSelector } from "@/components/RelationshipSelector";
 import { VoiceSelector } from "@/components/VoiceSelector";
+import { MemoryTester } from "@/components/MemoryTester";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
@@ -65,7 +68,12 @@ interface Message {
 export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onViewUsage }: MobileAppProps) => {
   const { user, signOut } = useAuth();
   const { trialStatus, trackUsage, getRemainingMinutes, getRemainingDays, canUseService } = useTrialStatus();
-  const [activeTab, setActiveTab] = useState<'chat' | 'profile' | 'settings' | 'voice'>('profile');
+  const { getCompanionMemories, generateContextPrompt, saveQuestionnaireToMemory } = useMemoryManager();
+  const { addMessage: addToMemory, forceSave } = useConversationMemory(
+    companion?.id, 
+    companion?.name
+  );
+  const [activeTab, setActiveTab] = useState<'chat' | 'profile' | 'settings' | 'voice' | 'memory'>('profile');
   const [isChatActive, setIsChatActive] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -79,6 +87,22 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Force save conversation memory when component unmounts or companion changes  
+  useEffect(() => {
+    return () => {
+      if (forceSave) {
+        forceSave();
+      }
+    };
+  }, [forceSave]);
+
+  useEffect(() => {
+    // Force save when switching companions
+    if (forceSave) {
+      forceSave();
+    }
+  }, [companion.id, forceSave]);
 
   // Update current companion when prop changes
   useEffect(() => {
@@ -236,7 +260,7 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
     setActiveTab('profile');
   };
 
-  const handleTabChange = (newTab: 'chat' | 'profile' | 'settings' | 'voice') => {
+  const handleTabChange = (newTab: 'chat' | 'profile' | 'settings' | 'voice' | 'memory') => {
     // Track usage when leaving chat tab
     if (activeTab === 'chat' && sessionStartTime && newTab !== 'chat') {
       const sessionDurationMs = new Date().getTime() - sessionStartTime.getTime();
@@ -301,6 +325,9 @@ const scrollToBottom = () => {
       const messageText = newMessage;
       setNewMessage('');
 
+      // Add user message to memory system
+      addToMemory('user', messageText);
+
       try {
         // Call OpenAI chat function
         const { data, error } = await supabase.functions.invoke('openai-chat', {
@@ -314,6 +341,9 @@ const scrollToBottom = () => {
         if (error) throw error;
 
         if (data.success) {
+          // Add assistant response to memory system
+          addToMemory('assistant', data.response);
+          
           // Use the updated conversation history from the API response
           // This ensures we stay in sync with the database
           if (data.conversationHistory && Array.isArray(data.conversationHistory)) {
@@ -887,6 +917,12 @@ const scrollToBottom = () => {
     </div>
   );
 
+  const renderMemory = () => (
+    <div className="flex flex-col h-full p-4">
+      <MemoryTester />
+    </div>
+  );
+
   return (
     <div className="h-screen max-w-md mx-auto bg-background flex flex-col">
       {/* Mobile App Header */}
@@ -924,11 +960,12 @@ const scrollToBottom = () => {
         {activeTab === 'chat' && renderChat()}
         {activeTab === 'voice' && renderVoice()}
         {activeTab === 'settings' && renderSettings()}
+        {activeTab === 'memory' && renderMemory()}
       </div>
 
       {/* Bottom Navigation */}
       <div className="border-t bg-card">
-        <div className="grid grid-cols-4 p-2">
+        <div className="grid grid-cols-5 p-2">
           <Button
             variant={activeTab === 'profile' ? 'default' : 'ghost'}
             size="sm"
@@ -966,6 +1003,15 @@ const scrollToBottom = () => {
           >
             <Settings className="w-4 h-4 mb-1" />
             <span className="text-xs">Settings</span>
+          </Button>
+          <Button
+            variant={activeTab === 'memory' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => handleTabChange('memory')}
+            className="flex flex-col items-center py-3"
+          >
+            <Clock className="w-4 h-4 mb-1" />
+            <span className="text-xs">Memory</span>
           </Button>
         </div>
       </div>
