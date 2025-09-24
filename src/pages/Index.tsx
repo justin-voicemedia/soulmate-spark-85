@@ -281,8 +281,27 @@ const AppContent = () => {
     setCurrentState('settings');
   };
 
-  const handleCompanionCreated = (companion: Companion) => {
-    setSelectedCompanion(companion);
+  const handleCompanionCreated = async (companion: Companion) => {
+    // If we were editing an existing companion, fetch the latest data from database
+    if (editingCompanion && companion.id === editingCompanion.id) {
+      try {
+        const { data: updatedCompanion, error } = await supabase
+          .from('companions')
+          .select('*')
+          .eq('id', companion.id)
+          .single();
+        
+        if (error) throw error;
+        
+        setSelectedCompanion(updatedCompanion as Companion);
+      } catch (error) {
+        console.error('Error fetching updated companion:', error);
+        // Fallback to the companion data passed from builder
+        setSelectedCompanion(companion);
+      }
+    } else {
+      setSelectedCompanion(companion);
+    }
     
     // If we were editing, clear the editing state
     if (editingCompanion) {
