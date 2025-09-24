@@ -45,7 +45,7 @@ serve(async (req) => {
       admin.from("subscribers").select("*\n").in("user_id", userIds),
       admin
         .from("conversation_usage")
-        .select("user_id, minutes_used, session_start")
+        .select("user_id, minutes_used, session_start, api_type")
         .in("user_id", userIds),
     ]);
 
@@ -60,12 +60,29 @@ serve(async (req) => {
       if (!subscribersByUser[s.user_id]) subscribersByUser[s.user_id] = s;
     });
 
-    const usageAgg: Record<string, { total_minutes: number; total_sessions: number; last_session?: string }> = {};
+    const usageAgg: Record<string, { 
+      total_minutes: number; 
+      total_sessions: number; 
+      voice_minutes: number;
+      text_minutes: number;
+      voice_sessions: number;
+      text_sessions: number;
+      last_session?: string 
+    }> = {};
     (usage || []).forEach((u) => {
       const key = u.user_id as string;
-      if (!usageAgg[key]) usageAgg[key] = { total_minutes: 0, total_sessions: 0, last_session: undefined };
-      usageAgg[key].total_minutes += u.minutes_used || 0;
+      if (!usageAgg[key]) usageAgg[key] = { total_minutes: 0, total_sessions: 0, voice_minutes: 0, text_minutes: 0, voice_sessions: 0, text_sessions: 0, last_session: undefined };
+      const minutes = (u.minutes_used || 0);
+      const apiType = (u.api_type || 'voice');
+      usageAgg[key].total_minutes += minutes;
       usageAgg[key].total_sessions += 1;
+      if (apiType === 'voice') {
+        usageAgg[key].voice_minutes += minutes;
+        usageAgg[key].voice_sessions += 1;
+      } else if (apiType === 'text') {
+        usageAgg[key].text_minutes += minutes;
+        usageAgg[key].text_sessions += 1;
+      }
       if (!usageAgg[key].last_session || (u.session_start && u.session_start > usageAgg[key].last_session!)) {
         usageAgg[key].last_session = u.session_start;
       }
@@ -74,7 +91,7 @@ serve(async (req) => {
     const clients = profiles.map((p) => {
       const sub = subsByUser[p.user_id];
       const subscriber = subscribersByUser[p.user_id];
-      const usageStats = usageAgg[p.user_id] || { total_minutes: 0, total_sessions: 0, last_session: undefined };
+      const usageStats = usageAgg[p.user_id] || { total_minutes: 0, total_sessions: 0, voice_minutes: 0, text_minutes: 0, voice_sessions: 0, text_sessions: 0, last_session: undefined };
 
       return {
         id: p.id,

@@ -59,6 +59,10 @@ interface ClientData {
     total_sessions: number;
     total_minutes: number;
     last_session?: string;
+    voice_minutes?: number;
+    text_minutes?: number;
+    voice_sessions?: number;
+    text_sessions?: number;
   };
 }
 
@@ -1262,6 +1266,16 @@ export const AdminPanel = () => {
                                   <div className="text-xs space-y-1 mt-1">
                                     <p>{client.usage_stats.total_sessions} sessions</p>
                                     <p>{client.usage_stats.total_minutes} total minutes</p>
+                                    {(client.usage_stats.voice_minutes !== undefined || client.usage_stats.text_minutes !== undefined) && (
+                                      <p>
+                                        Voice: {client.usage_stats.voice_minutes ?? 0} min • Chat: {client.usage_stats.text_minutes ?? 0} min
+                                      </p>
+                                    )}
+                                    {(client.usage_stats.voice_sessions !== undefined || client.usage_stats.text_sessions !== undefined) && (
+                                      <p className="text-muted-foreground">
+                                        Voice sessions: {client.usage_stats.voice_sessions ?? 0} • Chat sessions: {client.usage_stats.text_sessions ?? 0}
+                                      </p>
+                                    )}
                                     {client.usage_stats.last_session && (
                                       <p className="text-muted-foreground">
                                         Last: {formatDate(client.usage_stats.last_session)}
@@ -2020,6 +2034,9 @@ export const AdminPanel = () => {
                     <label className="text-sm font-medium text-muted-foreground">Usage Stats</label>
                     <p className="text-sm">
                       {selectedUser.usage_stats?.total_sessions || 0} sessions, {selectedUser.usage_stats?.total_minutes || 0} minutes
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Voice: {selectedUser.usage_stats?.voice_minutes ?? 0} min • Chat: {selectedUser.usage_stats?.text_minutes ?? 0} min
                     </p>
                   </div>
                 </CardContent>
