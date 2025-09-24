@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { RefreshCw, Image as ImageIcon, Sparkles, Upload, Settings, Home, Edit3, Save, X, Users, Mail, Calendar, CreditCard, Crown, UserPlus, Shield } from 'lucide-react';
 import { CompanionImageManager } from './CompanionImageManager';
+import { CostAnalyticsDashboard } from './CostAnalyticsDashboard';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -715,11 +716,12 @@ export const AdminPanel = () => {
       </div>
 
       <Tabs defaultValue="bulk-operations" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="image-manager">Image Manager</TabsTrigger>
           <TabsTrigger value="bulk-operations">Manage Companions</TabsTrigger>
           <TabsTrigger value="clients">Client Management</TabsTrigger>
           <TabsTrigger value="relationship-prompts">Relationship Prompts</TabsTrigger>
+          <TabsTrigger value="cost-analytics">Cost Analytics</TabsTrigger>
         </TabsList>
         
         <TabsContent value="image-manager" className="space-y-4">
@@ -1020,6 +1022,10 @@ export const AdminPanel = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="cost-analytics" className="space-y-4">
+          <CostAnalyticsDashboard />
         </TabsContent>
         
         <TabsContent value="relationship-prompts" className="space-y-4">

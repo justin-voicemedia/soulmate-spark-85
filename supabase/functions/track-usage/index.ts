@@ -114,14 +114,37 @@ serve(async (req) => {
 
       if (error) throw error;
 
+      // Calculate and update costs for this session
+      try {
+        const costResponse = await supabaseClient.functions.invoke('calculate-usage-costs', {
+          body: {
+            action: 'update_session',
+            session_id: effectiveSessionId,
+            user_id: userId,
+            api_type: apiType,
+            minutes_used: Math.ceil(effectiveMinutes as number),
+            tokens_used: finalTokens,
+            input_tokens: Math.floor(finalTokens * 0.7), // Estimate 70% input
+            output_tokens: Math.floor(finalTokens * 0.3), // Estimate 30% output
+            characters_generated: Math.ceil(effectiveMinutes as number) * 150 // Rough estimate for voice
+          }
+        });
+
+        if (costResponse.error) {
+          console.error("Error calculating costs:", costResponse.error);
+        }
+      } catch (costError) {
+        console.error("Cost calculation failed:", costError);
+      }
+
       // Update trial usage if user is in trial
       const { data: subscriberData, error: subscriberError } = await supabaseClient
         .from("subscribers")
-        .select("trial_minutes_used, subscribed")
+        .select("trial_minutes_used, subscribed, is_tester")
         .eq("user_id", userId)
         .single();
 
-      if (!subscriberError && !subscriberData?.subscribed) {
+      if (!subscriberError && !subscriberData?.subscribed && !subscriberData?.is_tester) {
         // User is in trial, update trial minutes
         const newTrialMinutes = (subscriberData.trial_minutes_used || 0) + minutesUsed;
         
@@ -137,7 +160,11 @@ serve(async (req) => {
       }
 
       return new Response(
-        JSON.stringify({ success: true, usage: data }),
+        JSON.stringify({ 
+          success: true, 
+          usage: data,
+          cost_calculated: true
+        }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,
