@@ -54,6 +54,7 @@ interface ClientData {
     trial_minutes_limit?: number;
     stripe_customer_id?: string;
     is_tester?: boolean;
+    subscription_end?: string;
   };
   usage_stats?: {
     total_sessions: number;
@@ -64,6 +65,7 @@ interface ClientData {
     voice_sessions?: number;
     text_sessions?: number;
   };
+  payments?: PaymentRecord[];
 }
 
 interface PaymentRecord {
@@ -248,6 +250,35 @@ export const AdminPanel = () => {
       if (error) throw error;
 
       const clients = (data as any)?.clients || [];
+      
+      // Load payment history for all clients
+      const userIds = clients.map((c: any) => c.user_id).filter(Boolean);
+      if (userIds.length > 0) {
+        const { data: paymentData, error: paymentError } = await supabase
+          .from('payment_history')
+          .select('*')
+          .in('user_id', userIds)
+          .order('payment_date', { ascending: false });
+        
+        if (paymentError) {
+          console.error('Error loading payment history:', paymentError);
+        } else {
+          // Group payments by user_id
+          const paymentsByUser: Record<string, any[]> = {};
+          (paymentData || []).forEach((payment) => {
+            if (!paymentsByUser[payment.user_id]) {
+              paymentsByUser[payment.user_id] = [];
+            }
+            paymentsByUser[payment.user_id].push(payment);
+          });
+          
+          // Add payment data to clients
+          clients.forEach((client: any) => {
+            client.payments = paymentsByUser[client.user_id] || [];
+          });
+        }
+      }
+      
       setClients(clients);
     } catch (error) {
       console.error('Error loading clients:', error);
@@ -1151,35 +1182,54 @@ export const AdminPanel = () => {
                               {/* Subscription Status */}
                               <div>
                                 <label className="text-xs text-muted-foreground">Subscription</label>
-                                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                  {client.subscriber?.is_tester && (
-                                    <span className="text-xs px-2 py-1 rounded bg-purple-100 text-purple-800 flex items-center gap-1">
-                                      <Shield className="w-3 h-3" />
-                                      Tester
-                                    </span>
-                                  )}
-                                  {client.subscription ? (
-                                    <>
-                                      <span className={`text-xs px-2 py-1 rounded ${getStatusBadgeColor(client.subscription.status)}`}>
-                                        {client.subscription.status}
-                                      </span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {client.subscription.plan_type}
-                                      </span>
-                                      {client.subscription.spicy_unlocked && (
-                                        <Crown className="w-3 h-3 text-yellow-500" />
-                                      )}
-                                    </>
-                                  ) : client.subscriber?.subscribed ? (
-                                    <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-800">
-                                      {client.subscriber.subscription_tier || 'Active'}
-                                    </span>
-                                  ) : (
-                                    <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-800">
-                                      Trial
-                                    </span>
-                                  )}
-                                </div>
+                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                   {client.subscriber?.is_tester && (
+                                     <span className="text-xs px-2 py-1 rounded bg-purple-100 text-purple-800 flex items-center gap-1">
+                                       <Shield className="w-3 h-3" />
+                                       Tester
+                                     </span>
+                                   )}
+                                   {client.subscription ? (
+                                     <>
+                                       <span className={`text-xs px-2 py-1 rounded ${getStatusBadgeColor(client.subscription.status)}`}>
+                                         {client.subscription.status}
+                                       </span>
+                                       <span className="text-xs text-muted-foreground">
+                                         {client.subscription.plan_type}
+                                       </span>
+                                       {client.subscription.spicy_unlocked && (
+                                         <Crown className="w-3 h-3 text-yellow-500" />
+                                       )}
+                                     </>
+                                   ) : client.subscriber?.subscribed ? (
+                                     <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-800">
+                                       {client.subscriber.subscription_tier || 'Active'}
+                                     </span>
+                                   ) : (
+                                     <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-800">
+                                       Trial
+                                     </span>
+                                   )}
+                                 </div>
+
+                                 {/* Stripe Customer Info */}
+                                 {(client.subscription?.stripe_customer_id || client.subscriber?.stripe_customer_id) && (
+                                   <div className="text-xs text-muted-foreground mt-1">
+                                     Stripe: {client.subscription?.stripe_customer_id || client.subscriber?.stripe_customer_id}
+                                   </div>
+                                 )}
+
+                                 {/* Subscription Dates */}
+                                 {client.subscription?.current_period_end && (
+                                   <div className="text-xs text-muted-foreground mt-1">
+                                     Expires: {formatDate(client.subscription.current_period_end)}
+                                   </div>
+                                 )}
+                                 {client.subscriber?.subscription_end && (
+                                   <div className="text-xs text-muted-foreground mt-1">
+                                     Subscriber until: {formatDate(client.subscriber.subscription_end)}
+                                   </div>
+                                 )}
                                 
                                 {/* Tester Toggle */}
                                 {client.subscriber && (
@@ -1281,6 +1331,41 @@ export const AdminPanel = () => {
                                         Last: {formatDate(client.usage_stats.last_session)}
                                       </p>
                                     )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Payment History */}
+                              {client.payments && client.payments.length > 0 && (
+                                <div>
+                                  <label className="text-xs text-muted-foreground">Recent Payments</label>
+                                  <div className="text-xs space-y-1 mt-1">
+                                    {client.payments.slice(0, 3).map((payment: PaymentRecord) => (
+                                      <div key={payment.id} className="flex justify-between items-center">
+                                        <span>${(payment.amount_cents / 100).toFixed(2)}</span>
+                                        <span className={`px-1 py-0.5 rounded text-xs ${
+                                          payment.status === 'succeeded' ? 'bg-green-100 text-green-800' : 
+                                          payment.status === 'failed' ? 'bg-red-100 text-red-800' :
+                                          'bg-yellow-100 text-yellow-800'
+                                        }`}>
+                                          {payment.status}
+                                        </span>
+                                      </div>
+                                    ))}
+                                    {client.payments.length > 3 && (
+                                      <p className="text-muted-foreground">+{client.payments.length - 3} more payments</p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Show if no payments but has subscription */}
+                              {(!client.payments || client.payments.length === 0) && 
+                               (client.subscription?.stripe_customer_id || client.subscriber?.stripe_customer_id) && (
+                                <div>
+                                  <label className="text-xs text-muted-foreground">Payment Status</label>
+                                  <div className="text-xs mt-1 text-yellow-600">
+                                    Has Stripe account but no payment records in database
                                   </div>
                                 </div>
                               )}
