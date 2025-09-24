@@ -58,6 +58,12 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
   const [selectedVoice, setSelectedVoice] = useState<string>('alloy');
   const [currentRelationshipType, setCurrentRelationshipType] = useState<string>('casual_friend');
   
+  // Custom input states for adding new items
+  const [customPersonalityTrait, setCustomPersonalityTrait] = useState('');
+  const [customHobby, setCustomHobby] = useState('');
+  const [customLike, setCustomLike] = useState('');
+  const [customDislike, setCustomDislike] = useState('');
+  
   const [formData, setFormData] = useState({
     name: editingCompanion?.name || '',
     sex: editingCompanion?.gender ? editingCompanion.gender.charAt(0).toUpperCase() + editingCompanion.gender.slice(1) : '',
@@ -149,6 +155,58 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
       dislikes: checked 
         ? [...prev.dislikes, dislike]
         : prev.dislikes.filter(d => d !== dislike)
+    }));
+  };
+
+  // Custom item handlers
+  const addCustomPersonalityTrait = () => {
+    const trait = customPersonalityTrait.trim();
+    if (trait && !formData.personality.includes(trait)) {
+      setFormData(prev => ({
+        ...prev,
+        personality: [...prev.personality, trait]
+      }));
+      setCustomPersonalityTrait('');
+    }
+  };
+
+  const addCustomHobby = () => {
+    const hobby = customHobby.trim();
+    if (hobby && !formData.hobbies.includes(hobby)) {
+      setFormData(prev => ({
+        ...prev,
+        hobbies: [...prev.hobbies, hobby]
+      }));
+      setCustomHobby('');
+    }
+  };
+
+  const addCustomLike = () => {
+    const like = customLike.trim();
+    if (like && !formData.likes.includes(like)) {
+      setFormData(prev => ({
+        ...prev,
+        likes: [...prev.likes, like]
+      }));
+      setCustomLike('');
+    }
+  };
+
+  const addCustomDislike = () => {
+    const dislike = customDislike.trim();
+    if (dislike && !formData.dislikes.includes(dislike)) {
+      setFormData(prev => ({
+        ...prev,
+        dislikes: [...prev.dislikes, dislike]
+      }));
+      setCustomDislike('');
+    }
+  };
+
+  const removeCustomItem = (item: string, type: 'personality' | 'hobbies' | 'likes' | 'dislikes') => {
+    setFormData(prev => ({
+      ...prev,
+      [type]: prev[type].filter(i => i !== item)
     }));
   };
 
@@ -494,6 +552,49 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
                     </div>
                   ))}
                 </div>
+                
+                {/* Custom personality trait input */}
+                <div className="flex gap-2 mt-3">
+                  <Input
+                    placeholder="Add a custom personality trait"
+                    value={customPersonalityTrait}
+                    onChange={(e) => setCustomPersonalityTrait(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && addCustomPersonalityTrait()}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addCustomPersonalityTrait}
+                    disabled={!customPersonalityTrait.trim()}
+                  >
+                    Add
+                  </Button>
+                </div>
+                
+                {/* Display custom items that can be removed */}
+                {formData.personality.filter(trait => !DEFAULT_PERSONALITY_TRAITS.includes(trait)).length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-sm text-muted-foreground mb-2">Custom traits:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.personality
+                        .filter(trait => !DEFAULT_PERSONALITY_TRAITS.includes(trait))
+                        .map(trait => (
+                          <div key={trait} className="flex items-center gap-1 bg-secondary px-2 py-1 rounded text-sm">
+                            {trait}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeCustomItem(trait, 'personality')}
+                              className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                            >
+                              ×
+                            </Button>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Hobbies */}
@@ -511,6 +612,49 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
                     </div>
                   ))}
                 </div>
+                
+                {/* Custom hobby input */}
+                <div className="flex gap-2 mt-3">
+                  <Input
+                    placeholder="Add a custom hobby or interest"
+                    value={customHobby}
+                    onChange={(e) => setCustomHobby(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && addCustomHobby()}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addCustomHobby}
+                    disabled={!customHobby.trim()}
+                  >
+                    Add
+                  </Button>
+                </div>
+                
+                {/* Display custom items that can be removed */}
+                {formData.hobbies.filter(hobby => !DEFAULT_HOBBY_OPTIONS.includes(hobby)).length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-sm text-muted-foreground mb-2">Custom hobbies:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.hobbies
+                        .filter(hobby => !DEFAULT_HOBBY_OPTIONS.includes(hobby))
+                        .map(hobby => (
+                          <div key={hobby} className="flex items-center gap-1 bg-secondary px-2 py-1 rounded text-sm">
+                            {hobby}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeCustomItem(hobby, 'hobbies')}
+                              className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                            >
+                              ×
+                            </Button>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Likes */}
@@ -528,6 +672,49 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
                     </div>
                   ))}
                 </div>
+                
+                {/* Custom like input */}
+                <div className="flex gap-2 mt-3">
+                  <Input
+                    placeholder="Add something custom they like"
+                    value={customLike}
+                    onChange={(e) => setCustomLike(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && addCustomLike()}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addCustomLike}
+                    disabled={!customLike.trim()}
+                  >
+                    Add
+                  </Button>
+                </div>
+                
+                {/* Display custom items that can be removed */}
+                {formData.likes.filter(like => !DEFAULT_LIKE_OPTIONS.includes(like)).length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-sm text-muted-foreground mb-2">Custom likes:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.likes
+                        .filter(like => !DEFAULT_LIKE_OPTIONS.includes(like))
+                        .map(like => (
+                          <div key={like} className="flex items-center gap-1 bg-secondary px-2 py-1 rounded text-sm">
+                            {like}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeCustomItem(like, 'likes')}
+                              className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                            >
+                              ×
+                            </Button>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Dislikes */}
@@ -545,6 +732,49 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
                     </div>
                   ))}
                 </div>
+                
+                {/* Custom dislike input */}
+                <div className="flex gap-2 mt-3">
+                  <Input
+                    placeholder="Add something custom they dislike"
+                    value={customDislike}
+                    onChange={(e) => setCustomDislike(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && addCustomDislike()}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addCustomDislike}
+                    disabled={!customDislike.trim()}
+                  >
+                    Add
+                  </Button>
+                </div>
+                
+                {/* Display custom items that can be removed */}
+                {formData.dislikes.filter(dislike => !DEFAULT_DISLIKE_OPTIONS.includes(dislike)).length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-sm text-muted-foreground mb-2">Custom dislikes:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.dislikes
+                        .filter(dislike => !DEFAULT_DISLIKE_OPTIONS.includes(dislike))
+                        .map(dislike => (
+                          <div key={dislike} className="flex items-center gap-1 bg-secondary px-2 py-1 rounded text-sm">
+                            {dislike}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeCustomItem(dislike, 'dislikes')}
+                              className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                            >
+                              ×
+                            </Button>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Voice Selection */}
