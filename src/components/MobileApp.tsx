@@ -533,9 +533,35 @@ const scrollToBottom = () => {
 
         {/* Chat Messages Area - Only show when chat is active */}
         {isChatActive && (
-          <div className="w-full max-w-md flex-1 flex flex-col">
+          <div className="w-full max-w-md flex-1 flex flex-col space-y-4">
+            {/* Message Input - Moved up under Stop Chat button */}
+            <div className="border rounded-lg p-4">
+              <div className="flex items-center space-x-2">
+                <div className="flex-1 flex items-center space-x-2">
+                  <Input
+                    placeholder={`Message ${companion.name}...`}
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    className="flex-1"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setIsRecording(!isRecording)}
+                    className={isRecording ? 'bg-red-100 text-red-600' : ''}
+                  >
+                    {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  </Button>
+                </div>
+                <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto space-y-4 max-h-96 mb-4">
+            <div className="flex-1 overflow-y-auto space-y-4 max-h-96">
               {messages.map((message) => (
                 <div
                   key={message.id}
@@ -564,32 +590,6 @@ const scrollToBottom = () => {
                 </div>
               ))}
               <div ref={messagesEndRef} />
-            </div>
-
-            {/* Message Input */}
-            <div className="border-t pt-4">
-              <div className="flex items-center space-x-2">
-                <div className="flex-1 flex items-center space-x-2">
-                  <Input
-                    placeholder={`Message ${companion.name}...`}
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    className="flex-1"
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setIsRecording(!isRecording)}
-                    className={isRecording ? 'bg-red-100 text-red-600' : ''}
-                  >
-                    {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                  </Button>
-                </div>
-                <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
             </div>
           </div>
         )}
