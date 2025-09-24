@@ -72,12 +72,39 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
   const [newMessage, setNewMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
-const messagesEndRef = useRef<HTMLDivElement>(null);
-const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relationship_type: string } | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relationship_type: string } | null>(null);
+  const [currentCompanion, setCurrentCompanion] = useState(companion);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Update current companion when prop changes
+  useEffect(() => {
+    setCurrentCompanion(companion);
+  }, [companion]);
+
+  // Refresh companion data from database
+  const refreshCompanionData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('companions')
+        .select('*')
+        .eq('id', companion.id)
+        .single();
+      
+      if (error) throw error;
+      setCurrentCompanion(data);
+    } catch (error) {
+      console.error('Error refreshing companion data:', error);
+    }
+  };
+
+  // Refresh companion data when component mounts or companion ID changes
+  useEffect(() => {
+    refreshCompanionData();
+  }, [companion.id]);
 
   // Fetch user profile and conversation history
   useEffect(() => {
@@ -101,7 +128,7 @@ const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relations
           .from('user_companions')
           .select('conversation_history')
           .eq('user_id', user.id)
-          .eq('companion_id', companion.id)
+          .eq('companion_id', currentCompanion.id)
           .maybeSingle();
 
         if (error) {
@@ -117,7 +144,7 @@ const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relations
           setMessages(history.length > 0 ? history : [
             {
               id: '1',
-              content: `Hi ${user?.user_metadata?.name || 'there'}! I'm ${companion.name}. I'm so excited to get to know you better. How are you feeling today?`,
+              content: `Hi ${user?.user_metadata?.name || 'there'}! I'm ${currentCompanion.name}. I'm so excited to get to know you better. How are you feeling today?`,
               sender: 'companion',
               timestamp: new Date()
             }
@@ -127,7 +154,7 @@ const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relations
           setMessages([
             {
               id: '1',
-              content: `Hi ${user?.user_metadata?.name || 'there'}! I'm ${companion.name}. I'm so excited to get to know you better. How are you feeling today?`,
+              content: `Hi ${user?.user_metadata?.name || 'there'}! I'm ${currentCompanion.name}. I'm so excited to get to know you better. How are you feeling today?`,
               sender: 'companion',
               timestamp: new Date()
             }
@@ -150,7 +177,7 @@ const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relations
           .from('user_companions')
           .select('voice_id, relationship_type')
           .eq('user_id', user.id)
-          .eq('companion_id', companion.id)
+          .eq('companion_id', currentCompanion.id)
           .maybeSingle();
         if (error) throw error;
         if (data) {
@@ -178,7 +205,7 @@ const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relations
         const sessionDurationMs = new Date().getTime() - sessionStartTime.getTime();
         const sessionDurationMinutes = sessionDurationMs / (1000 * 60);
         if (sessionDurationMinutes > 0.1) { // Only track if more than 6 seconds
-          trackUsage(companion.id, sessionDurationMinutes);
+          trackUsage(currentCompanion.id, sessionDurationMinutes);
         }
       }
     };
@@ -201,7 +228,7 @@ const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relations
       const sessionDurationMs = new Date().getTime() - sessionStartTime.getTime();
       const sessionDurationMinutes = sessionDurationMs / (1000 * 60);
       if (sessionDurationMinutes > 0.1) {
-        trackUsage(companion.id, sessionDurationMinutes);
+        trackUsage(currentCompanion.id, sessionDurationMinutes);
       }
       setSessionStartTime(null);
     }
@@ -215,7 +242,7 @@ const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relations
       const sessionDurationMs = new Date().getTime() - sessionStartTime.getTime();
       const sessionDurationMinutes = sessionDurationMs / (1000 * 60);
       if (sessionDurationMinutes > 0.1) {
-        trackUsage(companion.id, sessionDurationMinutes);
+        trackUsage(currentCompanion.id, sessionDurationMinutes);
       }
       setSessionStartTime(null);
       setIsChatActive(false); // Reset chat state when leaving
@@ -241,7 +268,7 @@ const handleVoiceChange = async (newVoiceId: string) => {
       .from('user_companions')
       .update({ voice_id: newVoiceId, updated_at: new Date().toISOString() })
       .eq('user_id', user.id)
-      .eq('companion_id', companion.id);
+      .eq('companion_id', currentCompanion.id);
     if (error) throw error;
     setUserCompanion(prev => prev ? { ...prev, voice_id: newVoiceId } : prev);
     toast.success('Voice updated successfully');
@@ -279,7 +306,7 @@ const scrollToBottom = () => {
         const { data, error } = await supabase.functions.invoke('openai-chat', {
           body: {
             message: messageText,
-            companionId: companion.id,
+            companionId: currentCompanion.id,
             conversationHistory: messages
           }
         });
@@ -326,7 +353,7 @@ const scrollToBottom = () => {
       return;
     }
     // Simulate voice call - would integrate with OpenAI Realtime API
-    alert(`Calling ${companion.name}... This would connect to voice AI via OpenAI Realtime API`);
+    alert(`Calling ${currentCompanion.name}... This would connect to voice AI via OpenAI Realtime API`);
   };
 
   const formatTime = (date: Date) => {
@@ -342,22 +369,22 @@ const scrollToBottom = () => {
       {/* Companion Profile Header */}
       <div className="relative">
         <img 
-          src={companion.image_url}
-          alt={companion.name}
+          src={currentCompanion.image_url}
+          alt={currentCompanion.name}
           className="w-full h-80 object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
         <div className="absolute bottom-4 left-4 text-white">
-          <h1 className="text-2xl font-bold">{companion.name}</h1>
+          <h1 className="text-2xl font-bold">{currentCompanion.name}</h1>
           <div className="flex items-center mt-1">
             <Calendar className="w-4 h-4 mr-1" />
-            <span>{companion.age} years old</span>
+            <span>{currentCompanion.age} years old</span>
             <span className="mx-2">•</span>
-            <span>{companion.gender}</span>
+            <span>{currentCompanion.gender}</span>
           </div>
           <div className="flex items-center mt-1">
             <MapPin className="w-4 h-4 mr-1" />
-            <span>{companion.location}</span>
+            <span>{currentCompanion.location}</span>
           </div>
         </div>
       </div>
@@ -389,7 +416,7 @@ const scrollToBottom = () => {
         {onEditCompanion && (
           <div className="w-full">
             <Button 
-              onClick={() => onEditCompanion(companion)}
+              onClick={() => onEditCompanion(currentCompanion)}
               variant="outline" 
               className="w-full"
             >
@@ -427,10 +454,10 @@ const scrollToBottom = () => {
         {/* Bio */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">About {companion.name}</CardTitle>
+            <CardTitle className="text-lg">About {currentCompanion.name}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground leading-relaxed">{companion.bio}</p>
+            <p className="text-muted-foreground leading-relaxed">{currentCompanion.bio}</p>
           </CardContent>
         </Card>
 
@@ -441,7 +468,7 @@ const scrollToBottom = () => {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {companion.hobbies.map(hobby => (
+              {currentCompanion.hobbies.map(hobby => (
                 <Badge key={hobby} variant="secondary">{hobby}</Badge>
               ))}
             </div>
@@ -455,7 +482,7 @@ const scrollToBottom = () => {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {companion.personality.map(trait => (
+              {currentCompanion.personality.map(trait => (
                 <Badge key={trait} variant="outline">{trait}</Badge>
               ))}
             </div>
@@ -470,7 +497,7 @@ const scrollToBottom = () => {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {companion.likes.map(like => (
+                {currentCompanion.likes.map(like => (
                   <Badge key={like} className="bg-green-100 text-green-800 hover:bg-green-200">
                     {like}
                   </Badge>
@@ -485,7 +512,7 @@ const scrollToBottom = () => {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {companion.dislikes.map(dislike => (
+                {currentCompanion.dislikes.map(dislike => (
                   <Badge key={dislike} className="bg-red-100 text-red-800 hover:bg-red-200">
                     {dislike}
                   </Badge>
