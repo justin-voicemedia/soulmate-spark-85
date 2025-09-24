@@ -36,6 +36,16 @@ interface CompanionBuilderProps {
 
 const sexOptions = ['Male', 'Female', 'Non-binary'];
 const raceOptions = ['Asian', 'Black', 'Hispanic/Latino', 'White', 'Middle Eastern', 'Mixed', 'Other'];
+
+const raceCountries: Record<string, string[]> = {
+  'Asian': ['China', 'Japan', 'India', 'South Korea', 'Thailand', 'Vietnam', 'Philippines', 'Indonesia', 'Malaysia', 'Singapore', 'Other Asian Country'],
+  'Black': ['Nigeria', 'Kenya', 'Ghana', 'South Africa', 'Ethiopia', 'Jamaica', 'Haiti', 'Trinidad and Tobago', 'Barbados', 'Other African/Caribbean Country'],
+  'Hispanic/Latino': ['Mexico', 'Colombia', 'Argentina', 'Peru', 'Venezuela', 'Chile', 'Ecuador', 'Guatemala', 'Cuba', 'Dominican Republic', 'Other Hispanic/Latino Country'],
+  'White': ['United States', 'United Kingdom', 'Germany', 'France', 'Italy', 'Spain', 'Canada', 'Australia', 'Russia', 'Poland', 'Other European/Western Country'],
+  'Middle Eastern': ['Iran', 'Turkey', 'Egypt', 'Saudi Arabia', 'Iraq', 'Israel', 'Jordan', 'Lebanon', 'Syria', 'UAE', 'Other Middle Eastern Country'],
+  'Mixed': ['Mixed Heritage - Multiple Countries'],
+  'Other': ['Other Country/Background']
+};
 const DEFAULT_PERSONALITY_TRAITS = [
   'Adventurous', 'Calm', 'Creative', 'Funny', 'Intelligent', 'Kind', 'Mysterious', 'Passionate', 'Romantic', 'Spontaneous'
 ];
@@ -68,6 +78,8 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
     name: editingCompanion?.name || '',
     sex: editingCompanion?.gender ? editingCompanion.gender.charAt(0).toUpperCase() + editingCompanion.gender.slice(1) : '',
     race: (editingCompanion as any)?.race || '',
+    country: (editingCompanion as any)?.country || '',
+    customCountry: '',
     age: editingCompanion?.age || 25,
     description: editingCompanion?.bio || '',
     physicalDescription: '',
@@ -491,7 +503,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
 
                 <div>
                   <Label>Race/Ethnicity *</Label>
-                  <Select value={formData.race} onValueChange={(value) => setFormData(prev => ({ ...prev, race: value }))}>
+                  <Select value={formData.race} onValueChange={(value) => setFormData(prev => ({ ...prev, race: value, country: '', customCountry: '' }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select race/ethnicity" />
                     </SelectTrigger>
@@ -502,6 +514,35 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Country Selection - appears after race is selected */}
+                {formData.race && raceCountries[formData.race] && (
+                  <div>
+                    <Label>Country/Origin</Label>
+                    <Select value={formData.country} onValueChange={(value) => setFormData(prev => ({ ...prev, country: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select country/origin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {raceCountries[formData.race].map(country => (
+                          <SelectItem key={country} value={country}>{country}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Custom Country Input */}
+                {formData.race && (
+                  <div>
+                    <Label>Custom Country/Origin (Optional)</Label>
+                    <Input
+                      value={formData.customCountry}
+                      onChange={(e) => setFormData(prev => ({ ...prev, customCountry: e.target.value }))}
+                      placeholder="Enter specific country or background if not listed above"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Physical Description */}
