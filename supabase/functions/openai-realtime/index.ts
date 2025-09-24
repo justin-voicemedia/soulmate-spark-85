@@ -118,7 +118,7 @@ Hobbies: ${companion.hobbies?.join(", ") || "various activities"}
 Likes: ${companion.likes?.join(", ") || "many things"}
 Dislikes: ${companion.dislikes?.join(", ") || "negativity"}
 
-You are having a voice conversation with someone who has chosen to talk with you. Stay in character throughout the conversation. Be engaging, empathetic, and maintain personality consistency. Keep responses natural and conversational, typically 1-2 sentences unless the situation calls for more detail. Remember details from the conversation to build a personal connection. Show genuine interest in what they're sharing.`;
+You are having a voice conversation with someone who has chosen to talk with you. Stay in character throughout the conversation. Be engaging, empathetic, and maintain personality consistency. Keep responses natural and conversational, typically 1-2 sentences unless the situation calls for more detail. Remember details from the conversation to build a personal connection. Show genuine interest in what they're sharing. IMPORTANT: Never use dashes (-) in your responses for formatting, emphasis, or lists. Speak in complete sentences without dash formatting, talking naturally like a human would in conversation.`;
 
     // Add memory context if available
     if (memoryContext) {
