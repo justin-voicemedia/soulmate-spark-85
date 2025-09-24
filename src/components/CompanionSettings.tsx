@@ -93,16 +93,52 @@ export const CompanionSettings = ({ companionId, companionName, onBack }: Compan
       if (error) throw error;
 
       setUserCompanion(prev => prev ? { ...prev, voice_id: newVoiceId } : null);
-      toast.success('Voice updated successfully');
+      
+      // Recreate the Vapi agent with the new voice
+      try {
+        const { data, error: agentError } = await supabase.functions.invoke('create-vapi-agent', {
+          body: { 
+            companionId: companionId,
+            voiceId: newVoiceId,
+            relationshipType: userCompanion.relationship_type
+          }
+        });
+
+        if (agentError) throw agentError;
+        toast.success('Voice updated and companion refreshed');
+      } catch (agentError) {
+        console.error('Error updating companion agent:', agentError);
+        toast.success('Voice updated successfully');
+      }
     } catch (error) {
       console.error('Error updating voice:', error);
       toast.error('Failed to update voice');
     }
   };
 
-  const handleRelationshipChange = (newType: string) => {
+  const handleRelationshipChange = async (newType: string) => {
     if (userCompanion) {
       setUserCompanion(prev => prev ? { ...prev, relationship_type: newType } : null);
+      
+      // Recreate the Vapi agent with the new relationship type
+      try {
+        const { data, error } = await supabase.functions.invoke('create-vapi-agent', {
+          body: { 
+            companionId: companionId,
+            voiceId: userCompanion.voice_id,
+            relationshipType: newType
+          }
+        });
+
+        if (error) throw error;
+        
+        // Reload the user companion data to reflect the changes
+        await loadUserCompanion();
+        toast.success('Companion updated with new relationship settings');
+      } catch (error) {
+        console.error('Error updating companion agent:', error);
+        toast.error('Settings saved but companion may need to be reselected');
+      }
     }
   };
 

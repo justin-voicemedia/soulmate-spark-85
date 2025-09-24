@@ -67,22 +67,10 @@ serve(async (req) => {
       console.error("Error checking existing relation:", relationError);
     }
 
-    // If agent exists with same voice and relationship type, return it
-    if (existingRelation?.vapi_agent_id && 
-        (!voiceId || voiceId === existingRelation.voice_id) &&
-        (!relationshipType || relationshipType === existingRelation.relationship_type)) {
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          agentId: existingRelation.vapi_agent_id,
-          message: "Agent already exists"
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        }
-      );
-    }
+    // Always create a new agent when voice or relationship type changes
+    // This ensures the companion uses the latest settings and relationship prompts
+    const resolvedVoice = voiceId || existingRelation?.voice_id || "alloy";
+    console.log("Creating new agent with voice:", resolvedVoice, "and relationship:", resolvedRelationshipType);
 
     // Create Vapi agent
     const vapiPrivateKey = Deno.env.get("VAPI_PRIVATE_KEY");
@@ -105,7 +93,6 @@ ${relationshipPrompt?.prompt_text || "Stay in character throughout the conversat
     const systemPrompt = basePrompt;
 
     const openAIVoices = new Set(["alloy","ash","ballad","coral","echo","sage","shimmer","verse","marin","cedar"]);
-    const resolvedVoice = voiceId || existingRelation?.voice_id || "alloy";
 
     const agentConfig = {
       name: `${companion.name} - User ${user.id.slice(0, 8)}`,
