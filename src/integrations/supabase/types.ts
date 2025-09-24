@@ -14,6 +14,108 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_credits: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          created_by: string | null
+          credit_type: string
+          currency: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          reference_id: string | null
+          status: string
+          updated_at: string
+          used_amount_cents: number | null
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          created_by?: string | null
+          credit_type: string
+          currency?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          reference_id?: string | null
+          status?: string
+          updated_at?: string
+          used_amount_cents?: number | null
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          created_by?: string | null
+          credit_type?: string
+          currency?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          reference_id?: string | null
+          status?: string
+          updated_at?: string
+          used_amount_cents?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      billing_info: {
+        Row: {
+          billing_address: Json | null
+          billing_email: string | null
+          card_brand: string | null
+          card_exp_month: number | null
+          card_exp_year: number | null
+          card_last_four: string | null
+          company_name: string | null
+          created_at: string
+          id: string
+          payment_method_id: string | null
+          payment_method_type: string | null
+          stripe_customer_id: string | null
+          tax_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          billing_address?: Json | null
+          billing_email?: string | null
+          card_brand?: string | null
+          card_exp_month?: number | null
+          card_exp_year?: number | null
+          card_last_four?: string | null
+          company_name?: string | null
+          created_at?: string
+          id?: string
+          payment_method_id?: string | null
+          payment_method_type?: string | null
+          stripe_customer_id?: string | null
+          tax_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          billing_address?: Json | null
+          billing_email?: string | null
+          card_brand?: string | null
+          card_exp_month?: number | null
+          card_exp_year?: number | null
+          card_last_four?: string | null
+          company_name?: string | null
+          created_at?: string
+          id?: string
+          payment_method_id?: string | null
+          payment_method_type?: string | null
+          stripe_customer_id?: string | null
+          tax_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       companions: {
         Row: {
           age: number
@@ -107,6 +209,204 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          amount_due_cents: number
+          amount_paid_cents: number | null
+          billing_period_end: string | null
+          billing_period_start: string | null
+          created_at: string
+          currency: string
+          discount_amount_cents: number | null
+          due_date: string | null
+          id: string
+          invoice_number: string | null
+          invoice_pdf_url: string | null
+          line_items: Json | null
+          metadata: Json | null
+          paid_at: string | null
+          status: string
+          stripe_invoice_id: string | null
+          tax_amount_cents: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_due_cents: number
+          amount_paid_cents?: number | null
+          billing_period_end?: string | null
+          billing_period_start?: string | null
+          created_at?: string
+          currency?: string
+          discount_amount_cents?: number | null
+          due_date?: string | null
+          id?: string
+          invoice_number?: string | null
+          invoice_pdf_url?: string | null
+          line_items?: Json | null
+          metadata?: Json | null
+          paid_at?: string | null
+          status: string
+          stripe_invoice_id?: string | null
+          tax_amount_cents?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_due_cents?: number
+          amount_paid_cents?: number | null
+          billing_period_end?: string | null
+          billing_period_start?: string | null
+          created_at?: string
+          currency?: string
+          discount_amount_cents?: number | null
+          due_date?: string | null
+          id?: string
+          invoice_number?: string | null
+          invoice_pdf_url?: string | null
+          line_items?: Json | null
+          metadata?: Json | null
+          paid_at?: string | null
+          status?: string
+          stripe_invoice_id?: string | null
+          tax_amount_cents?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          email_notifications: boolean | null
+          id: string
+          marketing_emails: boolean | null
+          payment_notifications: boolean | null
+          plan_change_notifications: boolean | null
+          trial_expiry_alerts: boolean | null
+          updated_at: string
+          usage_alerts: boolean | null
+          user_id: string
+          weekly_reports: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          email_notifications?: boolean | null
+          id?: string
+          marketing_emails?: boolean | null
+          payment_notifications?: boolean | null
+          plan_change_notifications?: boolean | null
+          trial_expiry_alerts?: boolean | null
+          updated_at?: string
+          usage_alerts?: boolean | null
+          user_id: string
+          weekly_reports?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          email_notifications?: boolean | null
+          id?: string
+          marketing_emails?: boolean | null
+          payment_notifications?: boolean | null
+          plan_change_notifications?: boolean | null
+          trial_expiry_alerts?: boolean | null
+          updated_at?: string
+          usage_alerts?: boolean | null
+          user_id?: string
+          weekly_reports?: boolean | null
+        }
+        Relationships: []
+      }
+      payment_history: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          payment_date: string
+          payment_method: string | null
+          status: string
+          stripe_invoice_id: string | null
+          stripe_payment_intent_id: string | null
+          subscription_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_date?: string
+          payment_method?: string | null
+          status: string
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          subscription_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_date?: string
+          payment_method?: string | null
+          status?: string
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          subscription_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      plan_changes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          effective_date: string
+          id: string
+          new_plan: string
+          new_price_cents: number | null
+          notes: string | null
+          old_plan: string | null
+          old_price_cents: number | null
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string
+          id?: string
+          new_plan: string
+          new_price_cents?: number | null
+          notes?: string | null
+          old_plan?: string | null
+          old_price_cents?: number | null
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          effective_date?: string
+          id?: string
+          new_plan?: string
+          new_price_cents?: number | null
+          notes?: string | null
+          old_plan?: string | null
+          old_price_cents?: number | null
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -137,6 +437,54 @@ export type Database = {
         }
         Relationships: []
       }
+      referrals: {
+        Row: {
+          conversion_date: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          referral_code: string
+          referred_email: string | null
+          referred_user_id: string | null
+          referrer_user_id: string
+          reward_amount_cents: number | null
+          reward_currency: string | null
+          reward_given_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          conversion_date?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          referral_code: string
+          referred_email?: string | null
+          referred_user_id?: string | null
+          referrer_user_id: string
+          reward_amount_cents?: number | null
+          reward_currency?: string | null
+          reward_given_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          conversion_date?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          referral_code?: string
+          referred_email?: string | null
+          referred_user_id?: string | null
+          referrer_user_id?: string
+          reward_amount_cents?: number | null
+          reward_currency?: string | null
+          reward_given_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       relationship_prompts: {
         Row: {
           created_at: string
@@ -163,14 +511,20 @@ export type Database = {
       }
       subscribers: {
         Row: {
+          account_status: string | null
           created_at: string
+          customer_since: string | null
           email: string
           id: string
           is_tester: boolean | null
+          last_login: string | null
+          referral_code: string | null
+          referred_by_user_id: string | null
           stripe_customer_id: string | null
           subscribed: boolean
           subscription_end: string | null
           subscription_tier: string | null
+          total_lifetime_value_cents: number | null
           trial_minutes_limit: number | null
           trial_minutes_used: number | null
           trial_start: string | null
@@ -178,14 +532,20 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          account_status?: string | null
           created_at?: string
+          customer_since?: string | null
           email: string
           id?: string
           is_tester?: boolean | null
+          last_login?: string | null
+          referral_code?: string | null
+          referred_by_user_id?: string | null
           stripe_customer_id?: string | null
           subscribed?: boolean
           subscription_end?: string | null
           subscription_tier?: string | null
+          total_lifetime_value_cents?: number | null
           trial_minutes_limit?: number | null
           trial_minutes_used?: number | null
           trial_start?: string | null
@@ -193,14 +553,20 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          account_status?: string | null
           created_at?: string
+          customer_since?: string | null
           email?: string
           id?: string
           is_tester?: boolean | null
+          last_login?: string | null
+          referral_code?: string | null
+          referred_by_user_id?: string | null
           stripe_customer_id?: string | null
           subscribed?: boolean
           subscription_end?: string | null
           subscription_tier?: string | null
+          total_lifetime_value_cents?: number | null
           trial_minutes_limit?: number | null
           trial_minutes_used?: number | null
           trial_start?: string | null
@@ -246,6 +612,102 @@ export type Database = {
           status?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          category: string | null
+          created_at: string
+          customer_satisfaction_rating: number | null
+          description: string
+          id: string
+          priority: string
+          resolution: string | null
+          resolved_at: string | null
+          status: string
+          subject: string
+          ticket_number: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: string | null
+          created_at?: string
+          customer_satisfaction_rating?: number | null
+          description: string
+          id?: string
+          priority?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          status?: string
+          subject: string
+          ticket_number: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string | null
+          created_at?: string
+          customer_satisfaction_rating?: number | null
+          description?: string
+          id?: string
+          priority?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          status?: string
+          subject?: string
+          ticket_number?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      usage_analytics: {
+        Row: {
+          api_calls_made: number | null
+          created_at: string
+          date: string
+          device_types: Json | null
+          features_used: Json | null
+          id: string
+          peak_usage_hour: number | null
+          total_minutes_used: number | null
+          total_sessions: number | null
+          total_tokens_used: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_calls_made?: number | null
+          created_at?: string
+          date: string
+          device_types?: Json | null
+          features_used?: Json | null
+          id?: string
+          peak_usage_hour?: number | null
+          total_minutes_used?: number | null
+          total_sessions?: number | null
+          total_tokens_used?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_calls_made?: number | null
+          created_at?: string
+          date?: string
+          device_types?: Json | null
+          features_used?: Json | null
+          id?: string
+          peak_usage_hour?: number | null
+          total_minutes_used?: number | null
+          total_sessions?: number | null
+          total_tokens_used?: number | null
           updated_at?: string
           user_id?: string
         }
