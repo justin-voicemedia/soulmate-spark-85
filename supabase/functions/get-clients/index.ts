@@ -45,7 +45,7 @@ serve(async (req) => {
       admin.from("subscribers").select("*\n").in("user_id", userIds),
       admin
         .from("conversation_usage")
-        .select("user_id, minutes_used, session_start, api_type")
+        .select("user_id, minutes_used, session_start, session_end, api_type, tokens_used, created_at, companion_id")
         .in("user_id", userIds),
     ]);
 
@@ -60,6 +60,47 @@ serve(async (req) => {
       if (!subscribersByUser[s.user_id]) subscribersByUser[s.user_id] = s;
     });
 
+    // Advanced filtering to remove duplicate and erroneous entries (same logic as get-usage-stats)
+    const seenSessions = new Set();
+    const filteredUsage = (usage || []).filter((u: any) => {
+      const minutes = u.minutes_used || 0;
+      if (minutes <= 0) return false; // Remove zero-minute sessions
+      
+      // Create a unique key for potential duplicates
+      const sessionKey = `${u.user_id}_${u.companion_id}_${u.api_type}_${u.minutes_used}_${u.tokens_used}_${Math.floor(new Date(u.session_start || u.created_at).getTime() / 1000)}`;
+      
+      // Skip if we've seen this exact session before (within same second)
+      if (seenSessions.has(sessionKey)) {
+        console.log('Filtering duplicate session:', sessionKey);
+        return false;
+      }
+      seenSessions.add(sessionKey);
+      
+      // Filter out suspicious zero-duration sessions with high minutes
+      if (u.session_end && u.session_start) {
+        const start = new Date(u.session_start).getTime();
+        const end = new Date(u.session_end).getTime();
+        const durationMs = Math.abs(end - start);
+        
+        // If session shows high minutes but zero duration, it's likely a bug
+        if (durationMs < 1000 && minutes > 5) {
+          console.log('Filtering zero-duration high-minute session:', { minutes, durationMs, sessionKey });
+          return false;
+        }
+        
+        // Drop if recorded as <= 1 minute but lasted < 15s (likely legacy 'track' spam)
+        if (minutes <= 1 && durationMs < 15000) return false;
+      }
+      
+      return true;
+    });
+
+    console.log('Usage filtering results:', {
+      original: usage?.length || 0,
+      filtered: filteredUsage.length,
+      duplicatesRemoved: (usage?.length || 0) - filteredUsage.length
+    });
+
     const usageAgg: Record<string, { 
       total_minutes: number; 
       total_sessions: number; 
@@ -69,7 +110,7 @@ serve(async (req) => {
       text_sessions: number;
       last_session?: string 
     }> = {};
-    (usage || []).forEach((u) => {
+    filteredUsage.forEach((u) => {
       const key = u.user_id as string;
       if (!usageAgg[key]) usageAgg[key] = { total_minutes: 0, total_sessions: 0, voice_minutes: 0, text_minutes: 0, voice_sessions: 0, text_sessions: 0, last_session: undefined };
       const minutes = (u.minutes_used || 0);
