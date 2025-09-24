@@ -768,6 +768,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_ticket_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       has_unlimited_access: {
         Args: { user_uuid: string }
         Returns: boolean
