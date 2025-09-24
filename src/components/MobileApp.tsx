@@ -388,9 +388,14 @@ const scrollToBottom = () => {
           }
         });
 
+        console.log('OpenAI Chat API Response:', { data, error });
+
         if (error) throw error;
 
-        if (data.success) {
+        if (data?.success) {
+          console.log('AI Response:', data.response);
+          console.log('Conversation History:', data.conversationHistory);
+          
           // Add assistant response to memory system
           addToMemory('assistant', data.response);
           
@@ -401,18 +406,26 @@ const scrollToBottom = () => {
               ...msg,
               timestamp: new Date(msg.timestamp)
             }));
+            console.log('Setting messages from conversation history:', updatedMessages);
             setMessages(updatedMessages);
           } else {
             // Fallback to manual message addition if no history returned
+            console.log('Using fallback method to add AI message');
             const aiMessage: Message = {
               id: (Date.now() + 1).toString(),
               content: data.response,
               sender: 'companion',
               timestamp: new Date()
             };
-            setMessages(prev => [...prev, aiMessage]);
+            console.log('Adding AI message:', aiMessage);
+            setMessages(prev => {
+              const newMessages = [...prev, aiMessage];
+              console.log('New messages array:', newMessages);
+              return newMessages;
+            });
           }
         } else {
+          console.log('API response indicates failure:', data);
           throw new Error('Failed to get AI response');
         }
       } catch (error) {
