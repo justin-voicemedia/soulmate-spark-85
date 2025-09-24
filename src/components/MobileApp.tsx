@@ -10,6 +10,7 @@ import { AvatarCustomizer } from "@/components/AvatarCustomizer";
 import { supabase } from "@/integrations/supabase/client";
 import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { 
   Phone, 
   MessageCircle, 
@@ -28,7 +29,8 @@ import {
   Crown,
   BarChart3,
   Trash2,
-  ExternalLink
+  ExternalLink,
+  Smile
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMemoryManager } from '@/hooks/useMemoryManager';
@@ -86,6 +88,18 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
   const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relationship_type: string } | null>(null);
   const [currentCompanion, setCurrentCompanion] = useState(companion);
   const [isMobileApp, setIsMobileApp] = useState(false);
+  const [isEmojiOpen, setIsEmojiOpen] = useState(false);
+
+  const emojis = [
+    '😀', '😃', '😄', '😁', '😊', '😉', '😍', '🥰', '😘', '😗',
+    '🙂', '🤗', '🤩', '🤔', '🫡', '😏', '😣', '😥', '😮', '🤐',
+    '😴', '😪', '🤤', '😋', '😛', '😝', '🤪', '🫠', '🙃', '😵‍💫',
+    '❤️', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '❣️', '💕',
+    '💖', '💗', '💓', '💞', '💟', '♥️', '💔', '❤️‍🔥', '❤️‍🩹', '💯',
+    '👍', '👎', '👌', '🤌', '🤏', '✌️', '🤞', '🫰', '🤟', '🤘',
+    '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '🫵', '👋', '🤚',
+    '🎉', '🎊', '🎈', '🎁', '🏆', '🥇', '🥈', '🥉', '⭐', '🌟'
+  ];
 
   // Check if running in mobile app
   useEffect(() => {
@@ -99,6 +113,11 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
     };
     checkMobileApp();
   }, []);
+
+  const insertEmoji = (emoji: string) => {
+    setNewMessage(prev => prev + emoji);
+    setIsEmojiOpen(false);
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -646,6 +665,31 @@ const scrollToBottom = () => {
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                     className="flex-1"
                   />
+                  <Popover open={isEmojiOpen} onOpenChange={setIsEmojiOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                      >
+                        <Smile className="w-4 h-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-2" side="top">
+                      <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
+                        {emojis.map((emoji, index) => (
+                          <Button
+                            key={index}
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-lg hover:bg-accent"
+                            onClick={() => insertEmoji(emoji)}
+                          >
+                            {emoji}
+                          </Button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   <Button
                     size="sm"
                     variant="outline"
