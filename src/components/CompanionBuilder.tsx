@@ -319,7 +319,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
       return;
     }
 
-    if (!formData.name || !formData.sex || !formData.race) {
+    if (!formData.name || !formData.sex) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -502,7 +502,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
                 </div>
 
                 <div>
-                  <Label>Race/Ethnicity *</Label>
+                  <Label>Race/Ethnicity</Label>
                   <Select value={formData.race} onValueChange={(value) => setFormData(prev => ({ ...prev, race: value, country: '', customCountry: '' }))}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select race/ethnicity" />
