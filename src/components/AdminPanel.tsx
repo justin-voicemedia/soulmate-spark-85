@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useImageGeneration } from '@/hooks/useImageGeneration';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { RefreshCw, Image as ImageIcon, Sparkles, Upload, Settings, Home, Edit3, Save, X, Users, Mail, Calendar, CreditCard, Crown, UserPlus, Shield } from 'lucide-react';
+import { RefreshCw, Image as ImageIcon, Sparkles, Upload, Settings, Home, Edit3, Save, X, Users, Mail, Calendar, CreditCard, Crown, UserPlus, Shield, DollarSign, Ticket, Gift, TrendingUp, FileText, Eye, AlertCircle, CheckCircle, Clock, Ban } from 'lucide-react';
 import { CompanionImageManager } from './CompanionImageManager';
 import { CostAnalyticsDashboard } from './CostAnalyticsDashboard';
 import { useNavigate } from 'react-router-dom';
@@ -61,6 +61,83 @@ interface ClientData {
   };
 }
 
+interface PaymentRecord {
+  id: string;
+  user_id: string;
+  amount_cents: number;
+  currency: string;
+  status: string;
+  payment_date: string;
+  payment_method?: string;
+  description?: string;
+  stripe_payment_intent_id?: string;
+  stripe_invoice_id?: string;
+  metadata?: any;
+}
+
+interface SupportTicket {
+  id: string;
+  user_id: string;
+  ticket_number: string;
+  subject: string;
+  description: string;
+  status: string;
+  priority: string;
+  category?: string;
+  assigned_to?: string;
+  resolution?: string;
+  created_at: string;
+  updated_at: string;
+  resolved_at?: string;
+  customer_satisfaction_rating?: number;
+  user_email?: string;
+}
+
+interface ReferralData {
+  id: string;
+  referrer_user_id: string;
+  referral_code: string;
+  referred_email?: string;
+  referred_user_id?: string;
+  status: string;
+  conversion_date?: string;
+  reward_amount_cents?: number;
+  reward_currency?: string;
+  reward_given_at?: string;
+  created_at: string;
+  referrer_email?: string;
+}
+
+interface BillingInfo {
+  id: string;
+  user_id: string;
+  stripe_customer_id?: string;
+  payment_method_type?: string;
+  card_brand?: string;
+  card_last_four?: string;
+  card_exp_month?: number;
+  card_exp_year?: number;
+  billing_email?: string;
+  company_name?: string;
+  billing_address?: any;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AccountCredit {
+  id: string;
+  user_id: string;
+  amount_cents: number;
+  used_amount_cents?: number;
+  currency: string;
+  credit_type: string;
+  description?: string;
+  status: string;
+  expires_at?: string;
+  created_at: string;
+  created_by?: string;
+}
+
 export const AdminPanel = () => {
   const [companions, setCompanions] = useState<Companion[]>([]);
   const [companionsLoading, setCompanionsLoading] = useState(false);
@@ -84,6 +161,23 @@ export const AdminPanel = () => {
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
   const [invitingTester, setInvitingTester] = useState(false);
+  
+  // Payment management state
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [billingInfo, setBillingInfo] = useState<BillingInfo[]>([]);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [accountCredits, setAccountCredits] = useState<AccountCredit[]>([]);
+  const [creditsLoading, setCreditsLoading] = useState(false);
+  
+  // Support management state
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  
+  // Referral management state
+  const [referrals, setReferrals] = useState<ReferralData[]>([]);
+  const [referralsLoading, setReferralsLoading] = useState(false);
   const { generateCompanionImage } = useImageGeneration();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -349,6 +443,122 @@ export const AdminPanel = () => {
     } catch (error) {
       console.error('Error updating tester status:', error);
       toast.error('Failed to update tester status');
+    }
+  };
+
+  // Payment management functions
+  const loadPayments = async () => {
+    setPaymentsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('payment_history')
+        .select('*')
+        .order('payment_date', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      setPayments(data || []);
+    } catch (error) {
+      console.error('Error loading payments:', error);
+      toast.error('Failed to load payment history');
+    } finally {
+      setPaymentsLoading(false);
+    }
+  };
+
+  const loadBillingInfo = async () => {
+    setBillingLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('billing_info')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      setBillingInfo(data || []);
+    } catch (error) {
+      console.error('Error loading billing info:', error);
+      toast.error('Failed to load billing information');
+    } finally {
+      setBillingLoading(false);
+    }
+  };
+
+  const loadAccountCredits = async () => {
+    setCreditsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('account_credits')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      setAccountCredits(data || []);
+    } catch (error) {
+      console.error('Error loading account credits:', error);
+      toast.error('Failed to load account credits');
+    } finally {
+      setCreditsLoading(false);
+    }
+  };
+
+  // Support management functions  
+  const loadSupportTickets = async () => {
+    setTicketsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .select(`
+          *,
+          profiles!inner(email)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      
+      const ticketsWithEmail = (data || []).map(ticket => ({
+        ...ticket,
+        user_email: (ticket as any).profiles?.email
+      }));
+      
+      setSupportTickets(ticketsWithEmail);
+    } catch (error) {
+      console.error('Error loading support tickets:', error);
+      toast.error('Failed to load support tickets');
+    } finally {
+      setTicketsLoading(false);
+    }
+  };
+
+  // Referral management functions
+  const loadReferrals = async () => {
+    setReferralsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('referrals')
+        .select(`
+          *,
+          referrer:profiles!referrer_user_id(email)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      
+      const referralsWithEmail = (data || []).map(referral => ({
+        ...referral,
+        referrer_email: (referral as any).referrer?.email
+      }));
+      
+      setReferrals(referralsWithEmail);
+    } catch (error) {
+      console.error('Error loading referrals:', error);
+      toast.error('Failed to load referrals');
+    } finally {
+      setReferralsLoading(false);
     }
   };
 
@@ -716,12 +926,15 @@ export const AdminPanel = () => {
       </div>
 
       <Tabs defaultValue="bulk-operations" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="image-manager">Image Manager</TabsTrigger>
-          <TabsTrigger value="bulk-operations">Manage Companions</TabsTrigger>
-          <TabsTrigger value="clients">Client Management</TabsTrigger>
-          <TabsTrigger value="relationship-prompts">Relationship Prompts</TabsTrigger>
-          <TabsTrigger value="cost-analytics">Cost Analytics</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
+          <TabsTrigger value="image-manager">Images</TabsTrigger>
+          <TabsTrigger value="bulk-operations">Companions</TabsTrigger>
+          <TabsTrigger value="clients">Clients</TabsTrigger>
+          <TabsTrigger value="payments">Payments</TabsTrigger>
+          <TabsTrigger value="support">Support</TabsTrigger>
+          <TabsTrigger value="referrals">Referrals</TabsTrigger>
+          <TabsTrigger value="relationship-prompts">Prompts</TabsTrigger>
+          <TabsTrigger value="cost-analytics">Analytics</TabsTrigger>
         </TabsList>
         
         <TabsContent value="image-manager" className="space-y-4">
@@ -1111,6 +1324,299 @@ export const AdminPanel = () => {
                   />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="payments" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-6 h-6" />
+                <div>
+                  <CardTitle>Payment Management</CardTitle>
+                  <CardDescription>
+                    Complete payment tracking, billing info, and account credits management
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex gap-2 flex-wrap">
+                <Button onClick={loadPayments} disabled={paymentsLoading} variant="outline">
+                  <RefreshCw className={`w-4 h-4 mr-2 ${paymentsLoading ? 'animate-spin' : ''}`} />
+                  Load Payments
+                </Button>
+                <Button onClick={loadBillingInfo} disabled={billingLoading} variant="outline">
+                  <CreditCard className={`w-4 h-4 mr-2 ${billingLoading ? 'animate-spin' : ''}`} />
+                  Load Billing Info
+                </Button>
+                <Button onClick={loadAccountCredits} disabled={creditsLoading} variant="outline">
+                  <Gift className={`w-4 h-4 mr-2 ${creditsLoading ? 'animate-spin' : ''}`} />
+                  Load Credits
+                </Button>
+              </div>
+
+              {/* Payment History */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Payment History</h3>
+                {payments.length > 0 ? (
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted">
+                          <tr>
+                            <th className="text-left p-3">Date</th>
+                            <th className="text-left p-3">Customer</th>
+                            <th className="text-left p-3">Amount</th>
+                            <th className="text-left p-3">Status</th>
+                            <th className="text-left p-3">Method</th>
+                            <th className="text-left p-3">Description</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {payments.map((payment) => (
+                            <tr key={payment.id} className="border-t">
+                              <td className="p-3">{new Date(payment.payment_date).toLocaleDateString()}</td>
+                              <td className="p-3">{payment.user_id}</td>
+                              <td className="p-3">${(payment.amount_cents / 100).toFixed(2)}</td>
+                              <td className="p-3">
+                                <span className={`px-2 py-1 rounded text-xs ${
+                                  payment.status === 'succeeded' ? 'bg-green-100 text-green-800' :
+                                  payment.status === 'failed' ? 'bg-red-100 text-red-800' :
+                                  'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {payment.status}
+                                </span>
+                              </td>
+                              <td className="p-3">{payment.payment_method || 'N/A'}</td>
+                              <td className="p-3">{payment.description || 'N/A'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 border rounded-lg">
+                    <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No payment records found</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Account Credits */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Account Credits</h3>
+                {accountCredits.length > 0 ? (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {accountCredits.map((credit) => (
+                      <Card key={credit.id} className="border">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium">${(credit.amount_cents / 100).toFixed(2)}</span>
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              credit.status === 'active' ? 'bg-green-100 text-green-800' :
+                              credit.status === 'expired' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {credit.status}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-1">{credit.description}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Used: ${((credit.used_amount_cents || 0) / 100).toFixed(2)} / ${(credit.amount_cents / 100).toFixed(2)}
+                          </p>
+                          {credit.expires_at && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Expires: {new Date(credit.expires_at).toLocaleDateString()}
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 border rounded-lg">
+                    <Gift className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No account credits found</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="support" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Ticket className="w-6 h-6" />
+                <div>
+                  <CardTitle>Support Ticket Management</CardTitle>
+                  <CardDescription>
+                    Manage customer support tickets with priorities and categories
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <Button onClick={loadSupportTickets} disabled={ticketsLoading} variant="outline">
+                <RefreshCw className={`w-4 h-4 mr-2 ${ticketsLoading ? 'animate-spin' : ''}`} />
+                Load Support Tickets ({supportTickets.length})
+              </Button>
+
+              {supportTickets.length > 0 ? (
+                <div className="space-y-4">
+                  {supportTickets.map((ticket) => (
+                    <Card key={ticket.id} className="border">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="font-medium">#{ticket.ticket_number}</span>
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                ticket.priority === 'high' ? 'bg-red-100 text-red-800' :
+                                ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                                {ticket.priority}
+                              </span>
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                ticket.status === 'open' ? 'bg-blue-100 text-blue-800' :
+                                ticket.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                                ticket.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {ticket.status}
+                              </span>
+                            </div>
+                            <h4 className="font-medium mb-1">{ticket.subject}</h4>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              {ticket.user_email || 'No email'} • {new Date(ticket.created_at).toLocaleDateString()}
+                            </p>
+                            <p className="text-sm line-clamp-2">{ticket.description}</p>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => setSelectedTicket(ticket)}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        {ticket.assigned_to && (
+                          <p className="text-xs text-muted-foreground">
+                            Assigned to: {ticket.assigned_to}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 border rounded-lg">
+                  <Ticket className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No support tickets found</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="referrals" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-6 h-6" />
+                <div>
+                  <CardTitle>Referral Program Management</CardTitle>
+                  <CardDescription>
+                    Track referral performance and viral growth metrics
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <Button onClick={loadReferrals} disabled={referralsLoading} variant="outline">
+                <RefreshCw className={`w-4 h-4 mr-2 ${referralsLoading ? 'animate-spin' : ''}`} />
+                Load Referrals ({referrals.length})
+              </Button>
+
+              {referrals.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <Card className="border">
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold">{referrals.length}</div>
+                        <div className="text-sm text-muted-foreground">Total Referrals</div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border">
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold">
+                          {referrals.filter(r => r.status === 'completed').length}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Successful Conversions</div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border">
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold">
+                          ${(referrals.reduce((sum, r) => sum + (r.reward_amount_cents || 0), 0) / 100).toFixed(2)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Total Rewards</div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted">
+                          <tr>
+                            <th className="text-left p-3">Referrer</th>
+                            <th className="text-left p-3">Code</th>
+                            <th className="text-left p-3">Referred Email</th>
+                            <th className="text-left p-3">Status</th>
+                            <th className="text-left p-3">Reward</th>
+                            <th className="text-left p-3">Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {referrals.map((referral) => (
+                            <tr key={referral.id} className="border-t">
+                              <td className="p-3">{referral.referrer_email || 'N/A'}</td>
+                              <td className="p-3 font-mono text-xs">{referral.referral_code}</td>
+                              <td className="p-3">{referral.referred_email || 'N/A'}</td>
+                              <td className="p-3">
+                                <span className={`px-2 py-1 rounded text-xs ${
+                                  referral.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                  referral.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {referral.status}
+                                </span>
+                              </td>
+                              <td className="p-3">
+                                {referral.reward_amount_cents ? 
+                                  `$${(referral.reward_amount_cents / 100).toFixed(2)}` : 'N/A'
+                                }
+                              </td>
+                              <td className="p-3">{new Date(referral.created_at).toLocaleDateString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 border rounded-lg">
+                  <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No referrals found</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
