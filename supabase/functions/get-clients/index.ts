@@ -30,7 +30,47 @@ serve(async (req) => {
 
     if (profilesError) throw profilesError;
 
+    // Fetch pending tester invitations (subscribers with no user_id but is_tester=true)
+    const { data: pendingTesters, error: pendingTestersError } = await admin
+      .from("subscribers")
+      .select("id, email, trial_start, trial_minutes_used, trial_minutes_limit, is_tester, created_at, updated_at")
+      .is("user_id", null)
+      .eq("is_tester", true)
+      .order("created_at", { ascending: false });
+
+    if (pendingTestersError) throw pendingTestersError;
+
     if (!profiles || profiles.length === 0) {
+      // If no profiles but there are pending testers, return just the pending testers
+      if (pendingTesters && pendingTesters.length > 0) {
+        const pendingTesterClients = pendingTesters.map((tester) => ({
+          id: `pending-${tester.id}`,
+          email: tester.email,
+          name: null,
+          avatar_url: null,
+          created_at: tester.created_at,
+          updated_at: tester.updated_at,
+          user_id: null,
+          subscription: undefined,
+          subscriber: {
+            id: tester.id,
+            subscribed: false,
+            subscription_tier: null,
+            trial_start: tester.trial_start,
+            trial_minutes_used: tester.trial_minutes_used,
+            trial_minutes_limit: tester.trial_minutes_limit,
+            stripe_customer_id: null,
+            is_tester: true,
+            pending_invitation: true, // Mark as pending
+          },
+          usage_stats: { total_minutes: 0, total_sessions: 0, voice_minutes: 0, text_minutes: 0, voice_sessions: 0, text_sessions: 0 },
+        }));
+        return new Response(JSON.stringify({ clients: pendingTesterClients }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+      
       return new Response(JSON.stringify({ clients: [] }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -169,7 +209,34 @@ serve(async (req) => {
       };
     });
 
-    return new Response(JSON.stringify({ clients }), {
+    // Add pending tester invitations to the clients list
+    const pendingTesterClients = (pendingTesters || []).map((tester) => ({
+      id: `pending-${tester.id}`,
+      email: tester.email,
+      name: null,
+      avatar_url: null,
+      created_at: tester.created_at,
+      updated_at: tester.updated_at,
+      user_id: null,
+      subscription: undefined,
+      subscriber: {
+        id: tester.id,
+        subscribed: false,
+        subscription_tier: null,
+        trial_start: tester.trial_start,
+        trial_minutes_used: tester.trial_minutes_used,
+        trial_minutes_limit: tester.trial_minutes_limit,
+        stripe_customer_id: null,
+        is_tester: true,
+        pending_invitation: true, // Mark as pending
+      },
+      usage_stats: { total_minutes: 0, total_sessions: 0, voice_minutes: 0, text_minutes: 0, voice_sessions: 0, text_sessions: 0 },
+    }));
+
+    // Combine regular clients with pending testers
+    const allClients = [...clients, ...pendingTesterClients];
+
+    return new Response(JSON.stringify({ clients: allClients }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });

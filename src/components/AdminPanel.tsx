@@ -55,6 +55,7 @@ interface ClientData {
     stripe_customer_id?: string;
     is_tester?: boolean;
     subscription_end?: string;
+    pending_invitation?: boolean;
   };
   usage_stats?: {
     total_sessions: number;
@@ -1099,22 +1100,30 @@ export const AdminPanel = () => {
                             <div className="space-y-3">
                               {/* Header */}
                               <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-2">
-                                  <Mail className="w-4 h-4 text-muted-foreground" />
-                                  <div className="flex-1 min-w-0">
-                                    {isEditing ? (
-                                      <Input
-                                        value={formData.email || client.email}
-                                        onChange={(e) => updateClientFormData(client.id, 'email', e.target.value)}
-                                        className="h-7 text-sm"
-                                        placeholder="Email"
-                                        onClick={(e) => e.stopPropagation()}
-                                      />
-                                    ) : (
-                                      <p className="text-sm font-medium truncate">{client.email}</p>
-                                    )}
-                                  </div>
-                                </div>
+                                 <div className="flex items-center gap-2">
+                                   <Mail className="w-4 h-4 text-muted-foreground" />
+                                   <div className="flex-1 min-w-0">
+                                     {isEditing ? (
+                                       <Input
+                                         value={formData.email || client.email}
+                                         onChange={(e) => updateClientFormData(client.id, 'email', e.target.value)}
+                                         className="h-7 text-sm"
+                                         placeholder="Email"
+                                         onClick={(e) => e.stopPropagation()}
+                                       />
+                                     ) : (
+                                       <div>
+                                         <p className="text-sm font-medium truncate">{client.email}</p>
+                                         {client.subscriber?.pending_invitation && (
+                                           <span className="text-xs px-2 py-1 rounded bg-orange-100 text-orange-800 flex items-center gap-1 w-fit mt-1">
+                                             <Clock className="w-3 h-3" />
+                                             Pending Invitation
+                                           </span>
+                                         )}
+                                       </div>
+                                     )}
+                                   </div>
+                                 </div>
                                 
                                 <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                                   {isEditing ? (
@@ -1222,20 +1231,28 @@ export const AdminPanel = () => {
                                    </div>
                                  )}
                                 
-                                {/* Tester Toggle */}
-                                {client.subscriber && (
-                                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-                                    <Button
-                                      size="sm"
-                                      variant={client.subscriber.is_tester ? "destructive" : "default"}
-                                      onClick={() => toggleTesterStatus(client.id)}
-                                      className="h-6 px-2 text-xs"
-                                    >
-                                      <Shield className="w-3 h-3 mr-1" />
-                                      {client.subscriber.is_tester ? 'Remove Tester' : 'Make Tester'}
-                                    </Button>
-                                  </div>
-                                )}
+                                 {/* Tester Toggle - Don't show for pending invitations */}
+                                 {client.subscriber && !client.subscriber.pending_invitation && (
+                                   <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                                     <Button
+                                       size="sm"
+                                       variant={client.subscriber.is_tester ? "destructive" : "default"}
+                                       onClick={() => toggleTesterStatus(client.id)}
+                                       className="h-6 px-2 text-xs"
+                                     >
+                                       <Shield className="w-3 h-3 mr-1" />
+                                       {client.subscriber.is_tester ? 'Remove Tester' : 'Make Tester'}
+                                     </Button>
+                                   </div>
+                                 )}
+                                 {/* Show info for pending invitations */}
+                                 {client.subscriber?.pending_invitation && (
+                                   <div className="mt-2">
+                                     <p className="text-xs text-muted-foreground">
+                                       Waiting for user to sign up with this email
+                                     </p>
+                                   </div>
+                                 )}
                               </div>
 
                               {/* Trial Info */}
