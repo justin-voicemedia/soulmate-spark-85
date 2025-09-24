@@ -324,8 +324,8 @@ const scrollToBottom = () => {
       onUpgrade?.();
       return;
     }
-    // Simulate voice call - would integrate with Twilio/Vapi.ai
-    alert(`Calling ${companion.name}... This would connect to voice AI via Twilio/Vapi.ai`);
+    // Simulate voice call - would integrate with OpenAI Realtime API
+    alert(`Calling ${companion.name}... This would connect to voice AI via OpenAI Realtime API`);
   };
 
   const formatTime = (date: Date) => {

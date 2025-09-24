@@ -18,24 +18,46 @@ export const useCompanionSelection = () => {
     setIsCreatingAgent(true);
     
     try {
-      // Create or get Vapi agent for this user-companion pair
-      const { data, error } = await supabase.functions.invoke('create-vapi-agent', {
-        body: { 
-          companionId,
-          voiceId: voiceId || selectedVoice,
-          relationshipType: relationshipType || 'casual_friend'
-        }
-      });
+      // Update or create user companion relationship
+      // Check if relationship exists
+      const { data: existingRelation } = await supabase
+        .from('user_companions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('companion_id', companionId)
+        .maybeSingle();
 
-      if (error) {
-        throw error;
+      if (existingRelation) {
+        // Update existing relationship
+        const { error } = await supabase
+          .from('user_companions')
+          .update({
+            voice_id: voiceId || selectedVoice,
+            relationship_type: relationshipType || 'casual_friend',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingRelation.id);
+
+        if (error) throw error;
+      } else {
+        // Create new relationship
+        const { error } = await supabase
+          .from('user_companions')
+          .insert({
+            user_id: user.id,
+            companion_id: companionId,
+            voice_id: voiceId || selectedVoice || 'alloy',
+            relationship_type: relationshipType || 'casual_friend'
+          });
+
+        if (error) throw error;
       }
 
       setSelectedCompanion(companionId);
       if (voiceId) {
         setSelectedVoice(voiceId);
       }
-      toast.success(data?.message || 'Companion selected successfully');
+      toast.success('Companion selected successfully');
       
     } catch (error) {
       console.error('Error selecting companion:', error);
@@ -54,17 +76,17 @@ export const useCompanionSelection = () => {
     setIsCreatingAgent(true);
     
     try {
-      // Update the voice for the current companion
-      const { data, error } = await supabase.functions.invoke('create-vapi-agent', {
-        body: { 
-          companionId: selectedCompanion,
-          voiceId 
-        }
-      });
+      // Update voice in user companion relationship
+      const { error } = await supabase
+        .from('user_companions')
+        .update({ 
+          voice_id: voiceId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+        .eq('companion_id', selectedCompanion);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       setSelectedVoice(voiceId);
       toast.success('Voice updated successfully');
