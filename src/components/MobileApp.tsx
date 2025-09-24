@@ -64,7 +64,8 @@ interface Message {
 export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onViewUsage }: MobileAppProps) => {
   const { user, signOut } = useAuth();
   const { trialStatus, trackUsage, getRemainingMinutes, getRemainingDays, canUseService } = useTrialStatus();
-  const [activeTab, setActiveTab] = useState<'chat' | 'chat-messages' | 'profile' | 'settings' | 'voice'>('profile');
+  const [activeTab, setActiveTab] = useState<'chat' | 'profile' | 'settings' | 'voice'>('profile');
+  const [isChatActive, setIsChatActive] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -165,10 +166,8 @@ const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relations
   }, [user, companion.id]);
 
   useEffect(() => {
-    // Start tracking session time when chat tab is opened
-    if ((activeTab === 'chat' || activeTab === 'chat-messages') && !sessionStartTime) {
-      setSessionStartTime(new Date());
-    }
+    // Don't auto-start session for chat tab, wait for Start Chat button
+    // Session tracking is now handled in handleStartChat
   }, [activeTab]);
 
   // Track usage when leaving chat or component unmounts
@@ -184,9 +183,20 @@ const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relations
     };
   }, [sessionStartTime, companion.id, trackUsage]);
 
-  const handleTabChange = (newTab: 'chat' | 'chat-messages' | 'profile' | 'settings' | 'voice') => {
-    // Track usage when leaving chat tab
-    if ((activeTab === 'chat' || activeTab === 'chat-messages') && sessionStartTime && newTab !== 'chat' && newTab !== 'chat-messages') {
+  const handleStartChat = () => {
+    if (!canUseService()) {
+      toast.error("Trial expired or out of minutes. Please upgrade to continue.");
+      onUpgrade?.();
+      return;
+    }
+    setIsChatActive(true);
+    setSessionStartTime(new Date());
+  };
+
+  const handleStopChat = () => {
+    setIsChatActive(false);
+    // Track usage when stopping chat
+    if (sessionStartTime) {
       const sessionDurationMs = new Date().getTime() - sessionStartTime.getTime();
       const sessionDurationMinutes = sessionDurationMs / (1000 * 60);
       if (sessionDurationMinutes > 0.1) {
@@ -194,15 +204,30 @@ const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relations
       }
       setSessionStartTime(null);
     }
+    // Go back to profile page
+    setActiveTab('profile');
+  };
+
+  const handleTabChange = (newTab: 'chat' | 'profile' | 'settings' | 'voice') => {
+    // Track usage when leaving chat tab
+    if (activeTab === 'chat' && sessionStartTime && newTab !== 'chat') {
+      const sessionDurationMs = new Date().getTime() - sessionStartTime.getTime();
+      const sessionDurationMinutes = sessionDurationMs / (1000 * 60);
+      if (sessionDurationMinutes > 0.1) {
+        trackUsage(companion.id, sessionDurationMinutes);
+      }
+      setSessionStartTime(null);
+      setIsChatActive(false); // Reset chat state when leaving
+    }
     
     // Start new session if switching to chat
-    if ((newTab === 'chat' || newTab === 'chat-messages') && activeTab !== 'chat' && activeTab !== 'chat-messages') {
+    if (newTab === 'chat' && activeTab !== 'chat') {
       if (!canUseService()) {
         toast.error("Trial expired or out of minutes. Please upgrade to continue.");
         onUpgrade?.();
         return;
       }
-      setSessionStartTime(new Date());
+      // Don't start session immediately for chat tab, wait for Start Chat button
     }
     
     setActiveTab(newTab);
@@ -471,7 +496,7 @@ const scrollToBottom = () => {
   const renderChat = () => (
     <div className="flex flex-col h-full">
       {/* Centered Chat Layout - Similar to Voice Widget */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-6">
+      <div className="flex-1 flex flex-col items-center justify-start p-6 space-y-6">
         {/* Large Companion Image */}
         <div className="relative">
           <img 
@@ -493,18 +518,81 @@ const scrollToBottom = () => {
             </div>
             
             <Button
-              onClick={() => {
-                // Switch to message view - we'll add this state
-                setActiveTab('chat-messages');
-              }}
+              onClick={isChatActive ? handleStopChat : handleStartChat}
               size="lg"
-              className="bg-green-600 hover:bg-green-700 w-full"
+              className={isChatActive 
+                ? "bg-red-600 hover:bg-red-700 w-full" 
+                : "bg-green-600 hover:bg-green-700 w-full"
+              }
             >
               <MessageCircle className="h-4 w-4 mr-2" />
-              Start Chat
+              {isChatActive ? "Stop Chat" : "Start Chat"}
             </Button>
           </div>
         </Card>
+
+        {/* Chat Messages Area - Only show when chat is active */}
+        {isChatActive && (
+          <div className="w-full max-w-md flex-1 flex flex-col">
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto space-y-4 max-h-96 mb-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`flex items-end space-x-2 max-w-[80%] ${
+                    message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+                  }`}>
+                    {message.sender === 'companion' && (
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src={companion.image_url} />
+                        <AvatarFallback>{companion.name[0]}</AvatarFallback>
+                      </Avatar>
+                    )}
+                    <div className={`px-4 py-2 rounded-2xl ${
+                      message.sender === 'user'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted'
+                    }`}>
+                      <p className="text-sm">{message.content}</p>
+                      <p className="text-xs opacity-70 mt-1">
+                        {formatTime(message.timestamp)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Message Input */}
+            <div className="border-t pt-4">
+              <div className="flex items-center space-x-2">
+                <div className="flex-1 flex items-center space-x-2">
+                  <Input
+                    placeholder={`Message ${companion.name}...`}
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    className="flex-1"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setIsRecording(!isRecording)}
+                    className={isRecording ? 'bg-red-100 text-red-600' : ''}
+                  >
+                    {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  </Button>
+                </div>
+                <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -791,7 +879,6 @@ const scrollToBottom = () => {
       <div className="flex-1 overflow-hidden">
         {activeTab === 'profile' && renderProfile()}
         {activeTab === 'chat' && renderChat()}
-        {activeTab === 'chat-messages' && renderChatMessages()}
         {activeTab === 'voice' && renderVoice()}
         {activeTab === 'settings' && renderSettings()}
       </div>
@@ -809,7 +896,7 @@ const scrollToBottom = () => {
             <span className="text-xs">Profile</span>
           </Button>
           <Button
-            variant={activeTab === 'chat' || activeTab === 'chat-messages' ? 'default' : 'ghost'}
+            variant={activeTab === 'chat' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => handleTabChange('chat')}
             className="flex flex-col items-center py-3"
