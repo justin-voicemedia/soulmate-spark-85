@@ -539,6 +539,14 @@ const scrollToBottom = () => {
         {/* Chat Messages Area - Only show when chat is active */}
         {isChatActive && (
           <div className="w-full max-w-md flex-1 flex flex-col space-y-4">
+            {/* Clear Chat Button */}
+            <div className="flex justify-end">
+              <Button size="sm" variant="outline" onClick={handleClearChat} title="Clear chat">
+                <Trash2 className="w-4 h-4 mr-1" />
+                Clear Chat
+              </Button>
+            </div>
+            
             {/* Message Input - Moved up under Stop Chat button */}
             <div className="border rounded-lg p-4">
               <div className="flex items-center space-x-2">
