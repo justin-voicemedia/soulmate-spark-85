@@ -423,21 +423,9 @@ export const AdminPanel = () => {
 
     setInvitingTester(true);
     try {
-      // Create or update subscriber record as tester
-      const { error } = await supabase
-        .from('subscribers')
-        .upsert({
-          email: inviteEmail.trim(),
-          user_id: null, // Explicitly set to null for admin-created testers
-          is_tester: true,
-          subscribed: false,
-          trial_minutes_limit: 999999, // Unlimited
-          trial_minutes_used: 0,
-          account_status: 'active',
-          customer_since: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'email' });
+      const { data, error } = await supabase.functions.invoke('invite-tester', {
+        body: { email: inviteEmail.trim() },
+      });
 
       if (error) throw error;
 
