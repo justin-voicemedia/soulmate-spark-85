@@ -13,20 +13,36 @@ export const MemoryTester: React.FC = () => {
   const [memories, setMemories] = useState<any>(null);
 
   const processExistingConversation = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user found for processing');
+      toast.error('User not authenticated');
+      return;
+    }
     
+    console.log('Starting conversation processing for user:', user.id);
     setIsProcessing(true);
+    
     try {
       // Get the existing conversation
-      const { data: userCompanion } = await supabase
+      console.log('Fetching conversation from database...');
+      const { data: userCompanion, error: fetchError } = await supabase
         .from('user_companions')
         .select('conversation_history')
         .eq('user_id', user.id)
         .eq('companion_id', '41722b07-f138-4c23-ae59-ba276853b759')
         .maybeSingle();
 
+      if (fetchError) {
+        console.error('Database fetch error:', fetchError);
+        toast.error('Failed to fetch conversation: ' + fetchError.message);
+        return;
+      }
+
+      console.log('Database response:', userCompanion);
+
       if (userCompanion?.conversation_history) {
         const conversationHistory = userCompanion.conversation_history as any[];
+        console.log('Found conversation with', conversationHistory.length, 'messages');
         
         // Convert to the format expected by saveConversationSummary
         const formattedConversation = conversationHistory.map((msg: any) => ({
@@ -35,37 +51,49 @@ export const MemoryTester: React.FC = () => {
           timestamp: msg.timestamp
         }));
 
-        console.log('Processing conversation with:', formattedConversation.length, 'messages');
+        console.log('Formatted conversation:', formattedConversation.slice(0, 3)); // Show first 3 messages
         
         // Process the conversation
+        console.log('Calling saveConversationSummary...');
         await saveConversationSummary(
           '41722b07-f138-4c23-ae59-ba276853b759',
           formattedConversation,
           'Sophie'
         );
         
+        console.log('Conversation processing completed');
         toast.success('Conversation processed successfully!');
         
         // Load the resulting memories
-        loadMemories();
+        setTimeout(() => loadMemories(), 1000);
       } else {
+        console.log('No conversation history found in database');
         toast.error('No conversation found to process');
       }
     } catch (error) {
       console.error('Error processing conversation:', error);
-      toast.error('Failed to process conversation');
+      toast.error('Failed to process conversation: ' + (error as Error).message);
     } finally {
       setIsProcessing(false);
     }
   };
 
   const loadMemories = async () => {
+    console.log('Loading memories...');
     try {
+      console.log('Calling getCompanionMemories...');
       const companionMemories = await getCompanionMemories('41722b07-f138-4c23-ae59-ba276853b759');
+      console.log('Loaded memories from database:', companionMemories);
       setMemories(companionMemories);
-      console.log('Loaded memories:', companionMemories);
+      
+      if (companionMemories) {
+        toast.success('Memories loaded successfully!');
+      } else {
+        toast.info('No memories found for this companion');
+      }
     } catch (error) {
       console.error('Error loading memories:', error);
+      toast.error('Failed to load memories: ' + (error as Error).message);
     }
   };
 
