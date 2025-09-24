@@ -451,16 +451,24 @@ export const AdminPanel = () => {
     const newTesterStatus = !client.subscriber.is_tester;
     
     try {
-      const { error } = await supabase
+      console.log('Updating subscriber:', client.subscriber.id, 'to tester status:', newTesterStatus);
+      
+      const { data, error } = await supabase
         .from('subscribers')
         .update({
           is_tester: newTesterStatus,
           trial_minutes_limit: newTesterStatus ? 999999 : 500, // Unlimited for testers
           updated_at: new Date().toISOString()
         })
-        .eq('id', client.subscriber.id);
+        .eq('id', client.subscriber.id)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
+
+      console.log('Update successful:', data);
 
       // Update local state
       setClients(prev =>
