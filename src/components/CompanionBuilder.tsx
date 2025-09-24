@@ -713,7 +713,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
 
               <Button 
                 type="submit" 
-                disabled={creating || imageLoading || uploading || !formData.name || !formData.sex || !formData.race}
+                disabled={creating || imageLoading || uploading || !formData.name || !formData.sex}
                 className="w-full"
               >
                 {creating ? (
