@@ -67,7 +67,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
   const [formData, setFormData] = useState({
     name: editingCompanion?.name || '',
     sex: editingCompanion?.gender ? editingCompanion.gender.charAt(0).toUpperCase() + editingCompanion.gender.slice(1) : '',
-    race: '',
+    race: (editingCompanion as any)?.race || '',
     age: editingCompanion?.age || 25,
     description: editingCompanion?.bio || '',
     physicalDescription: '',
@@ -334,6 +334,7 @@ export const CompanionBuilder = ({ onBack, onCompanionCreated, editingCompanion 
         name: formData.name,
         age: formData.age,
         gender: formData.sex.toLowerCase(),
+        race: formData.race,
         bio: formData.description || `Hi, I'm ${formData.name}! I'm a ${formData.age}-year-old ${formData.sex.toLowerCase()} who loves ${formData.hobbies.slice(0, 2).join(' and ')}.`,
         hobbies: formData.hobbies,
         personality: formData.personality,
