@@ -64,7 +64,7 @@ interface Message {
 export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onViewUsage }: MobileAppProps) => {
   const { user, signOut } = useAuth();
   const { trialStatus, trackUsage, getRemainingMinutes, getRemainingDays, canUseService } = useTrialStatus();
-  const [activeTab, setActiveTab] = useState<'chat' | 'profile' | 'settings' | 'voice'>('profile');
+  const [activeTab, setActiveTab] = useState<'chat' | 'chat-messages' | 'profile' | 'settings' | 'voice'>('profile');
   const [userProfile, setUserProfile] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -166,7 +166,7 @@ const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relations
 
   useEffect(() => {
     // Start tracking session time when chat tab is opened
-    if (activeTab === 'chat' && !sessionStartTime) {
+    if ((activeTab === 'chat' || activeTab === 'chat-messages') && !sessionStartTime) {
       setSessionStartTime(new Date());
     }
   }, [activeTab]);
@@ -184,9 +184,9 @@ const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relations
     };
   }, [sessionStartTime, companion.id, trackUsage]);
 
-  const handleTabChange = (newTab: 'chat' | 'profile' | 'settings' | 'voice') => {
+  const handleTabChange = (newTab: 'chat' | 'chat-messages' | 'profile' | 'settings' | 'voice') => {
     // Track usage when leaving chat tab
-    if (activeTab === 'chat' && sessionStartTime && newTab !== 'chat') {
+    if ((activeTab === 'chat' || activeTab === 'chat-messages') && sessionStartTime && newTab !== 'chat' && newTab !== 'chat-messages') {
       const sessionDurationMs = new Date().getTime() - sessionStartTime.getTime();
       const sessionDurationMinutes = sessionDurationMs / (1000 * 60);
       if (sessionDurationMinutes > 0.1) {
@@ -196,7 +196,7 @@ const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relations
     }
     
     // Start new session if switching to chat
-    if (newTab === 'chat' && activeTab !== 'chat') {
+    if ((newTab === 'chat' || newTab === 'chat-messages') && activeTab !== 'chat' && activeTab !== 'chat-messages') {
       if (!canUseService()) {
         toast.error("Trial expired or out of minutes. Please upgrade to continue.");
         onUpgrade?.();
@@ -470,10 +470,58 @@ const scrollToBottom = () => {
 
   const renderChat = () => (
     <div className="flex flex-col h-full">
+      {/* Centered Chat Layout - Similar to Voice Widget */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-6">
+        {/* Large Companion Image */}
+        <div className="relative">
+          <img 
+            src={companion.image_url} 
+            alt={companion.name}
+            className="w-48 h-48 rounded-full object-cover object-center bg-background border-4 border-primary/30 shadow-lg"
+            onError={(e) => {
+              e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${companion.name}`;
+            }}
+          />
+        </div>
+
+        {/* Chat Info Card */}
+        <Card className="p-6 w-full max-w-md">
+          <div className="text-center space-y-4">
+            <div className="flex items-center justify-center space-x-2">
+              <MessageCircle className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Chat with {companion.name}</h3>
+            </div>
+            
+            <Button
+              onClick={() => {
+                // Switch to message view - we'll add this state
+                setActiveTab('chat-messages');
+              }}
+              size="lg"
+              className="bg-green-600 hover:bg-green-700 w-full"
+            >
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Start Chat
+            </Button>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+
+  const renderChatMessages = () => (
+    <div className="flex flex-col h-full">
       {/* Chat Header */}
       <div className="p-4 border-b bg-card">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
+            <Button 
+              size="sm" 
+              variant="ghost"
+              onClick={() => setActiveTab('chat')}
+            >
+              ←
+            </Button>
             <Avatar>
               <AvatarImage src={companion.image_url} />
               <AvatarFallback>{companion.name[0]}</AvatarFallback>
@@ -743,6 +791,7 @@ const scrollToBottom = () => {
       <div className="flex-1 overflow-hidden">
         {activeTab === 'profile' && renderProfile()}
         {activeTab === 'chat' && renderChat()}
+        {activeTab === 'chat-messages' && renderChatMessages()}
         {activeTab === 'voice' && renderVoice()}
         {activeTab === 'settings' && renderSettings()}
       </div>
@@ -760,7 +809,7 @@ const scrollToBottom = () => {
             <span className="text-xs">Profile</span>
           </Button>
           <Button
-            variant={activeTab === 'chat' ? 'default' : 'ghost'}
+            variant={activeTab === 'chat' || activeTab === 'chat-messages' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => handleTabChange('chat')}
             className="flex flex-col items-center py-3"
