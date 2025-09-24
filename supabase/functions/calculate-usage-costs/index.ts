@@ -11,17 +11,15 @@ interface PricingConfig {
   openai_text_output: number;   // per 1M tokens
   openai_voice_input: number;   // per minute
   openai_voice_output: number;  // per minute
-  elevenlabs_voice: number;     // per 1k characters
   processing_overhead: number;  // flat rate per request
 }
 
-// Current pricing (update these as needed)
+// Current pricing for OpenAI only (update these as needed)
 const PRICING: PricingConfig = {
   openai_text_input: 0.15,      // $0.15 per 1M input tokens
   openai_text_output: 0.60,     // $0.60 per 1M output tokens  
   openai_voice_input: 0.006,    // $0.006 per minute
   openai_voice_output: 0.024,   // $0.024 per minute
-  elevenlabs_voice: 0.0003,     // $0.30 per 1M characters (~$0.0003 per 1k)
   processing_overhead: 0.001,   // $0.001 per API call
 };
 
@@ -45,10 +43,9 @@ function calculateTokenCost(tokens: number, apiType: string, isInput: boolean = 
   }
 }
 
-function calculateVoiceCost(minutes: number, characters: number = 0): number {
-  const openaiCost = minutes * PRICING.openai_voice_input;
-  const elevenlabsCost = (characters / 1000) * PRICING.elevenlabs_voice;
-  return openaiCost + elevenlabsCost + PRICING.processing_overhead;
+function calculateVoiceCost(minutes: number): number {
+  const openaiCost = minutes * PRICING.openai_voice_output;
+  return openaiCost + PRICING.processing_overhead;
 }
 
 function calculateTextCost(inputTokens: number, outputTokens: number): number {
@@ -101,10 +98,7 @@ serve(async (req) => {
         let calculatedCost = 0;
 
         if (session.api_type === 'voice') {
-          calculatedCost = calculateVoiceCost(
-            session.minutes_used || 0, 
-            session.characters_generated || 0
-          );
+          calculatedCost = calculateVoiceCost(session.minutes_used || 0);
         } else if (session.api_type === 'text') {
           // Estimate input/output tokens if not available
           const totalTokens = session.tokens_used || 0;
@@ -144,7 +138,7 @@ serve(async (req) => {
       let calculatedCost = 0;
 
       if (api_type === 'voice') {
-        calculatedCost = calculateVoiceCost(minutes_used, characters_generated);
+        calculatedCost = calculateVoiceCost(minutes_used);
       } else if (api_type === 'text') {
         calculatedCost = calculateTextCost(input_tokens || 0, output_tokens || 0);
       }
@@ -197,7 +191,7 @@ serve(async (req) => {
     let calculatedCost = 0;
 
     if (api_type === 'voice') {
-      calculatedCost = calculateVoiceCost(minutes_used, characters_generated);
+      calculatedCost = calculateVoiceCost(minutes_used);
     } else if (api_type === 'text') {
       calculatedCost = calculateTextCost(input_tokens || 0, output_tokens || 0);
     }
