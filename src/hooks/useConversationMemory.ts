@@ -22,6 +22,7 @@ export const useConversationMemory = (companionId?: string, companionName?: stri
     };
     
     conversationRef.current.push(message);
+    console.log(`💬 Added ${role} message to memory buffer (${conversationRef.current.length} total)`);
     
     // Auto-save conversation summaries periodically
     scheduleAutoSave();
@@ -36,15 +37,15 @@ export const useConversationMemory = (companionId?: string, companionName?: stri
     const conversationLength = conversationRef.current.length;
     
     // Save if:
-    // - 10+ minutes have passed since last save, OR
-    // - Conversation has 20+ messages, OR
-    // - 5+ minutes have passed and there are 10+ messages
+    // - 5+ minutes have passed since last save, OR
+    // - Conversation has 12+ messages, OR
+    // - 3+ minutes have passed and there are 8+ messages
     const shouldSave = 
-      timeSinceLastSave > 10 * 60 * 1000 || // 10 minutes
-      conversationLength >= 20 ||
-      (timeSinceLastSave > 5 * 60 * 1000 && conversationLength >= 10);
+      timeSinceLastSave > 5 * 60 * 1000 || // 5 minutes
+      conversationLength >= 12 ||
+      (timeSinceLastSave > 3 * 60 * 1000 && conversationLength >= 8);
     
-    if (shouldSave && conversationRef.current.length > 4) {
+    if (shouldSave && conversationRef.current.length > 3) {
       // Clear any existing timeout
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
@@ -59,11 +60,12 @@ export const useConversationMemory = (companionId?: string, companionName?: stri
 
   // Save the current conversation and reset
   const saveCurrentConversation = async () => {
-    if (!companionId || !companionName || conversationRef.current.length < 4) return;
+    if (!companionId || !companionName || conversationRef.current.length < 3) return;
     
     try {
-      console.log('Saving conversation summary...', {
+      console.log('🧠 Auto-saving conversation memory...', {
         companionId,
+        companionName,
         messageCount: conversationRef.current.length
       });
       
@@ -77,9 +79,9 @@ export const useConversationMemory = (companionId?: string, companionName?: stri
       conversationRef.current = [];
       lastSaveRef.current = new Date();
       
-      console.log('Conversation summary saved successfully');
+      console.log('✅ Conversation memory saved successfully');
     } catch (error) {
-      console.error('Error saving conversation summary:', error);
+      console.error('❌ Error saving conversation memory:', error);
     }
   };
 
