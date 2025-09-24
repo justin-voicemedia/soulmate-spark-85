@@ -8,6 +8,8 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AvatarCustomizer } from "@/components/AvatarCustomizer";
 import { supabase } from "@/integrations/supabase/client";
+import { App } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
 import { 
   Phone, 
   MessageCircle, 
@@ -25,7 +27,8 @@ import {
   AlertCircle,
   Crown,
   BarChart3,
-  Trash2
+  Trash2,
+  ExternalLink
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMemoryManager } from '@/hooks/useMemoryManager';
@@ -82,6 +85,20 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relationship_type: string } | null>(null);
   const [currentCompanion, setCurrentCompanion] = useState(companion);
+  const [isMobileApp, setIsMobileApp] = useState(false);
+
+  // Check if running in mobile app
+  useEffect(() => {
+    const checkMobileApp = async () => {
+      try {
+        const info = await App.getInfo();
+        setIsMobileApp(!!info.name); // If app info exists, we're in mobile app
+      } catch {
+        setIsMobileApp(false); // If error, we're in browser
+      }
+    };
+    checkMobileApp();
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -236,12 +253,29 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
 
   const handleStartChat = () => {
     if (!canUseService()) {
-      toast.error("Trial expired or out of minutes. Please upgrade to continue.");
-      onUpgrade?.();
+      handleUpgradeRequest();
       return;
     }
     setIsChatActive(true);
     setSessionStartTime(new Date());
+  };
+
+  const handleUpgradeRequest = async () => {
+    if (isMobileApp) {
+      // In mobile app, redirect to website for payment
+      toast.error("Trial expired or out of minutes. Redirecting to website for upgrade...");
+      try {
+        const websiteUrl = 'https://21462f3f-4956-4d89-ae71-737a989983a4.lovableproject.com';
+        await Browser.open({ url: websiteUrl });
+      } catch (error) {
+        console.error('Failed to open website:', error);
+        toast.error("Please visit our website to upgrade your subscription.");
+      }
+    } else {
+      // In browser, use regular upgrade flow
+      toast.error("Trial expired or out of minutes. Please upgrade to continue.");
+      onUpgrade?.();
+    }
   };
 
   const handleStopChat = () => {
@@ -274,8 +308,7 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
     // Start new session if switching to chat
     if (newTab === 'chat' && activeTab !== 'chat') {
       if (!canUseService()) {
-        toast.error("Trial expired or out of minutes. Please upgrade to continue.");
-        onUpgrade?.();
+        handleUpgradeRequest();
         return;
       }
       // Don't start session immediately for chat tab, wait for Start Chat button
@@ -307,8 +340,7 @@ const scrollToBottom = () => {
 
   const handleSendMessage = async () => {
     if (!canUseService()) {
-      toast.error("Trial expired or out of minutes. Please upgrade to continue.");
-      onUpgrade?.();
+      handleUpgradeRequest();
       return;
     }
     
@@ -377,8 +409,7 @@ const scrollToBottom = () => {
 
   const handleVoiceCall = () => {
     if (!canUseService()) {
-      toast.error("Trial expired or out of minutes. Please upgrade to continue.");
-      onUpgrade?.();
+      handleUpgradeRequest();
       return;
     }
     // Simulate voice call - would integrate with OpenAI Realtime API
@@ -468,11 +499,12 @@ const scrollToBottom = () => {
                 {getRemainingMinutes() < 50 && (
                   <Button 
                     size="sm" 
-                    onClick={onUpgrade}
+                    onClick={handleUpgradeRequest}
                     className="mt-2"
                   >
                     <Crown className="w-4 h-4 mr-1" />
-                    Upgrade Now
+                    {isMobileApp ? 'Upgrade on Website' : 'Upgrade Now'}
+                    {isMobileApp && <ExternalLink className="w-3 h-3 ml-1" />}
                   </Button>
                 )}
               </div>
