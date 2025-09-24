@@ -104,6 +104,7 @@ serve(async (req) => {
               trial_minutes_used: subscriber.trial_minutes_used,
               trial_minutes_limit: subscriber.trial_minutes_limit,
               stripe_customer_id: subscriber.stripe_customer_id,
+              is_tester: subscriber.is_tester,
             }
           : undefined,
         usage_stats: usageStats,

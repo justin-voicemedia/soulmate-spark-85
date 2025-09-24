@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useImageGeneration } from '@/hooks/useImageGeneration';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { RefreshCw, Image as ImageIcon, Sparkles, Upload, Settings, Home, Edit3, Save, X, Users, Mail, Calendar, CreditCard, Crown } from 'lucide-react';
+import { RefreshCw, Image as ImageIcon, Sparkles, Upload, Settings, Home, Edit3, Save, X, Users, Mail, Calendar, CreditCard, Crown, UserPlus, Shield } from 'lucide-react';
 import { CompanionImageManager } from './CompanionImageManager';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -51,6 +51,7 @@ interface ClientData {
     trial_minutes_used?: number;
     trial_minutes_limit?: number;
     stripe_customer_id?: string;
+    is_tester?: boolean;
   };
   usage_stats?: {
     total_sessions: number;
@@ -80,6 +81,8 @@ export const AdminPanel = () => {
   const [savingClients, setSavingClients] = useState<string[]>([]);
   const [clientEditFormData, setClientEditFormData] = useState<Record<string, Partial<ClientData>>>({});
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [invitingTester, setInvitingTester] = useState(false);
   const { generateCompanionImage } = useImageGeneration();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -166,7 +169,8 @@ export const AdminPanel = () => {
           subscriber: client.subscriber ? {
             ...client.subscriber,
             trial_minutes_limit: client.subscriber.trial_minutes_limit,
-            subscribed: client.subscriber.subscribed
+            subscribed: client.subscriber.subscribed,
+            is_tester: client.subscriber.is_tester || false
           } : undefined
         }
       }));
@@ -197,15 +201,16 @@ export const AdminPanel = () => {
       if (formData.subscriber) {
         const client = clients.find(c => c.id === clientId);
         if (client?.subscriber) {
-          const { error: subscriberError } = await supabase
-            .from('subscribers')
-            .update({
-              trial_minutes_limit: formData.subscriber.trial_minutes_limit,
-              subscribed: formData.subscriber.subscribed,
-              subscription_tier: formData.subscriber.subscription_tier,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', client.subscriber.id);
+        const { error: subscriberError } = await supabase
+          .from('subscribers')
+          .update({
+            trial_minutes_limit: formData.subscriber.trial_minutes_limit,
+            subscribed: formData.subscriber.subscribed,
+            subscription_tier: formData.subscriber.subscription_tier,
+            is_tester: formData.subscriber.is_tester,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', client.subscriber.id);
 
           if (subscriberError) throw subscriberError;
         }
@@ -266,6 +271,84 @@ export const AdminPanel = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  const inviteTester = async () => {
+    if (!inviteEmail.trim()) {
+      toast.error('Please enter an email address');
+      return;
+    }
+
+    setInvitingTester(true);
+    try {
+      // Create or update subscriber record as tester
+      const { error } = await supabase
+        .from('subscribers')
+        .upsert({
+          email: inviteEmail.trim(),
+          is_tester: true,
+          subscribed: false,
+          trial_minutes_limit: 999999, // Unlimited
+          trial_minutes_used: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'email' });
+
+      if (error) throw error;
+
+      toast.success(`Tester account created for ${inviteEmail}`);
+      setInviteEmail('');
+      await loadClients(); // Refresh the list
+    } catch (error) {
+      console.error('Error inviting tester:', error);
+      toast.error('Failed to create tester account');
+    } finally {
+      setInvitingTester(false);
+    }
+  };
+
+  const toggleTesterStatus = async (clientId: string) => {
+    const client = clients.find(c => c.id === clientId);
+    if (!client?.subscriber) {
+      toast.error('No subscriber record found for this user');
+      return;
+    }
+
+    const newTesterStatus = !client.subscriber.is_tester;
+    
+    try {
+      const { error } = await supabase
+        .from('subscribers')
+        .update({
+          is_tester: newTesterStatus,
+          trial_minutes_limit: newTesterStatus ? 999999 : 500, // Unlimited for testers
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', client.subscriber.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setClients(prev =>
+        prev.map(c =>
+          c.id === clientId && c.subscriber
+            ? { 
+                ...c, 
+                subscriber: { 
+                  ...c.subscriber, 
+                  is_tester: newTesterStatus,
+                  trial_minutes_limit: newTesterStatus ? 999999 : 500
+                }
+              }
+            : c
+        )
+      );
+
+      toast.success(`${newTesterStatus ? 'Enabled' : 'Disabled'} tester access for ${client.email}`);
+    } catch (error) {
+      console.error('Error updating tester status:', error);
+      toast.error('Failed to update tester status');
+    }
   };
 
   const getStatusBadgeColor = (status?: string) => {
@@ -657,7 +740,7 @@ export const AdminPanel = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap mb-4">
                 <Button 
                   onClick={loadClients} 
                   disabled={clientsLoading}
@@ -666,6 +749,28 @@ export const AdminPanel = () => {
                   <RefreshCw className={`w-4 h-4 mr-2 ${clientsLoading ? 'animate-spin' : ''}`} />
                   Load Clients ({clients.length})
                 </Button>
+                
+                <div className="flex gap-2 items-center">
+                  <Input
+                    placeholder="Enter email to invite as tester"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="w-64"
+                    onKeyPress={(e) => e.key === 'Enter' && inviteTester()}
+                  />
+                  <Button 
+                    onClick={inviteTester}
+                    disabled={invitingTester || !inviteEmail.trim()}
+                    className="flex items-center gap-2"
+                  >
+                    {invitingTester ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <UserPlus className="w-4 h-4" />
+                    )}
+                    Invite Tester
+                  </Button>
+                </div>
               </div>
 
               {clients.length > 0 && (
@@ -754,7 +859,13 @@ export const AdminPanel = () => {
                               {/* Subscription Status */}
                               <div>
                                 <label className="text-xs text-muted-foreground">Subscription</label>
-                                <div className="flex items-center gap-2 mt-1">
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  {client.subscriber?.is_tester && (
+                                    <span className="text-xs px-2 py-1 rounded bg-purple-100 text-purple-800 flex items-center gap-1">
+                                      <Shield className="w-3 h-3" />
+                                      Tester
+                                    </span>
+                                  )}
                                   {client.subscription ? (
                                     <>
                                       <span className={`text-xs px-2 py-1 rounded ${getStatusBadgeColor(client.subscription.status)}`}>
@@ -777,6 +888,21 @@ export const AdminPanel = () => {
                                     </span>
                                   )}
                                 </div>
+                                
+                                {/* Tester Toggle */}
+                                {client.subscriber && (
+                                  <div className="mt-2">
+                                    <Button
+                                      size="sm"
+                                      variant={client.subscriber.is_tester ? "destructive" : "default"}
+                                      onClick={() => toggleTesterStatus(client.id)}
+                                      className="h-6 px-2 text-xs"
+                                    >
+                                      <Shield className="w-3 h-3 mr-1" />
+                                      {client.subscriber.is_tester ? 'Remove Tester' : 'Make Tester'}
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
 
                               {/* Trial Info */}
@@ -796,31 +922,46 @@ export const AdminPanel = () => {
                                           className="h-7 text-sm"
                                           placeholder="Trial limit"
                                         />
-                                        <div className="flex items-center gap-2">
-                                          <input
-                                            type="checkbox"
-                                            checked={formData.subscriber?.subscribed ?? client.subscriber.subscribed}
-                                            onChange={(e) => updateClientFormData(client.id, 'subscriber', {
-                                              ...formData.subscriber,
-                                              subscribed: e.target.checked
-                                            })}
-                                            className="w-3 h-3"
-                                          />
-                                          <label className="text-xs">Subscribed</label>
-                                        </div>
+                                         <div className="flex items-center gap-2">
+                                           <input
+                                             type="checkbox"
+                                             checked={formData.subscriber?.subscribed ?? client.subscriber.subscribed}
+                                             onChange={(e) => updateClientFormData(client.id, 'subscriber', {
+                                               ...formData.subscriber,
+                                               subscribed: e.target.checked
+                                             })}
+                                             className="w-3 h-3"
+                                           />
+                                           <label className="text-xs">Subscribed</label>
+                                         </div>
+                                         <div className="flex items-center gap-2">
+                                           <input
+                                             type="checkbox"
+                                             checked={formData.subscriber?.is_tester ?? client.subscriber.is_tester ?? false}
+                                             onChange={(e) => updateClientFormData(client.id, 'subscriber', {
+                                               ...formData.subscriber,
+                                               is_tester: e.target.checked
+                                             })}
+                                             className="w-3 h-3"
+                                           />
+                                           <label className="text-xs">Tester Account</label>
+                                         </div>
                                       </div>
-                                    ) : (
-                                      <div className="text-xs space-y-1">
-                                        <p>{client.subscriber.trial_minutes_used || 0} / {client.subscriber.trial_minutes_limit || 500} minutes</p>
-                                        <div className="w-full bg-gray-200 rounded-full h-1">
-                                          <div 
-                                            className="bg-primary h-1 rounded-full" 
-                                            style={{
-                                              width: `${Math.min(100, ((client.subscriber.trial_minutes_used || 0) / (client.subscriber.trial_minutes_limit || 500)) * 100)}%`
-                                            }}
-                                          ></div>
-                                        </div>
-                                      </div>
+                                     ) : (
+                                       <div className="text-xs space-y-1">
+                                         <p>{client.subscriber.trial_minutes_used || 0} / {client.subscriber.trial_minutes_limit || 500} minutes</p>
+                                         {client.subscriber.is_tester && (
+                                           <p className="text-purple-600 font-medium">Unlimited (Tester)</p>
+                                         )}
+                                         <div className="w-full bg-gray-200 rounded-full h-1">
+                                           <div 
+                                             className="bg-primary h-1 rounded-full" 
+                                             style={{
+                                               width: client.subscriber.is_tester ? '100%' : `${Math.min(100, ((client.subscriber.trial_minutes_used || 0) / (client.subscriber.trial_minutes_limit || 500)) * 100)}%`
+                                             }}
+                                           ></div>
+                                         </div>
+                                       </div>
                                     )}
                                   </div>
                                 </div>
