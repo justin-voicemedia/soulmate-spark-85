@@ -137,8 +137,13 @@ You're having a genuine conversation with someone who chose to connect with you.
     }
 
     const openaiData = await openaiResponse.json();
-    const aiResponse = openaiData.choices[0].message.content;
-
+    const aiRawResponse = openaiData.choices[0].message.content;
+    // Sanitize to avoid dashes/bullets for human-like chat
+    const aiResponse = aiRawResponse
+      .replace(/^[\s]*[-–—•·]\s+/gm, '')
+      .replace(/[–—]/g, ', ')
+      .replace(/\s-\s/g, ', ');
+ 
     console.log("OpenAI response received:", aiResponse);
 
     // Update conversation history

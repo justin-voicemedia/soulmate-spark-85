@@ -225,11 +225,28 @@ You are having a voice conversation with someone who has chosen to talk with you
         };
 
         openAISocket.onmessage = (event) => {
-          const data = JSON.parse(event.data);
-          console.log("OpenAI message type:", data.type);
-          
-          // Forward all OpenAI messages to the client
-          socket.send(event.data);
+          try {
+            const data = JSON.parse(event.data);
+            console.log("OpenAI message type:", data.type);
+
+            const TEXT_DELTA_TYPES = new Set([
+              "response.audio_transcript.delta",
+              "response.text.delta",
+              "response.output_text.delta"
+            ]);
+
+            if (TEXT_DELTA_TYPES.has(data.type) && typeof data.delta === "string") {
+              data.delta = sanitizeText(data.delta);
+            }
+            if (data.type === "response.done" && Array.isArray(data.response?.output_text)) {
+              data.response.output_text = data.response.output_text.map((t: string) => sanitizeText(t));
+            }
+
+            socket.send(JSON.stringify(data));
+          } catch (_) {
+            // Fallback: forward raw if parsing fails
+            socket.send(event.data);
+          }
         };
 
         openAISocket.onclose = (event) => {
