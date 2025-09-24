@@ -39,15 +39,38 @@ serve(async (req) => {
 
     if (usageError) throw usageError;
 
-    // Filter out likely erroneous legacy entries (bursts of 1-min sessions with near-zero duration)
+    // Advanced filtering to remove duplicate and erroneous entries
+    const seenSessions = new Set();
     const filteredUsageData = (usageData || []).filter((s: any) => {
       const minutes = s.minutes_used || 0;
-      if (!s.session_end) return minutes > 0;
-      const start = new Date(s.session_start).getTime();
-      const end = new Date(s.session_end).getTime();
-      const durationMs = Math.abs(end - start);
-      // Drop if recorded as <= 1 minute but lasted < 15s (likely legacy 'track' spam)
-      if (minutes <= 1 && durationMs < 15000) return false;
+      if (minutes <= 0) return false; // Remove zero-minute sessions
+      
+      // Create a unique key for potential duplicates
+      const sessionKey = `${s.user_id}_${s.companion_id}_${s.api_type}_${s.minutes_used}_${s.tokens_used}_${Math.floor(new Date(s.created_at).getTime() / 1000)}`;
+      
+      // Skip if we've seen this exact session before (within same second)
+      if (seenSessions.has(sessionKey)) {
+        console.log('Filtering duplicate session:', sessionKey);
+        return false;
+      }
+      seenSessions.add(sessionKey);
+      
+      // Filter out suspicious zero-duration sessions with high minutes
+      if (s.session_end && s.session_start) {
+        const start = new Date(s.session_start).getTime();
+        const end = new Date(s.session_end).getTime();
+        const durationMs = Math.abs(end - start);
+        
+        // If session shows high minutes but zero duration, it's likely a bug
+        if (durationMs < 1000 && minutes > 5) {
+          console.log('Filtering zero-duration high-minute session:', { minutes, durationMs, sessionKey });
+          return false;
+        }
+        
+        // Drop if recorded as <= 1 minute but lasted < 15s (likely legacy 'track' spam)
+        if (minutes <= 1 && durationMs < 15000) return false;
+      }
+      
       return true;
     });
 
