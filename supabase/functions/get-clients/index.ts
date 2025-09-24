@@ -82,7 +82,12 @@ serve(async (req) => {
     // Batch load related data
     const [{ data: subs }, { data: subscribers }, { data: usage }] = await Promise.all([
       admin.from("subscriptions").select("*\n").in("user_id", userIds),
-      admin.from("subscribers").select("*\n").in("user_id", userIds),
+      admin
+        .from("subscribers")
+        .select("*\n")
+        .in("user_id", userIds)
+        .order("updated_at", { ascending: false })
+        .order("created_at", { ascending: false }),
       admin
         .from("conversation_usage")
         .select("user_id, minutes_used, session_start, session_end, api_type, tokens_used, created_at, companion_id")
