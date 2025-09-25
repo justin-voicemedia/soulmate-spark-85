@@ -207,7 +207,7 @@ export const HeroRotating = ({
                 size="lg" 
                 variant="outline" 
                 onClick={onBuildCompanion} 
-                className="text-lg px-8 py-6 border-white/30 text-white hover:bg-white/10 hover:text-white"
+                className="text-lg px-8 py-6 bg-black/20 border-white/30 text-white hover:bg-white/10 hover:text-white"
               >
                 Build Your Own
               </Button>
@@ -284,7 +284,7 @@ export const HeroRotating = ({
               size="lg" 
               variant="outline" 
               onClick={onBuildCompanion} 
-              className="text-lg px-8 py-6 border-white/30 text-white hover:bg-white/10 hover:text-white"
+              className="text-lg px-8 py-6 bg-black/20 border-white/30 text-white hover:bg-white/10 hover:text-white"
             >
               Build Your Own
             </Button>
