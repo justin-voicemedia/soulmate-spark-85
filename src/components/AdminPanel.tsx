@@ -14,6 +14,7 @@ import { CompanionImageManager } from './CompanionImageManager';
 import { CostAnalyticsDashboard } from './CostAnalyticsDashboard';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface Companion {
   id: string;
@@ -201,6 +202,7 @@ export const AdminPanel = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const { isViewer, loading: roleLoading } = useUserRole();
 
   const loadCompanions = async () => {
     setCompanionsLoading(true);
@@ -1015,6 +1017,12 @@ export const AdminPanel = () => {
           <div className="flex items-center gap-2">
             <Settings className="w-6 h-6" />
             <h1 className="text-2xl font-bold">Admin Panel</h1>
+            {isViewer && (
+              <span className="text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-medium flex items-center gap-1">
+                <Eye className="w-3 h-3" />
+                Read-Only Mode
+              </span>
+            )}
           </div>
           <Button 
             variant="outline" 
@@ -1027,7 +1035,10 @@ export const AdminPanel = () => {
           </Button>
         </div>
         <p className="text-muted-foreground">
-          Manage companion images and generate AI images for the homepage
+          {isViewer 
+            ? "You have read-only access to view data and architecture. You cannot make changes."
+            : "Manage companion images and generate AI images for the homepage"
+          }
         </p>
       </div>
 
@@ -1133,42 +1144,44 @@ export const AdminPanel = () => {
                                    </div>
                                  </div>
                                 
-                                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                                  {isEditing ? (
-                                    <>
-                                      <Button
-                                        size="sm"
-                                        onClick={() => saveClient(client.id)}
-                                        disabled={isSaving}
-                                        className="h-7 px-2"
-                                      >
-                                        {isSaving ? (
-                                          <RefreshCw className="w-3 h-3 animate-spin" />
-                                        ) : (
-                                          <Save className="w-3 h-3" />
-                                        )}
-                                      </Button>
+                                {!isViewer && (
+                                  <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                    {isEditing ? (
+                                      <>
+                                        <Button
+                                          size="sm"
+                                          onClick={() => saveClient(client.id)}
+                                          disabled={isSaving}
+                                          className="h-7 px-2"
+                                        >
+                                          {isSaving ? (
+                                            <RefreshCw className="w-3 h-3 animate-spin" />
+                                          ) : (
+                                            <Save className="w-3 h-3" />
+                                          )}
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => toggleClientEdit(client.id)}
+                                          disabled={isSaving}
+                                          className="h-7 px-2"
+                                        >
+                                          <X className="w-3 h-3" />
+                                        </Button>
+                                      </>
+                                    ) : (
                                       <Button
                                         size="sm"
                                         variant="outline"
                                         onClick={() => toggleClientEdit(client.id)}
-                                        disabled={isSaving}
                                         className="h-7 px-2"
                                       >
-                                        <X className="w-3 h-3" />
+                                        <Edit3 className="w-3 h-3" />
                                       </Button>
-                                    </>
-                                  ) : (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => toggleClientEdit(client.id)}
-                                      className="h-7 px-2"
-                                    >
-                                      <Edit3 className="w-3 h-3" />
-                                    </Button>
-                                  )}
-                                </div>
+                                    )}
+                                  </div>
+                                )}
                               </div>
 
                               {/* Name */}
@@ -1239,8 +1252,8 @@ export const AdminPanel = () => {
                                    </div>
                                  )}
                                 
-                                 {/* Tester Toggle - Don't show for pending invitations */}
-                                 {client.subscriber && !client.subscriber.pending_invitation && (
+                                 {/* Tester Toggle - Don't show for pending invitations or viewers */}
+                                 {!isViewer && client.subscriber && !client.subscriber.pending_invitation && (
                                    <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                                      <Button
                                        size="sm"
