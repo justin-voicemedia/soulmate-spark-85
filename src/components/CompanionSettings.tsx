@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowLeft, Settings, Volume2, Heart, Brain, Image } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -150,8 +151,9 @@ export const CompanionSettings = ({ companionId, companionName, onBack }: Compan
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="h-screen bg-gradient-to-br from-background to-secondary">
+      <ScrollArea className="h-full">
+        <div className="max-w-4xl mx-auto space-y-6 p-4 pb-8">
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={onBack}>
@@ -283,7 +285,8 @@ export const CompanionSettings = ({ companionId, companionName, onBack }: Compan
             </CardContent>
           </Card>
         )}
-      </div>
+        </div>
+      </ScrollArea>
     </div>
   );
 };
