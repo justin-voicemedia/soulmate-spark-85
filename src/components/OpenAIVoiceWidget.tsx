@@ -231,15 +231,9 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
       if (event.type === 'session_ready') {
         toast.success('Voice session ready');
         console.log('Voice session is ready for conversation');
-      } else if (event.type === 'response.audio.delta') {
-        setIsSpeaking(true);
-      } else if (event.type === 'response.audio.done') {
-        setIsSpeaking(false);
-      } else if (event.type === 'input_audio_buffer.speech_started') {
-        setIsListening(true);
-      } else if (event.type === 'input_audio_buffer.speech_stopped') {
-        setIsListening(false);
       } else if (event.type === 'response.audio_transcript.delta') {
+        // Set speaking state when AI starts speaking
+        setIsSpeaking(true);
         // Accumulate AI response transcript for memory
         if (event.delta) {
           aiResponseBufferRef.current += event.delta;
@@ -251,8 +245,16 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
           addMessage('user', event.transcript);
           console.log('User said:', event.transcript);
         }
+      } else if (event.type === 'input_audio_buffer.speech_started') {
+        setIsListening(true);
+      } else if (event.type === 'input_audio_buffer.speech_stopped') {
+        setIsListening(false);
+      } else if (event.type === 'response.audio_transcript.done') {
+        // Stop speaking animation when transcript is done
+        setIsSpeaking(false);
       } else if (event.type === 'response.done') {
-        // When AI finishes responding, save the complete response to memory
+        // When AI finishes responding, stop speaking and save the complete response to memory
+        setIsSpeaking(false);
         if (aiResponseBufferRef.current.trim()) {
           addMessage('assistant', aiResponseBufferRef.current.trim());
           console.log('AI response complete:', aiResponseBufferRef.current);
