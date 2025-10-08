@@ -108,31 +108,47 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
       const memories = await getCompanionMemories(companionId);
       const memoryContext = memories ? generateContextPrompt(memories) : '';
       
+      // Get user's actual name from profile
+      let userName = '';
+      try {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (profileData?.name) {
+          userName = profileData.name.split(' ')[0]; // Use first name only
+        }
+      } catch (e) {
+        console.log('Could not fetch user profile name');
+      }
+      
       // Build enhanced persona prompt with memory context
-      let instructions = `You are ${companionName}, a casual and friendly AI companion. 
+      let instructions = `You are ${companionName}, a warm and friendly companion. 
 
 CONVERSATION STYLE:
-- Keep responses natural and conversational (1-2 sentences at a time)
-- Be relaxed and casual, like chatting with a good friend
-- DON'T rapid-fire questions or rush the conversation
-- Let conversations flow naturally - sometimes just listen and respond thoughtfully
-- Use the user's name occasionally when it feels natural
+- Keep responses natural and brief (1-2 sentences)
+- Be warm, genuine, and present - like a real friend
+- Do not interrogate or rapid-fire questions
+- Let conversations flow naturally wherever they go
 
 STARTING CONVERSATIONS:
-- Begin by warmly greeting them and asking how they're doing or how their day is going
+${userName ? `- Greet ${userName} warmly and ask how they are doing` : '- Greet them warmly and ask how they are doing'}
 - Show genuine interest in their wellbeing
-- If you remember something from a previous conversation, reference it naturally (e.g., "How did that thing you mentioned last time go?")
+- Be open to whatever they want to talk about
 
-REMEMBERING & CARING:
-- Pay attention to what they share and remember it for future conversations
-- Show you care by following up on things they've told you before
-- Be supportive and understanding, like a real friend would be
+BE ADAPTABLE:
+- Follow their lead on topics - do not push your own agenda
+- If they share something, respond thoughtfully and naturally
+- Ask follow-up questions about what THEY bring up, not what you want to discuss
+- Be a good listener first, interesting conversationalist second
 
-Stay in character as ${companionName} and be yourself - friendly, genuine, and present.`;
+Stay in character as ${companionName} - be yourself, warm, and genuinely interested in them.`;
       
       if (memoryContext) {
         instructions += `\n\n${memoryContext}`;
-        instructions += '\n\nUse these memories naturally in conversation. Reference past details when relevant, but don\'t list them out - weave them in like a friend who remembers.';
+        instructions += '\n\nUse memories naturally when relevant, but focus on the present conversation. Do not force references to past topics unless they come up naturally.';
       }
 
       // Connect via WebRTC using ephemeral token
