@@ -18,8 +18,39 @@ serve(async (req) => {
       throw new Error('OPENAI_API_KEY is not set');
     }
 
-    const { voice = 'alloy', instructions = 'You are a helpful, friendly companion who speaks naturally like a real person. Be genuine, casual, and conversational - never sound like a chatbot or virtual assistant. Keep responses natural and flowing, like talking to a friend.', model = 'gpt-4o-mini-realtime-preview-2024-12-17' } = await req.json().catch(() => ({}));
+    const body = await req.json().catch(() => ({}));
+    const { action, voice = 'alloy', instructions = 'You are a helpful, friendly companion who speaks naturally like a real person. Be genuine, casual, and conversational - never sound like a chatbot or virtual assistant. Keep responses natural and flowing, like talking to a friend.', model = 'gpt-4o-mini-realtime-preview-2024-12-17', sdp, ephemeralKey } = body;
 
+    // Handle SDP exchange (WebRTC connection setup)
+    if (action === 'exchange_sdp') {
+      if (!sdp || !ephemeralKey) {
+        throw new Error('Missing sdp or ephemeralKey for SDP exchange');
+      }
+
+      console.log('Exchanging SDP with OpenAI...');
+      const sdpResponse = await fetch(`https://api.openai.com/v1/realtime?model=${encodeURIComponent(model)}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ephemeralKey}`,
+          'Content-Type': 'application/sdp',
+          'OpenAI-Beta': 'realtime=v1',
+        },
+        body: sdp,
+      });
+
+      if (!sdpResponse.ok) {
+        const errorText = await sdpResponse.text();
+        console.error('OpenAI SDP exchange failed:', sdpResponse.status, errorText);
+        throw new Error(`OpenAI SDP exchange failed: ${sdpResponse.status}`);
+      }
+
+      const answerSdp = await sdpResponse.text();
+      return new Response(JSON.stringify({ sdp: answerSdp }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Handle session creation (ephemeral token)
     // Validate voice against OpenAI supported list
     const allowedVoices = new Set(['alloy','ash','ballad','coral','echo','sage','shimmer','verse','marin','cedar']);
     const voiceToUse = allowedVoices.has(voice) ? voice : 'alloy';

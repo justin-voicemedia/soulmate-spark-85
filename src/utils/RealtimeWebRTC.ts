@@ -147,29 +147,25 @@ export class RealtimeChat {
          }, 5000);
       });
 
-      // Connect to OpenAI's Realtime API via WebRTC
-      console.log('Connecting to OpenAI Realtime API...');
-      const baseUrl = "https://api.openai.com/v1/realtime";
-      const model = 'gpt-4o-mini-realtime-preview-2024-12-17';
-      const sdpResponse = await fetch(`${baseUrl}?model=${encodeURIComponent(model)}`, {
-        method: "POST",
-        body: this.pc.localDescription?.sdp || offer.sdp!,
-        headers: {
-          Authorization: `Bearer ${EPHEMERAL_KEY}`,
-          "Content-Type": "application/sdp",
-          "OpenAI-Beta": "realtime=v1",
-        },
+      // Connect to OpenAI's Realtime API via our backend proxy
+      console.log('Connecting to OpenAI Realtime API through backend...');
+      const { data: sdpData, error: sdpError } = await supabase.functions.invoke('openai-realtime-session', {
+        body: { 
+          action: 'exchange_sdp',
+          sdp: this.pc.localDescription?.sdp || offer.sdp!,
+          ephemeralKey: EPHEMERAL_KEY,
+          model: 'gpt-4o-mini-realtime-preview-2024-12-17'
+        }
       });
 
-      if (!sdpResponse.ok) {
-        const errorText = await sdpResponse.text();
-        console.error('OpenAI SDP exchange failed:', sdpResponse.status, errorText);
-        throw new Error(`OpenAI connection failed: ${sdpResponse.status} - ${errorText}`);
+      if (sdpError || !sdpData?.sdp) {
+        console.error('OpenAI SDP exchange failed:', sdpError);
+        throw new Error(`OpenAI connection failed: ${sdpError?.message || 'No SDP in response'}`);
       }
 
       const answer = {
         type: "answer" as RTCSdpType,
-        sdp: await sdpResponse.text(),
+        sdp: sdpData.sdp,
       };
 
       console.log('Setting remote description...');
