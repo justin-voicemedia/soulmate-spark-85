@@ -1135,13 +1135,20 @@ const scrollToBottom = () => {
             }`}
           >
             <div className={`relative ${activeTab === 'profile' ? 'scale-110' : ''} transition-transform duration-300`}>
-              {/* Icon container with gradient background */}
-              <div className={`relative rounded-full p-2 transition-all duration-300 ${
+              {/* Icon container with 3D effect */}
+              <div className={`relative rounded-full p-2.5 transition-all duration-300 ${
                 activeTab === 'profile'
-                  ? 'bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg shadow-purple-500/50'
-                  : 'bg-gradient-to-br from-purple-500/40 to-purple-600/30'
-              }`}>
-                <User className="w-5 h-5 text-white" strokeWidth={2.5} />
+                  ? 'bg-gradient-to-br from-purple-400 via-purple-500 to-purple-700'
+                  : 'bg-gradient-to-br from-purple-400/50 via-purple-500/40 to-purple-700/40'
+              }`}
+              style={{
+                boxShadow: activeTab === 'profile' 
+                  ? '0 4px 14px 0 rgba(168, 85, 247, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.2), inset 0 1px 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 4px 0 rgba(0, 0, 0, 0.2)'
+                  : '0 2px 8px 0 rgba(168, 85, 247, 0.25), 0 1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 1px 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 2px 0 rgba(0, 0, 0, 0.15)'
+              }}>
+                {/* Top highlight for glossy effect */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-1/3 bg-white/20 rounded-full blur-sm" />
+                <User className="w-5 h-5 text-white relative z-10" strokeWidth={2.5} />
               </div>
               {activeTab === 'profile' && (
                 <div className="absolute inset-0 bg-purple-500/30 blur-xl rounded-full" />
@@ -1167,12 +1174,18 @@ const scrollToBottom = () => {
             }`}
           >
             <div className={`relative ${activeTab === 'chat' ? 'scale-110' : ''} transition-transform duration-300`}>
-              <div className={`relative rounded-full p-2 transition-all duration-300 ${
+              <div className={`relative rounded-full p-2.5 transition-all duration-300 ${
                 activeTab === 'chat'
-                  ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/50'
-                  : 'bg-gradient-to-br from-blue-500/40 to-blue-600/30'
-              }`}>
-                <MessageCircle className="w-5 h-5 text-white" strokeWidth={2.5} fill={activeTab === 'chat' ? 'currentColor' : 'none'} />
+                  ? 'bg-gradient-to-br from-blue-400 via-blue-500 to-blue-700'
+                  : 'bg-gradient-to-br from-blue-400/50 via-blue-500/40 to-blue-700/40'
+              }`}
+              style={{
+                boxShadow: activeTab === 'chat' 
+                  ? '0 4px 14px 0 rgba(59, 130, 246, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.2), inset 0 1px 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 4px 0 rgba(0, 0, 0, 0.2)'
+                  : '0 2px 8px 0 rgba(59, 130, 246, 0.25), 0 1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 1px 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 2px 0 rgba(0, 0, 0, 0.15)'
+              }}>
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-1/3 bg-white/20 rounded-full blur-sm" />
+                <MessageCircle className="w-5 h-5 text-white relative z-10" strokeWidth={2.5} fill={activeTab === 'chat' ? 'currentColor' : 'none'} />
               </div>
               {activeTab === 'chat' && (
                 <div className="absolute inset-0 bg-blue-500/30 blur-xl rounded-full" />
@@ -1198,12 +1211,18 @@ const scrollToBottom = () => {
             }`}
           >
             <div className={`relative ${activeTab === 'voice' ? 'scale-110' : ''} transition-transform duration-300`}>
-              <div className={`relative rounded-full p-2 transition-all duration-300 ${
+              <div className={`relative rounded-full p-2.5 transition-all duration-300 ${
                 activeTab === 'voice'
-                  ? 'bg-gradient-to-br from-green-500 to-green-600 shadow-lg shadow-green-500/50'
-                  : 'bg-gradient-to-br from-green-500/40 to-green-600/30'
-              }`}>
-                <Mic className="w-5 h-5 text-white" strokeWidth={2.5} fill={activeTab === 'voice' ? 'currentColor' : 'none'} />
+                  ? 'bg-gradient-to-br from-green-400 via-green-500 to-green-700'
+                  : 'bg-gradient-to-br from-green-400/50 via-green-500/40 to-green-700/40'
+              }`}
+              style={{
+                boxShadow: activeTab === 'voice' 
+                  ? '0 4px 14px 0 rgba(34, 197, 94, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.2), inset 0 1px 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 4px 0 rgba(0, 0, 0, 0.2)'
+                  : '0 2px 8px 0 rgba(34, 197, 94, 0.25), 0 1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 1px 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 2px 0 rgba(0, 0, 0, 0.15)'
+              }}>
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-1/3 bg-white/20 rounded-full blur-sm" />
+                <Mic className="w-5 h-5 text-white relative z-10" strokeWidth={2.5} fill={activeTab === 'voice' ? 'currentColor' : 'none'} />
               </div>
               {activeTab === 'voice' && (
                 <div className="absolute inset-0 bg-green-500/30 blur-xl rounded-full" />
@@ -1228,12 +1247,18 @@ const scrollToBottom = () => {
             }`}
           >
             <div className={`relative ${activeTab === 'settings' ? 'scale-110' : ''} transition-transform duration-300`}>
-              <div className={`relative rounded-full p-2 transition-all duration-300 ${
+              <div className={`relative rounded-full p-2.5 transition-all duration-300 ${
                 activeTab === 'settings'
-                  ? 'bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg shadow-orange-500/50'
-                  : 'bg-gradient-to-br from-orange-500/40 to-orange-600/30'
-              }`}>
-                <Settings className="w-5 h-5 text-white" strokeWidth={2.5} />
+                  ? 'bg-gradient-to-br from-orange-400 via-orange-500 to-orange-700'
+                  : 'bg-gradient-to-br from-orange-400/50 via-orange-500/40 to-orange-700/40'
+              }`}
+              style={{
+                boxShadow: activeTab === 'settings' 
+                  ? '0 4px 14px 0 rgba(249, 115, 22, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.2), inset 0 1px 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 4px 0 rgba(0, 0, 0, 0.2)'
+                  : '0 2px 8px 0 rgba(249, 115, 22, 0.25), 0 1px 2px 0 rgba(0, 0, 0, 0.1), inset 0 1px 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 2px 0 rgba(0, 0, 0, 0.15)'
+              }}>
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-1/3 bg-white/20 rounded-full blur-sm" />
+                <Settings className="w-5 h-5 text-white relative z-10" strokeWidth={2.5} />
               </div>
               {activeTab === 'settings' && (
                 <div className="absolute inset-0 bg-orange-500/30 blur-xl rounded-full" />
