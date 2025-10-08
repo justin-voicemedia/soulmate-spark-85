@@ -1141,25 +1141,28 @@ const scrollToBottom = () => {
             }`}
           >
             <div className={`relative ${activeTab === 'profile' ? 'scale-110' : ''} transition-transform duration-300`}>
-              {/* Icon container with 3D image */}
-              <div className={`relative rounded-full p-1 transition-all duration-300 ${
+              {/* Icon container with companion image */}
+              <div className={`relative rounded-full p-0.5 transition-all duration-300 ${
                 activeTab === 'profile'
                   ? 'bg-gradient-to-br from-purple-400 via-purple-500 to-purple-700'
                   : 'bg-gradient-to-br from-purple-400/50 via-purple-500/40 to-purple-700/40'
               }`}
               style={{
                 boxShadow: activeTab === 'profile' 
-                  ? '0 4px 14px 0 rgba(168, 85, 247, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.2)'
-                  : '0 2px 8px 0 rgba(168, 85, 247, 0.25), 0 1px 2px 0 rgba(0, 0, 0, 0.1)'
+                  ? '0 4px 14px 0 rgba(168, 85, 247, 0.5), 0 1px 2px 0 rgba(0, 0, 0, 0.2), 0 0 20px rgba(168, 85, 247, 0.3)'
+                  : '0 2px 8px 0 rgba(168, 85, 247, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.1)'
               }}>
                 <img 
-                  src={profileIcon} 
-                  alt="Profile" 
-                  className="w-10 h-10 relative z-10 drop-shadow-lg"
+                  src={companion.image_url} 
+                  alt={companion.name}
+                  className="w-11 h-11 rounded-full object-cover relative z-10 drop-shadow-lg"
+                  onError={(e) => {
+                    e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${companion.name}`;
+                  }}
                 />
               </div>
               {activeTab === 'profile' && (
-                <div className="absolute inset-0 bg-purple-500/30 blur-xl rounded-full" />
+                <div className="absolute inset-0 bg-purple-500/40 blur-xl rounded-full" />
               )}
             </div>
             <span className={`text-xs font-medium mt-1 ${
