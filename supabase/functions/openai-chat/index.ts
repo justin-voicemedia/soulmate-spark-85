@@ -30,7 +30,7 @@ serve(async (req) => {
     const user = userData.user;
     if (!user) throw new Error("User not authenticated");
 
-    const { message, companionId, conversationHistory = [], userMood = null, conversationMode = 'casual' } = await req.json();
+    const { message, companionId, conversationHistory = [], userMood = null, conversationMode = 'casual', sessionId = null } = await req.json();
     if (!message || !companionId) throw new Error("Message and companion ID are required");
 
     // Get companion details
@@ -261,6 +261,46 @@ You're having a genuine conversation with someone who chose to connect with you.
 
       if (insertError) {
         console.error("Error creating user companion relationship:", insertError);
+      }
+    }
+
+    // Store messages in conversation_messages table if sessionId is provided
+    if (sessionId) {
+      try {
+        // Get user_companion_id
+        const { data: uc } = await supabaseClient
+          .from("user_companions")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("companion_id", companionId)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        // Store user message
+        await supabaseClient.from('conversation_messages').insert({
+          user_id: user.id,
+          companion_id: companionId,
+          user_companion_id: uc?.id,
+          session_id: sessionId,
+          role: 'user',
+          content: message,
+        });
+
+        // Store assistant response
+        await supabaseClient.from('conversation_messages').insert({
+          user_id: user.id,
+          companion_id: companionId,
+          user_companion_id: uc?.id,
+          session_id: sessionId,
+          role: 'assistant',
+          content: aiResponse,
+        });
+
+        console.log("Messages stored in conversation_messages table");
+      } catch (storageError) {
+        console.error('Error storing messages:', storageError);
+        // Don't fail the request if storage fails
       }
     }
 

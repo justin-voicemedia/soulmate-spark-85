@@ -226,6 +226,57 @@ export type Database = {
         }
         Relationships: []
       }
+      conversation_messages: {
+        Row: {
+          companion_id: string
+          content: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          role: string
+          session_id: string | null
+          user_companion_id: string | null
+          user_id: string
+        }
+        Insert: {
+          companion_id: string
+          content: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role: string
+          session_id?: string | null
+          user_companion_id?: string | null
+          user_id: string
+        }
+        Update: {
+          companion_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role?: string
+          session_id?: string | null
+          user_companion_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_usage"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_messages_user_companion_id_fkey"
+            columns: ["user_companion_id"]
+            isOneToOne: false
+            referencedRelation: "user_companions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_modes: {
         Row: {
           created_at: string
@@ -1174,6 +1225,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_conversation_sessions: {
+        Args: { p_companion_id: string; p_limit?: number; p_user_id: string }
+        Returns: {
+          first_message: string
+          message_count: number
+          minutes_used: number
+          session_end: string
+          session_id: string
+          session_start: string
+        }[]
+      }
       get_mood_trends: {
         Args: { p_companion_id: string; p_days?: number; p_user_id: string }
         Returns: {
@@ -1209,6 +1271,24 @@ export type Database = {
       record_memory_access: {
         Args: { p_memory_id: string }
         Returns: undefined
+      }
+      search_conversation_history: {
+        Args: {
+          p_companion_id: string
+          p_end_date?: string
+          p_limit?: number
+          p_search_term?: string
+          p_start_date?: string
+          p_user_id: string
+        }
+        Returns: {
+          content: string
+          created_at: string
+          id: string
+          metadata: Json
+          role: string
+          session_id: string
+        }[]
       }
       search_memories: {
         Args: {

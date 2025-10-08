@@ -12,6 +12,7 @@ import { RelationshipSelector } from './RelationshipSelector';
 import { MemoryManager } from './MemoryManager';
 import { EnhancedMemoryManager } from './EnhancedMemoryManager';
 import { CompanionPhotoGallery } from './CompanionPhotoGallery';
+import { ConversationHistory } from './ConversationHistory';
 
 interface CompanionSettingsProps {
   companionId: string;
@@ -167,7 +168,7 @@ export const CompanionSettings = ({ companionId, companionName, onBack }: Compan
 
         {/* Settings Tabs */}
         <Tabs defaultValue="photos" className="w-full">
-          <TabsList className="w-full grid grid-cols-4">
+          <TabsList className="w-full grid grid-cols-5">
             <TabsTrigger value="photos" className="flex items-center gap-2">
               <Image className="h-4 w-4" />
               Photos
@@ -183,6 +184,10 @@ export const CompanionSettings = ({ companionId, companionName, onBack }: Compan
             <TabsTrigger value="memory" className="flex items-center gap-2">
               <Brain className="h-4 w-4" />
               Memory
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              History
             </TabsTrigger>
           </TabsList>
 
@@ -244,6 +249,15 @@ export const CompanionSettings = ({ companionId, companionName, onBack }: Compan
                 </p>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-6">
+            {user && (
+              <ConversationHistory 
+                userId={user.id}
+                companionId={companionId}
+              />
+            )}
           </TabsContent>
         </Tabs>
 
