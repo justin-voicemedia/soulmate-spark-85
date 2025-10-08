@@ -439,15 +439,10 @@ Stay in character as ${companionName} - be yourself, warm, and genuinely interes
 
   return (
     <div className="relative w-full h-full flex flex-col">
-      {/* Ambient Background with Gradients */}
+      {/* Simple Background - No intensive animations */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-primary/10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent" />
         {isSpeaking && (
-          <>
-            <div className="absolute inset-0 bg-primary/5 animate-pulse" />
-            <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse delay-75" />
-          </>
+          <div className="absolute inset-0 bg-primary/5 transition-opacity duration-300" />
         )}
       </div>
 
@@ -457,74 +452,32 @@ Stay in character as ${companionName} - be yourself, warm, and genuinely interes
         {/* Large Companion Avatar */}
         {companionImage && (
           <div className="relative">
-            {/* Outer glow rings when speaking */}
+            {/* Simple speaking indicator - single ring only */}
             {isSpeaking && (
-              <>
-                <div className="absolute -inset-8 rounded-full bg-primary/10 animate-ping" style={{ animationDuration: '2s' }}></div>
-                <div className="absolute -inset-4 rounded-full bg-primary/20 animate-ping" style={{ animationDuration: '1.5s' }}></div>
-                <div className="absolute -inset-2 rounded-full bg-primary/30 blur-2xl animate-pulse"></div>
-              </>
+              <div className="absolute -inset-4 rounded-full bg-primary/20 transition-opacity duration-300" />
             )}
 
-            {/* Listening effect */}
+            {/* Listening indicator */}
             {isListening && !isSpeaking && (
-              <div className="absolute -inset-4 rounded-full border-4 border-green-500/50 animate-pulse" />
+              <div className="absolute -inset-4 rounded-full border-2 border-green-500/50 transition-opacity duration-300" />
             )}
             
-            {/* Main Avatar - Much Larger */}
+            {/* Main Avatar - Simplified styling */}
             <div className="relative">
               <img 
                 src={companionImage} 
                 alt={companionName}
-                className={`w-64 h-64 md:w-80 md:h-80 rounded-full object-contain object-center bg-background/50 backdrop-blur-sm border-8 shadow-2xl transition-all duration-500 ${
+                className={`w-64 h-64 md:w-80 md:h-80 rounded-full object-contain object-center bg-background/50 border-4 shadow-lg transition-all duration-300 ${
                   isSpeaking 
-                    ? 'border-primary shadow-primary/60 shadow-[0_0_80px_rgba(var(--primary),0.4)] scale-105' 
+                    ? 'border-primary scale-105' 
                     : isListening 
-                    ? 'border-green-500 shadow-green-500/50 scale-102' 
-                    : 'border-primary/40 shadow-primary/20'
+                    ? 'border-green-500 scale-102' 
+                    : 'border-primary/40'
                 }`}
                 onError={(e) => {
                   e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${companionName}`;
                 }}
               />
-
-              {/* Enhanced Audio Visualizer */}
-              {isSpeaking && (
-                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex gap-2">
-                  {[...Array(9)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="w-2 bg-gradient-to-t from-primary to-primary/50 rounded-full shadow-lg shadow-primary/50"
-                      style={{
-                        height: `${20 + Math.sin(i) * 20}px`,
-                        animation: `pulse ${0.5 + (i % 3) * 0.2}s ease-in-out infinite`,
-                        animationDelay: `${i * 0.05}s`,
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* Status Badge - Floating */}
-              {(isSpeaking || isListening) && (
-                <div className={`absolute top-4 right-4 px-4 py-2 rounded-full backdrop-blur-md shadow-xl flex items-center gap-2 ${
-                  isSpeaking 
-                    ? 'bg-primary/90 text-primary-foreground' 
-                    : 'bg-green-500/90 text-white'
-                }`}>
-                  {isSpeaking ? (
-                    <>
-                      <Volume2 className="h-4 w-4 animate-pulse" />
-                      <span className="text-sm font-medium">Speaking</span>
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="h-4 w-4 animate-pulse" />
-                      <span className="text-sm font-medium">Listening</span>
-                    </>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -535,7 +488,7 @@ Stay in character as ${companionName} - be yourself, warm, and genuinely interes
             {companionName}
           </h2>
           {isConnected && (
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-background/60 backdrop-blur-sm border border-primary/20">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-background/60 border border-primary/20">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               <span className="text-sm font-medium text-muted-foreground">
                 {formatDuration(sessionDuration)}
@@ -551,8 +504,8 @@ Stay in character as ${companionName} - be yourself, warm, and genuinely interes
         </div>
       </div>
 
-      {/* Bottom Controls with Glassmorphic Effect */}
-      <div className="relative z-10 p-6 bg-background/80 backdrop-blur-xl border-t border-primary/10">
+      {/* Bottom Controls - Simplified */}
+      <div className="relative z-10 p-6 bg-background/80 border-t border-primary/10">
         <div className="max-w-md mx-auto space-y-4">
           <div className="flex justify-center">
             {!inCall ? (
