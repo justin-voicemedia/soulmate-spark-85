@@ -141,6 +141,18 @@ const AppContent = () => {
   const handleQuestionnaireComplete = async (data: QuestionnaireData, companionId?: string) => {
     setQuestionnaireData(data);
     
+    // Save user's name to their profile if logged in
+    if (user && data.name) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({ name: data.name })
+          .eq('user_id', user.id);
+      } catch (e) {
+        console.log('Could not update profile name');
+      }
+    }
+    
     // If we have a selected companion (from browsing), save questionnaire data and proceed to auth
     if (selectedCompanion || companionId) {
       const targetCompanionId = companionId || selectedCompanion?.id;
