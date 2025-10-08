@@ -319,6 +319,122 @@ export const useMemoryManager = () => {
         console.log('Conversation summary saved:', memorySummary);
       }
 
+      // Also save structured memories to companion_memories table for retrieval by chat function
+      const memoriesToInsert: any[] = [];
+
+      // Save basic info
+      if (memorySummary.structuredData?.basicInfo?.fullName) {
+        memoriesToInsert.push({
+          user_id: user.id,
+          companion_id: companionId,
+          memory_key: "User's Name",
+          memory_value: memorySummary.structuredData.basicInfo.fullName,
+          memory_type: 'personal',
+          category_id: null,
+          tags: ['name', 'basic_info'],
+          importance: 10
+        });
+      }
+
+      if (memorySummary.structuredData?.basicInfo?.location) {
+        memoriesToInsert.push({
+          user_id: user.id,
+          companion_id: companionId,
+          memory_key: "User's Location",
+          memory_value: memorySummary.structuredData.basicInfo.location,
+          memory_type: 'personal',
+          category_id: null,
+          tags: ['location', 'basic_info'],
+          importance: 8
+        });
+      }
+
+      // Save work info
+      if (memorySummary.structuredData?.workInfo) {
+        const work = memorySummary.structuredData.workInfo;
+        if (work.company || work.position || work.industry) {
+          const workDesc = [work.position, work.company, work.industry].filter(Boolean).join(' at ');
+          memoriesToInsert.push({
+            user_id: user.id,
+            companion_id: companionId,
+            memory_key: "User's Work",
+            memory_value: workDesc,
+            memory_type: 'personal',
+            category_id: null,
+            tags: ['work', 'career'],
+            importance: 7
+          });
+        }
+      }
+
+      // Save family members
+      if (memorySummary.structuredData?.familyMembers?.length > 0) {
+        memorySummary.structuredData.familyMembers.forEach((member: any) => {
+          if (member.name) {
+            memoriesToInsert.push({
+              user_id: user.id,
+              companion_id: companionId,
+              memory_key: `Family: ${member.name}`,
+              memory_value: `${member.relationship}${member.notes ? ': ' + member.notes : ''}`,
+              memory_type: 'personal',
+              category_id: null,
+              tags: ['family', 'relationships'],
+              importance: 9
+            });
+          }
+        });
+      }
+
+      // Save pets
+      if (memorySummary.structuredData?.pets?.length > 0) {
+        memorySummary.structuredData.pets.forEach((pet: any) => {
+          if (pet.name) {
+            memoriesToInsert.push({
+              user_id: user.id,
+              companion_id: companionId,
+              memory_key: `Pet: ${pet.name}`,
+              memory_value: `${pet.type}${pet.notes ? ': ' + pet.notes : ''}`,
+              memory_type: 'personal',
+              category_id: null,
+              tags: ['pets', 'animals'],
+              importance: 8
+            });
+          }
+        });
+      }
+
+      // Save key topics and personal info
+      if (memorySummary.personalInfo?.length > 0) {
+        memorySummary.personalInfo.forEach((info: string, idx: number) => {
+          memoriesToInsert.push({
+            user_id: user.id,
+            companion_id: companionId,
+            memory_key: `Personal Detail ${idx + 1}`,
+            memory_value: info,
+            memory_type: 'conversation',
+            category_id: null,
+            tags: memorySummary.keyTopics || [],
+            importance: 6
+          });
+        });
+      }
+
+      // Insert all memories
+      if (memoriesToInsert.length > 0) {
+        const { error: memoryInsertError } = await supabase
+          .from('companion_memories')
+          .upsert(memoriesToInsert, { 
+            onConflict: 'user_id,companion_id,memory_key',
+            ignoreDuplicates: false 
+          });
+
+        if (memoryInsertError) {
+          console.error('Error inserting memories to companion_memories table:', memoryInsertError);
+        } else {
+          console.log(`✅ Inserted ${memoriesToInsert.length} memories to companion_memories table`);
+        }
+      }
+
     } catch (error) {
       console.error('Error saving conversation summary:', error);
     } finally {
