@@ -52,6 +52,7 @@ import { ConversationModeSelector } from "@/components/ConversationModeSelector"
 import { DailyPrompt } from "@/components/DailyPrompt";
 import { StreakDisplay } from "@/components/StreakDisplay";
 import { GamificationHub } from "@/components/GamificationHub";
+import { TypingIndicator } from "@/components/TypingIndicator";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
@@ -117,6 +118,7 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
   const [isMobileApp, setIsMobileApp] = useState(false);
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [currentMood, setCurrentMood] = useState<{ mood: string; intensity: number } | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
 
   const emojis = [
     '😀', '😃', '😄', '😁', '😊', '😉', '😍', '🥰', '😘', '😗',
@@ -432,6 +434,9 @@ const scrollToBottom = () => {
       // Update streak on first message of the day
       await updateStreak();
 
+      // Set typing indicator
+      setIsTyping(true);
+
       try {
         // Call OpenAI chat function with mood context
         const { data, error } = await supabase.functions.invoke('openai-chat', {
@@ -485,12 +490,17 @@ const scrollToBottom = () => {
               return newMessages;
             });
           }
+          
+          // Turn off typing indicator
+          setIsTyping(false);
         } else {
           console.log('API response indicates failure:', data);
+          setIsTyping(false);
           throw new Error('Failed to get AI response');
         }
       } catch (error) {
         console.error('Chat error:', error);
+        setIsTyping(false);
         toast.error('Failed to send message. Please try again.');
         
         // Remove the user message on error
@@ -795,6 +805,15 @@ const scrollToBottom = () => {
                 </div>
               </div>
             ))}
+            
+            {/* Typing Indicator */}
+            {isTyping && (
+              <TypingIndicator 
+                companionName={companion.name}
+                companionImage={companion.image_url}
+              />
+            )}
+            
             <div ref={messagesEndRef} />
           </div>
         )}
@@ -999,6 +1018,15 @@ const scrollToBottom = () => {
               </div>
             </div>
           ))}
+          
+          {/* Typing Indicator */}
+          {isTyping && (
+            <TypingIndicator 
+              companionName={companion.name}
+              companionImage={companion.image_url}
+            />
+          )}
+          
           <div ref={messagesEndRef} />
         </div>
       </div>
