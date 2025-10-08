@@ -188,34 +188,45 @@ You're having a genuine conversation with someone who chose to connect with you.
 
     console.log("Sending to OpenAI with messages:", messages.length);
 
-    // Call OpenAI API
-    const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
-    if (!openaiApiKey) {
-      throw new Error("OPENAI_API_KEY not configured");
+    // Call Lovable AI Gateway (OpenAI-compatible)
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (!lovableApiKey) {
+      throw new Error("LOVABLE_API_KEY not configured");
     }
 
-    const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+    const aiGatewayResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${openaiApiKey}`,
+        "Authorization": `Bearer ${lovableApiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-5-mini-2025-08-07",
-        messages: messages,
-        max_completion_tokens: 500,
-        // Note: temperature not supported for GPT-5 models
+        model: "google/gemini-2.5-flash",
+        messages,
+        // Do not set temperature or token limits explicitly to avoid provider-specific errors
       }),
     });
 
-    if (!openaiResponse.ok) {
-      const errorText = await openaiResponse.text();
-      console.error("OpenAI API error:", openaiResponse.status, errorText);
-      throw new Error(`OpenAI API error: ${errorText}`);
+    if (!aiGatewayResponse.ok) {
+      const text = await aiGatewayResponse.text();
+      console.error("AI Gateway error:", aiGatewayResponse.status, text);
+      if (aiGatewayResponse.status === 429) {
+        return new Response(JSON.stringify({ error: "AI rate limit reached. Please wait a moment and try again." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (aiGatewayResponse.status === 402) {
+        return new Response(JSON.stringify({ error: "AI credits depleted. Please add funds to your Lovable workspace." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      throw new Error(`AI gateway error: ${text}`);
     }
 
-    const openaiData = await openaiResponse.json();
-    console.log("Raw OpenAI response:", JSON.stringify(openaiData, null, 2));
+    const openaiData = await aiGatewayResponse.json();
+    console.log("Raw AI gateway response:", JSON.stringify(openaiData, null, 2));
     const rawContent = openaiData?.choices?.[0]?.message?.content;
 
     // Normalize OpenAI content which can be string or array of parts
@@ -249,10 +260,10 @@ You're having a genuine conversation with someone who chose to connect with you.
       aiResponse = aiRawResponse.trim();
     }
     
-    // Final validation - if still empty, throw error to debug
+    // Final validation - if still empty, use a graceful fallback instead of erroring
     if (!aiResponse || aiResponse.length === 0) {
-      console.error("OpenAI returned empty content. Raw data:", JSON.stringify(openaiData));
-      throw new Error("Received empty response from OpenAI - please check logs");
+      console.warn("AI returned empty content; using graceful fallback message");
+      aiResponse = "I’m here with you. Mind saying that a bit differently?";
     }
  
     console.log("OpenAI response received:", aiResponse);
