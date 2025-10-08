@@ -1,19 +1,14 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Download, Calendar, MessageSquare } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { Search, Download, MessageSquare, Calendar, Clock } from "lucide-react";
 import { format } from "date-fns";
-import { toast } from "sonner";
-
-interface ConversationHistoryProps {
-  userId: string;
-  companionId: string;
-}
 
 interface ConversationSession {
   session_id: string;
@@ -29,54 +24,102 @@ interface ConversationMessage {
   role: string;
   content: string;
   created_at: string;
+  metadata: any;
+}
+
+interface ConversationHistoryProps {
+  userId: string;
+  companionId: string;
 }
 
 export const ConversationHistory = ({ userId, companionId }: ConversationHistoryProps) => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [sessions, setSessions] = useState<ConversationSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ConversationMessage[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  const { data: sessions, isLoading: sessionsLoading } = useQuery({
-    queryKey: ["conversation-sessions", userId, companionId],
-    queryFn: async () => {
+  useEffect(() => {
+    loadSessions();
+  }, [userId, companionId]);
+
+  const loadSessions = async () => {
+    try {
+      setLoading(true);
       const { data, error } = await supabase.rpc("get_conversation_sessions", {
         p_user_id: userId,
         p_companion_id: companionId,
         p_limit: 50,
       });
-      if (error) throw error;
-      return data as ConversationSession[];
-    },
-  });
 
-  const { data: sessionMessages, isLoading: messagesLoading } = useQuery({
-    queryKey: ["session-messages", selectedSession],
-    queryFn: async () => {
-      if (!selectedSession) return [];
+      if (error) throw error;
+      setSessions(data || []);
+    } catch (error: any) {
+      console.error("Error loading sessions:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load conversation history",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadSessionMessages = async (sessionId: string) => {
+    try {
+      setLoading(true);
       const { data, error } = await supabase
         .from("conversation_messages")
         .select("*")
-        .eq("session_id", selectedSession)
+        .eq("session_id", sessionId)
         .order("created_at", { ascending: true });
-      if (error) throw error;
-      return data as ConversationMessage[];
-    },
-    enabled: !!selectedSession,
-  });
 
-  const { data: searchResults, isLoading: searchLoading } = useQuery({
-    queryKey: ["search-conversations", userId, companionId, searchTerm],
-    queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 3) return [];
+      if (error) throw error;
+      setMessages(data || []);
+      setSelectedSession(sessionId);
+    } catch (error: any) {
+      console.error("Error loading messages:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load conversation messages",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const searchConversations = async () => {
+    if (!searchTerm.trim()) {
+      loadSessions();
+      return;
+    }
+
+    try {
+      setLoading(true);
       const { data, error } = await supabase.rpc("search_conversation_history", {
         p_user_id: userId,
         p_companion_id: companionId,
         p_search_term: searchTerm,
+        p_limit: 100,
       });
+
       if (error) throw error;
-      return data as ConversationMessage[];
-    },
-    enabled: searchTerm.length >= 3,
-  });
+      setMessages(data || []);
+      setSelectedSession(null);
+    } catch (error: any) {
+      console.error("Error searching:", error);
+      toast({
+        title: "Error",
+        description: "Failed to search conversations",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const exportConversation = async (sessionId: string) => {
     try {
@@ -88,160 +131,155 @@ export const ConversationHistory = ({ userId, companionId }: ConversationHistory
 
       if (error) throw error;
 
-      const conversationText = data
-        .map((msg) => `[${format(new Date(msg.created_at), "PPpp")}] ${msg.role}: ${msg.content}`)
-        .join("\n\n");
+      const exportData = {
+        session_id: sessionId,
+        exported_at: new Date().toISOString(),
+        messages: data,
+      };
 
-      const blob = new Blob([conversationText], { type: "text/plain" });
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+        type: "application/json",
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `conversation-${sessionId}-${format(new Date(), "yyyy-MM-dd")}.txt`;
+      a.download = `conversation-${sessionId}-${format(new Date(), "yyyy-MM-dd")}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast.success("Conversation exported successfully");
-    } catch (error) {
-      console.error("Error exporting conversation:", error);
-      toast.error("Failed to export conversation");
+      toast({
+        title: "Success",
+        description: "Conversation exported successfully",
+      });
+    } catch (error: any) {
+      console.error("Error exporting:", error);
+      toast({
+        title: "Error",
+        description: "Failed to export conversation",
+        variant: "destructive",
+      });
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Search Bar */}
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input
-            placeholder="Search conversations (min 3 characters)..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
-
-      {/* Search Results */}
-      {searchTerm.length >= 3 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Search Results</CardTitle>
-            <CardDescription>
-              {searchLoading ? "Searching..." : `Found ${searchResults?.length || 0} messages`}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[300px]">
-              <div className="space-y-3">
-                {searchResults?.map((msg) => (
-                  <div key={msg.id} className="p-3 border rounded-lg">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="font-medium capitalize">{msg.role}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(msg.created_at), "PPp")}
-                      </span>
-                    </div>
-                    <p className="text-sm">{msg.content}</p>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Conversation Sessions */}
-      <Card>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[600px]">
+      <Card className="md:col-span-1">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
             Conversation History
           </CardTitle>
-          <CardDescription>View and replay your past conversations</CardDescription>
+          <CardDescription>View past conversations</CardDescription>
         </CardHeader>
         <CardContent>
-          {sessionsLoading ? (
-            <p className="text-muted-foreground">Loading conversations...</p>
-          ) : !sessions || sessions.length === 0 ? (
-            <p className="text-muted-foreground">No conversations yet</p>
-          ) : (
-            <ScrollArea className="h-[400px]">
-              <div className="space-y-2">
-                {sessions.map((session) => (
-                  <div
-                    key={session.session_id}
-                    className="p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
-                    onClick={() => setSelectedSession(session.session_id)}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">
-                          {format(new Date(session.session_start), "PPP")}
-                        </span>
+          <div className="flex gap-2 mb-4">
+            <Input
+              placeholder="Search conversations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && searchConversations()}
+            />
+            <Button size="icon" variant="secondary" onClick={searchConversations}>
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <ScrollArea className="h-[450px]">
+            <div className="space-y-2">
+              {sessions.map((session) => (
+                <Card
+                  key={session.session_id}
+                  className={`cursor-pointer transition-colors hover:bg-accent ${
+                    selectedSession === session.session_id ? "border-primary" : ""
+                  }`}
+                  onClick={() => loadSessionMessages(session.session_id)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        {format(new Date(session.session_start), "MMM d, yyyy")}
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          exportConversation(session.session_id);
-                        }}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
+                      <Badge variant="secondary">
+                        {session.message_count} msgs
+                      </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      {session.message_count} messages • {session.minutes_used} minutes
+                    <p className="text-sm line-clamp-2 mb-2">
+                      {session.first_message || "No messages"}
                     </p>
-                    {session.first_message && (
-                      <p className="text-sm truncate">{session.first_message}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          )}
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      {session.minutes_used} min
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </ScrollArea>
         </CardContent>
       </Card>
 
-      {/* Session Details Dialog */}
-      <Dialog open={!!selectedSession} onOpenChange={() => setSelectedSession(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>Conversation Replay</DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="h-[60vh]">
-            <div className="space-y-4 p-4">
-              {messagesLoading ? (
-                <p className="text-muted-foreground">Loading messages...</p>
-              ) : (
-                sessionMessages?.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`p-4 rounded-lg ${
-                      msg.role === "user"
-                        ? "bg-primary text-primary-foreground ml-8"
-                        : "bg-muted mr-8"
-                    }`}
-                  >
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="font-medium capitalize">{msg.role}</span>
-                      <span className="text-xs opacity-70">
-                        {format(new Date(msg.created_at), "p")}
-                      </span>
+      <Card className="md:col-span-2">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>
+              {selectedSession ? "Conversation" : "Search Results"}
+            </CardTitle>
+            {selectedSession && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => exportConversation(selectedSession)}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[500px]">
+            {messages.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                {loading ? "Loading..." : "Select a conversation to view messages"}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {messages.map((message, index) => (
+                  <div key={message.id}>
+                    <div
+                      className={`flex ${
+                        message.role === "user" ? "justify-end" : "justify-start"
+                      }`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-lg p-3 ${
+                          message.role === "user"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant={message.role === "user" ? "default" : "secondary"}>
+                            {message.role}
+                          </Badge>
+                          <span className="text-xs opacity-70">
+                            {format(new Date(message.created_at), "HH:mm")}
+                          </span>
+                        </div>
+                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      </div>
                     </div>
-                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    {index < messages.length - 1 && <Separator className="my-2" />}
                   </div>
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </ScrollArea>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
     </div>
   );
 };
