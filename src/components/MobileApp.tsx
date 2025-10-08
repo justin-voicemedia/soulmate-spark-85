@@ -994,14 +994,12 @@ const scrollToBottom = () => {
   );
 
   const renderVoice = () => (
-    <div className="flex flex-col h-full p-4">
-      <div className="flex-1 flex items-center justify-center">
-        <OpenAIVoiceWidget 
-          companionId={companion.id} 
-          companionName={companion.name} 
-          companionImage={companion.image_url}
-        />
-      </div>
+    <div className="flex flex-col h-full">
+      <OpenAIVoiceWidget 
+        companionId={companion.id} 
+        companionName={companion.name} 
+        companionImage={companion.image_url}
+      />
     </div>
   );
 

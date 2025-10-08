@@ -438,108 +438,160 @@ Stay in character as ${companionName} - be yourself, warm, and genuinely interes
   };
 
   return (
-    <div className="flex flex-col items-center space-y-6">
-      {/* Companion Image - Large and Above Widget */}
-      {companionImage && (
-        <div className="relative">
-          {/* Animated glow rings when speaking */}
-          {isSpeaking && (
-            <>
-              <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping"></div>
-              <div className="absolute inset-0 rounded-full bg-primary/30 blur-xl animate-pulse"></div>
-            </>
-          )}
-          
-          {/* Main image with transition */}
-          <img 
-            src={companionImage} 
-            alt={companionName}
-            className={`w-48 h-48 rounded-full object-contain object-center bg-background border-4 shadow-lg transition-all duration-300 ${
-              isSpeaking 
-                ? 'border-primary shadow-primary/50 shadow-2xl scale-105' 
-                : isListening 
-                ? 'border-green-500 shadow-green-500/30' 
-                : 'border-primary/30'
-            }`}
-            onError={(e) => {
-              e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${companionName}`;
-            }}
-          />
-          
-          {/* Audio wave bars when speaking */}
-          {isSpeaking && (
-            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 flex gap-1">
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="w-1 bg-primary rounded-full animate-pulse"
-                  style={{
-                    height: `${12 + (i % 2) * 8}px`,
-                    animationDelay: `${i * 0.1}s`,
-                    animationDuration: `${0.6 + (i % 3) * 0.2}s`
-                  }}
-                />
-              ))}
+    <div className="relative w-full h-full flex flex-col">
+      {/* Ambient Background with Gradients */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-primary/10">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent" />
+        {isSpeaking && (
+          <>
+            <div className="absolute inset-0 bg-primary/5 animate-pulse" />
+            <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse delay-75" />
+          </>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 space-y-8">
+        
+        {/* Large Companion Avatar */}
+        {companionImage && (
+          <div className="relative">
+            {/* Outer glow rings when speaking */}
+            {isSpeaking && (
+              <>
+                <div className="absolute -inset-8 rounded-full bg-primary/10 animate-ping" style={{ animationDuration: '2s' }}></div>
+                <div className="absolute -inset-4 rounded-full bg-primary/20 animate-ping" style={{ animationDuration: '1.5s' }}></div>
+                <div className="absolute -inset-2 rounded-full bg-primary/30 blur-2xl animate-pulse"></div>
+              </>
+            )}
+
+            {/* Listening effect */}
+            {isListening && !isSpeaking && (
+              <div className="absolute -inset-4 rounded-full border-4 border-green-500/50 animate-pulse" />
+            )}
+            
+            {/* Main Avatar - Much Larger */}
+            <div className="relative">
+              <img 
+                src={companionImage} 
+                alt={companionName}
+                className={`w-64 h-64 md:w-80 md:h-80 rounded-full object-contain object-center bg-background/50 backdrop-blur-sm border-8 shadow-2xl transition-all duration-500 ${
+                  isSpeaking 
+                    ? 'border-primary shadow-primary/60 shadow-[0_0_80px_rgba(var(--primary),0.4)] scale-105' 
+                    : isListening 
+                    ? 'border-green-500 shadow-green-500/50 scale-102' 
+                    : 'border-primary/40 shadow-primary/20'
+                }`}
+                onError={(e) => {
+                  e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${companionName}`;
+                }}
+              />
+
+              {/* Enhanced Audio Visualizer */}
+              {isSpeaking && (
+                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex gap-2">
+                  {[...Array(9)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-2 bg-gradient-to-t from-primary to-primary/50 rounded-full shadow-lg shadow-primary/50"
+                      style={{
+                        height: `${20 + Math.sin(i) * 20}px`,
+                        animation: `pulse ${0.5 + (i % 3) * 0.2}s ease-in-out infinite`,
+                        animationDelay: `${i * 0.05}s`,
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Status Badge - Floating */}
+              {(isSpeaking || isListening) && (
+                <div className={`absolute top-4 right-4 px-4 py-2 rounded-full backdrop-blur-md shadow-xl flex items-center gap-2 ${
+                  isSpeaking 
+                    ? 'bg-primary/90 text-primary-foreground' 
+                    : 'bg-green-500/90 text-white'
+                }`}>
+                  {isSpeaking ? (
+                    <>
+                      <Volume2 className="h-4 w-4 animate-pulse" />
+                      <span className="text-sm font-medium">Speaking</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="h-4 w-4 animate-pulse" />
+                      <span className="text-sm font-medium">Listening</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
-          )}
-          
-          {/* Status indicator badges */}
-          {isSpeaking && (
-            <div className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground rounded-full p-2 animate-pulse shadow-lg">
-              <Volume2 className="h-4 w-4" />
-            </div>
-          )}
-          {isListening && (
-            <div className="absolute -bottom-2 -right-2 bg-green-500 text-white rounded-full p-2 animate-pulse shadow-lg">
-              <Mic className="h-4 w-4" />
+          </div>
+        )}
+
+        {/* Companion Name with Glassmorphic Card */}
+        <div className="text-center space-y-2">
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            {companionName}
+          </h2>
+          {isConnected && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-background/60 backdrop-blur-sm border border-primary/20">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-sm font-medium text-muted-foreground">
+                {formatDuration(sessionDuration)}
+              </span>
             </div>
           )}
         </div>
-      )}
 
-      <Card className="p-6 w-full max-w-md">
-        <div className="text-center space-y-4">
-          <div className="flex items-center justify-center space-x-2">
-            <Volume2 className="h-5 w-5 text-primary" />
-            <h3 className="text-lg font-semibold">Voice Chat with {companionName}</h3>
-          </div>
-
-        <div className="space-y-2">
+        {/* Connection Status */}
+        <div className="flex flex-col items-center gap-3">
           {getConnectionStatusBadge()}
-
-          {isConnected && (
-            <p className="text-sm text-muted-foreground">Duration: {formatDuration(sessionDuration)}</p>
-          )}
-
           {getStatusIndicator()}
         </div>
-
-        <div className="flex justify-center space-x-3">
-          {!inCall ? (
-            <Button onClick={startCall} disabled={isConnecting} size="lg" className="bg-green-600 hover:bg-green-700">
-              {isConnecting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Connecting...
-                </>
-              ) : (
-                <>
-                  <Phone className="h-4 w-4 mr-2" />
-                  Start Voice Chat
-                </>
-              )}
-            </Button>
-          ) : (
-            <Button onClick={endCall} size="lg" variant="destructive">
-              <PhoneOff className="h-4 w-4 mr-2" />
-              End Call
-            </Button>
-          )}
-        </div>
-
-        <p className="text-xs text-muted-foreground">Voice usage is billed per minute.</p>
       </div>
-    </Card>
+
+      {/* Bottom Controls with Glassmorphic Effect */}
+      <div className="relative z-10 p-6 bg-background/80 backdrop-blur-xl border-t border-primary/10">
+        <div className="max-w-md mx-auto space-y-4">
+          <div className="flex justify-center">
+            {!inCall ? (
+              <Button 
+                onClick={startCall} 
+                disabled={isConnecting} 
+                size="lg" 
+                className="w-full max-w-xs h-14 text-lg font-semibold bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 shadow-lg shadow-green-500/30 transition-all"
+              >
+                {isConnecting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Phone className="h-5 w-5 mr-2" />
+                    Start Voice Chat
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button 
+                onClick={endCall} 
+                size="lg" 
+                variant="destructive"
+                className="w-full max-w-xs h-14 text-lg font-semibold shadow-lg shadow-destructive/30"
+              >
+                <PhoneOff className="h-5 w-5 mr-2" />
+                End Call
+              </Button>
+            )}
+          </div>
+
+          <p className="text-xs text-center text-muted-foreground">
+            Voice usage is billed per minute
+          </p>
+        </div>
+      </div>
     </div>
   );
 };
