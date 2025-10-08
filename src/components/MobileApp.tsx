@@ -36,9 +36,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMemoryManager } from '@/hooks/useMemoryManager';
 import { useConversationMemory } from '@/hooks/useConversationMemory';
 import { useTrialStatus } from "@/hooks/useTrialStatus";
+import { useRelationshipProgression } from "@/hooks/useRelationshipProgression";
 import { OpenAIVoiceWidget } from "@/components/OpenAIVoiceWidget";
 import { RelationshipSelector } from "@/components/RelationshipSelector";
 import { VoiceSelector } from "@/components/VoiceSelector";
+import { RelationshipProgressBar } from "@/components/RelationshipProgressBar";
+import { RelationshipMilestones } from "@/components/RelationshipMilestones";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
@@ -83,6 +86,7 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
     companion?.id, 
     companion?.name
   );
+  const { stats, fetchStats, awardXP } = useRelationshipProgression();
   const [activeTab, setActiveTab] = useState<'chat' | 'profile' | 'settings' | 'voice'>('profile');
   const [isChatActive, setIsChatActive] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -91,7 +95,7 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
   const [isRecording, setIsRecording] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [userCompanion, setUserCompanion] = useState<{ voice_id: string; relationship_type: string } | null>(null);
+  const [userCompanion, setUserCompanion] = useState<{ id: string; voice_id: string; relationship_type: string } | null>(null);
   const [currentCompanion, setCurrentCompanion] = useState(companion);
   const [isMobileApp, setIsMobileApp] = useState(false);
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
@@ -240,23 +244,26 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
       try {
         const { data, error } = await supabase
           .from('user_companions')
-          .select('voice_id, relationship_type')
+          .select('id, voice_id, relationship_type')
           .eq('user_id', user.id)
           .eq('companion_id', currentCompanion.id)
           .maybeSingle();
         if (error) throw error;
         if (data) {
           setUserCompanion({
+            id: data.id,
             voice_id: data.voice_id || 'alloy',
             relationship_type: data.relationship_type || 'casual_friend',
           });
+          // Fetch relationship progression stats
+          fetchStats(data.id);
         }
       } catch (e) {
         console.error('Error loading companion settings:', e);
       }
     };
     load();
-  }, [user, companion.id]);
+  }, [user, companion.id, fetchStats]);
 
   useEffect(() => {
     // Don't auto-start session for chat tab, wait for Start Chat button
@@ -489,6 +496,16 @@ const scrollToBottom = () => {
 
       {/* Profile Content */}
       <div className="flex-1 p-4 space-y-6 overflow-y-auto">
+        {/* Relationship Progress */}
+        {stats && (
+          <RelationshipProgressBar
+            level={stats.level}
+            xp={stats.xp}
+            xpToNextLevel={stats.xpToNextLevel}
+            totalInteractions={stats.totalInteractions}
+          />
+        )}
+
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-4">
           <Button 
@@ -620,6 +637,11 @@ const scrollToBottom = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Relationship Milestones */}
+        {stats && stats.milestones.length > 0 && (
+          <RelationshipMilestones milestones={stats.milestones} />
+        )}
       </div>
     </div>
   );
