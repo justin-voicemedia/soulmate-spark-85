@@ -208,7 +208,25 @@ You're having a genuine conversation with someone who chose to connect with you.
     }
 
     const openaiData = await openaiResponse.json();
-    const aiRawResponse = openaiData.choices[0].message.content;
+    const rawContent = openaiData?.choices?.[0]?.message?.content;
+
+    // Normalize OpenAI content which can be string or array of parts
+    let aiRawResponse = '';
+    if (Array.isArray(rawContent)) {
+      aiRawResponse = rawContent
+        .map((part: any) => {
+          if (typeof part === 'string') return part;
+          if (typeof part?.text === 'string') return part.text;
+          if (typeof part?.content === 'string') return part.content;
+          return '';
+        })
+        .join('')
+        .trim();
+    } else if (typeof rawContent === 'string') {
+      aiRawResponse = rawContent.trim();
+    } else {
+      aiRawResponse = '';
+    }
     
     // Sanitize to avoid dashes/bullets for human-like chat
     let aiResponse = aiRawResponse
@@ -223,10 +241,10 @@ You're having a genuine conversation with someone who chose to connect with you.
       aiResponse = aiRawResponse.trim();
     }
     
-    // Final validation - if still empty, use a fallback
+    // Final validation - if still empty, use a graceful fallback instead of erroring
     if (!aiResponse || aiResponse.length === 0) {
-      console.error("Empty response from OpenAI");
-      throw new Error("Received empty response from AI");
+      console.warn("OpenAI returned empty content; using graceful fallback message");
+      aiResponse = "I'm here with you. Could you say that again in a different way?";
     }
  
     console.log("OpenAI response received:", aiResponse);
