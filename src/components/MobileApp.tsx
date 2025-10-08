@@ -1110,47 +1110,134 @@ const scrollToBottom = () => {
         {activeTab === 'settings' && renderSettings()}
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="border-t bg-card">
-        <div className="grid grid-cols-4 p-2">
-          <Button
-            variant={activeTab === 'profile' ? 'default' : 'ghost'}
-            size="sm"
+      {/* Bottom Navigation - Modern Design */}
+      <div className="relative border-t border-primary/10 bg-background/80 backdrop-blur-xl">
+        {/* Active indicator bar */}
+        <div 
+          className="absolute top-0 left-0 h-1 bg-gradient-to-r from-primary to-primary/50 transition-all duration-300 rounded-full"
+          style={{
+            width: '25%',
+            transform: `translateX(${
+              activeTab === 'profile' ? '0%' : 
+              activeTab === 'chat' ? '100%' : 
+              activeTab === 'voice' ? '200%' : '300%'
+            })`
+          }}
+        />
+        <div className="grid grid-cols-4 p-2 gap-1">
+          {/* Profile Tab */}
+          <button
             onClick={() => handleTabChange('profile')}
-            className="flex flex-col items-center py-3"
+            className={`flex flex-col items-center py-3 px-2 rounded-xl transition-all duration-300 ${
+              activeTab === 'profile' 
+                ? 'bg-gradient-to-br from-purple-500/20 to-purple-600/10 shadow-lg' 
+                : 'hover:bg-muted/50'
+            }`}
           >
-            <User className="w-4 h-4 mb-1" />
-            <span className="text-xs">Profile</span>
-          </Button>
-          <Button
-            variant={activeTab === 'chat' ? 'default' : 'ghost'}
-            size="sm"
+            <div className={`relative ${activeTab === 'profile' ? 'scale-110' : ''} transition-transform duration-300`}>
+              <User className={`w-6 h-6 mb-1 ${
+                activeTab === 'profile' 
+                  ? 'text-purple-500' 
+                  : 'text-muted-foreground'
+              }`} />
+              {activeTab === 'profile' && (
+                <div className="absolute inset-0 bg-purple-500/30 blur-xl rounded-full" />
+              )}
+            </div>
+            <span className={`text-xs font-medium ${
+              activeTab === 'profile' 
+                ? 'text-purple-600 dark:text-purple-400' 
+                : 'text-muted-foreground'
+            }`}>
+              Profile
+            </span>
+          </button>
+
+          {/* Chat Tab */}
+          <button
             onClick={() => handleTabChange('chat')}
-            className="flex flex-col items-center py-3"
             disabled={!canUseService()}
+            className={`flex flex-col items-center py-3 px-2 rounded-xl transition-all duration-300 disabled:opacity-50 ${
+              activeTab === 'chat' 
+                ? 'bg-gradient-to-br from-blue-500/20 to-blue-600/10 shadow-lg' 
+                : 'hover:bg-muted/50'
+            }`}
           >
-            <MessageCircle className="w-4 h-4 mb-1" />
-            <span className="text-xs">Chat</span>
-          </Button>
-          <Button
-            variant={activeTab === 'voice' ? 'default' : 'ghost'}
-            size="sm"
+            <div className={`relative ${activeTab === 'chat' ? 'scale-110' : ''} transition-transform duration-300`}>
+              <MessageCircle className={`w-6 h-6 mb-1 ${
+                activeTab === 'chat' 
+                  ? 'text-blue-500' 
+                  : 'text-muted-foreground'
+              }`} />
+              {activeTab === 'chat' && (
+                <div className="absolute inset-0 bg-blue-500/30 blur-xl rounded-full" />
+              )}
+            </div>
+            <span className={`text-xs font-medium ${
+              activeTab === 'chat' 
+                ? 'text-blue-600 dark:text-blue-400' 
+                : 'text-muted-foreground'
+            }`}>
+              Chat
+            </span>
+          </button>
+
+          {/* Voice Tab */}
+          <button
             onClick={() => handleTabChange('voice')}
-            className="flex flex-col items-center py-3"
             disabled={!canUseService()}
+            className={`flex flex-col items-center py-3 px-2 rounded-xl transition-all duration-300 disabled:opacity-50 ${
+              activeTab === 'voice' 
+                ? 'bg-gradient-to-br from-green-500/20 to-green-600/10 shadow-lg' 
+                : 'hover:bg-muted/50'
+            }`}
           >
-            <Mic className="w-4 h-4 mb-1" />
-            <span className="text-xs">Voice</span>
-          </Button>
-          <Button
-            variant={activeTab === 'settings' ? 'default' : 'ghost'}
-            size="sm"
+            <div className={`relative ${activeTab === 'voice' ? 'scale-110' : ''} transition-transform duration-300`}>
+              <Mic className={`w-6 h-6 mb-1 ${
+                activeTab === 'voice' 
+                  ? 'text-green-500' 
+                  : 'text-muted-foreground'
+              }`} />
+              {activeTab === 'voice' && (
+                <div className="absolute inset-0 bg-green-500/30 blur-xl rounded-full" />
+              )}
+            </div>
+            <span className={`text-xs font-medium ${
+              activeTab === 'voice' 
+                ? 'text-green-600 dark:text-green-400' 
+                : 'text-muted-foreground'
+            }`}>
+              Voice
+            </span>
+          </button>
+
+          {/* Settings Tab */}
+          <button
             onClick={() => handleTabChange('settings')}
-            className="flex flex-col items-center py-3"
+            className={`flex flex-col items-center py-3 px-2 rounded-xl transition-all duration-300 ${
+              activeTab === 'settings' 
+                ? 'bg-gradient-to-br from-orange-500/20 to-orange-600/10 shadow-lg' 
+                : 'hover:bg-muted/50'
+            }`}
           >
-            <Settings className="w-4 h-4 mb-1" />
-            <span className="text-xs">Settings</span>
-          </Button>
+            <div className={`relative ${activeTab === 'settings' ? 'scale-110' : ''} transition-transform duration-300`}>
+              <Settings className={`w-6 h-6 mb-1 ${
+                activeTab === 'settings' 
+                  ? 'text-orange-500' 
+                  : 'text-muted-foreground'
+              }`} />
+              {activeTab === 'settings' && (
+                <div className="absolute inset-0 bg-orange-500/30 blur-xl rounded-full" />
+              )}
+            </div>
+            <span className={`text-xs font-medium ${
+              activeTab === 'settings' 
+                ? 'text-orange-600 dark:text-orange-400' 
+                : 'text-muted-foreground'
+            }`}>
+              Settings
+            </span>
+          </button>
         </div>
       </div>
     </div>
