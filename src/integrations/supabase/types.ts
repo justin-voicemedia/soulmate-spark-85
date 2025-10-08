@@ -116,6 +116,62 @@ export type Database = {
         }
         Relationships: []
       }
+      companion_memories: {
+        Row: {
+          access_count: number | null
+          category_id: string | null
+          companion_id: string
+          created_at: string
+          id: string
+          importance: number | null
+          last_accessed_at: string | null
+          memory_key: string
+          memory_type: string
+          memory_value: string
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_count?: number | null
+          category_id?: string | null
+          companion_id: string
+          created_at?: string
+          id?: string
+          importance?: number | null
+          last_accessed_at?: string | null
+          memory_key: string
+          memory_type?: string
+          memory_value: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_count?: number | null
+          category_id?: string | null
+          companion_id?: string
+          created_at?: string
+          id?: string
+          importance?: number | null
+          last_accessed_at?: string | null
+          memory_key?: string
+          memory_type?: string
+          memory_value?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "companion_memories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "memory_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companions: {
         Row: {
           age: number
@@ -350,6 +406,54 @@ export type Database = {
           tax_amount_cents?: number | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      memory_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      memory_tags: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
         }
         Relationships: []
       }
@@ -1101,6 +1205,32 @@ export type Database = {
       has_unlimited_access: {
         Args: { user_uuid: string }
         Returns: boolean
+      }
+      record_memory_access: {
+        Args: { p_memory_id: string }
+        Returns: undefined
+      }
+      search_memories: {
+        Args: {
+          p_category_id?: string
+          p_companion_id: string
+          p_search_term: string
+          p_tags?: string[]
+          p_user_id: string
+        }
+        Returns: {
+          access_count: number
+          category_id: string
+          category_name: string
+          created_at: string
+          id: string
+          importance: number
+          last_accessed_at: string
+          memory_key: string
+          memory_type: string
+          memory_value: string
+          tags: string[]
+        }[]
       }
       update_user_streak: {
         Args: { p_companion_id: string; p_user_id: string }

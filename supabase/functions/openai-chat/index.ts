@@ -98,6 +98,47 @@ You're having a genuine conversation with someone who chose to connect with you.
       systemPrompt += `\n\nRelationship Context: ${relationshipPrompt}`;
     }
 
+    // Get enhanced memories for context
+    const { data: memories } = await supabaseClient.rpc('search_memories', {
+      p_user_id: user.id,
+      p_companion_id: companionId,
+      p_search_term: null,
+      p_category_id: null,
+      p_tags: null
+    });
+
+    if (memories && memories.length > 0) {
+      systemPrompt += '\n\n**MEMORY CONTEXT:**\n';
+      
+      // Group memories by category
+      const categorized = memories.reduce((acc: any, memory: any) => {
+        const category = memory.category_name || 'General';
+        if (!acc[category]) acc[category] = [];
+        acc[category].push(memory);
+        return acc;
+      }, {});
+
+      // Add top 15 most important/accessed memories
+      const topMemories = memories.slice(0, 15);
+      Object.entries(categorized).forEach(([category, mems]: [string, any]) => {
+        systemPrompt += `\n**${category}:**\n`;
+        (mems as any[]).forEach(mem => {
+          systemPrompt += `- ${mem.memory_key}: ${mem.memory_value}`;
+          if (mem.tags && mem.tags.length > 0) {
+            systemPrompt += ` [${mem.tags.join(', ')}]`;
+          }
+          systemPrompt += `\n`;
+        });
+      });
+
+      // Record memory access for retrieved memories
+      for (const memory of topMemories) {
+        await supabaseClient.rpc('record_memory_access', {
+          p_memory_id: memory.id
+        });
+      }
+    }
+
     // Add mood context if detected
     if (userMood && userMood.mood !== 'neutral') {
       const moodGuidance = {

@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { VoiceSelector } from './VoiceSelector';
 import { RelationshipSelector } from './RelationshipSelector';
 import { MemoryManager } from './MemoryManager';
+import { EnhancedMemoryManager } from './EnhancedMemoryManager';
 import { CompanionPhotoGallery } from './CompanionPhotoGallery';
 
 interface CompanionSettingsProps {
@@ -246,9 +247,10 @@ export const CompanionSettings = ({ companionId, companionName, onBack }: Compan
           </TabsContent>
         </Tabs>
 
-        {/* Memory Manager Modal */}
-        <MemoryManager 
+        {/* Enhanced Memory Manager Modal */}
+        <EnhancedMemoryManager 
           companionId={companionId}
+          companionName={companionName}
           isOpen={showMemoryManager}
           onClose={() => setShowMemoryManager(false)}
         />
