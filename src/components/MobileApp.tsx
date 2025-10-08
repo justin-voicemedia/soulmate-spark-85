@@ -619,139 +619,166 @@ const scrollToBottom = () => {
   );
 
   const renderChat = () => (
-    <div className="flex flex-col h-full">
-      {/* Centered Chat Layout - Similar to Voice Widget */}
-      <div className="flex-1 flex flex-col items-center justify-start p-6 space-y-6">
-        {/* Large Companion Image */}
-        <div className="relative">
-          <img 
-            src={companion.image_url} 
-            alt={companion.name}
-            className="w-48 h-48 rounded-full object-contain object-center bg-background border-4 border-primary/30 shadow-lg"
-            onError={(e) => {
-              e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${companion.name}`;
-            }}
-          />
-        </div>
+    <div className="relative flex flex-col h-full">
+      {/* Ambient Background - Same as Voice Chat */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-primary/10">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/20 via-transparent to-transparent" />
+      </div>
 
-        {/* Chat Info Card */}
-        <Card className="p-6 w-full max-w-md">
-          <div className="text-center space-y-4">
-            <div className="flex items-center justify-center space-x-2">
-              <MessageCircle className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">Chat with {companion.name}</h3>
-            </div>
-            
-            <Button
-              onClick={isChatActive ? handleStopChat : handleStartChat}
-              size="lg"
-              className={isChatActive 
-                ? "bg-red-600 hover:bg-red-700 w-full" 
-                : "bg-green-600 hover:bg-green-700 w-full"
-              }
-            >
-              <MessageCircle className="h-4 w-4 mr-2" />
-              {isChatActive ? "Stop Chat" : "Start Chat"}
-            </Button>
-          </div>
-        </Card>
-
-        {/* Chat Messages Area - Only show when chat is active */}
-        {isChatActive && (
-          <div className="w-full max-w-md flex-1 flex flex-col space-y-4">
-            {/* Clear Chat Button */}
-            <div className="flex justify-end">
-              <Button size="sm" variant="outline" onClick={handleClearChat} title="Clear chat">
-                <Trash2 className="w-4 h-4 mr-1" />
-                Clear Chat
-              </Button>
-            </div>
-            
-            {/* Message Input - Moved up under Stop Chat button */}
-            <div className="border rounded-lg p-4">
-              <div className="flex items-center space-x-2">
-                <div className="flex-1 flex items-center space-x-2">
-                  <Input
-                    placeholder={`Message ${companion.name}...`}
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    className="flex-1"
-                  />
-                  <Popover open={isEmojiOpen} onOpenChange={setIsEmojiOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                      >
-                        <Smile className="w-4 h-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-2" side="top">
-                      <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
-                        {emojis.map((emoji, index) => (
-                          <Button
-                            key={index}
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-lg hover:bg-accent"
-                            onClick={() => insertEmoji(emoji)}
-                          >
-                            {emoji}
-                          </Button>
-                        ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setIsRecording(!isRecording)}
-                    className={isRecording ? 'bg-red-100 text-red-600' : ''}
-                  >
-                    {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                  </Button>
-                </div>
-                <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
-                  <Send className="w-4 h-4" />
-                </Button>
+      {/* Content */}
+      <div className="relative z-10 flex-1 flex flex-col overflow-hidden">
+        {/* Top Section with Large Avatar - Matches Voice Chat */}
+        <div className="flex-shrink-0 flex flex-col items-center justify-start p-6 space-y-4">
+          <div className="relative mt-2">
+            <div className="absolute -inset-2 rounded-full bg-primary/20 blur-xl"></div>
+            <div className="relative">
+              <img 
+                src={companion.image_url} 
+                alt={companion.name}
+                className="w-32 h-32 md:w-40 md:h-40 rounded-full object-contain object-center bg-background/50 backdrop-blur-sm border-4 border-primary/40 shadow-2xl shadow-primary/20 transition-all"
+                onError={(e) => {
+                  e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${companion.name}`;
+                }}
+              />
+              {/* Online badge */}
+              <div className="absolute bottom-2 right-2 px-3 py-1 rounded-full bg-green-500/90 backdrop-blur-sm shadow-xl flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                <span className="text-xs font-medium text-white">Online</span>
               </div>
             </div>
+          </div>
+          <div className="text-center">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              {companion.name}
+            </h2>
+          </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto space-y-4 max-h-96">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`flex items-end space-x-2 max-w-[80%] ${
-                    message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+          {/* Primary action */}
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={isChatActive ? handleStopChat : handleStartChat}
+              size="sm"
+              className={isChatActive 
+                ? 'bg-red-600 hover:bg-red-700 rounded-full' 
+                : 'bg-green-600 hover:bg-green-700 rounded-full'}
+            >
+              <MessageCircle className="h-4 w-4 mr-2" />
+              {isChatActive ? 'Stop Chat' : 'Start Chat'}
+            </Button>
+            <Button 
+              size="sm" 
+              variant="ghost"
+              onClick={handleVoiceCall}
+              className="hover:bg-primary/10 rounded-full"
+            >
+              <Phone className="w-4 h-4 mr-2" />
+              Voice Call
+            </Button>
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              onClick={handleClearChat} 
+              title="Clear chat"
+              className="hover:bg-primary/10 rounded-full"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Messages - only when active */}
+        {isChatActive && (
+          <div className="flex-1 px-4 overflow-y-auto space-y-3 pb-4">
+            {messages.map((message, index) => (
+              <div
+                key={message.id}
+                className={`flex animate-fade-in ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
+                <div className={`flex items-end space-x-2 max-w-[85%] ${
+                  message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+                }`}>
+                  {message.sender === 'companion' && (
+                    <Avatar className="w-7 h-7 border-2 border-primary/20 shadow-md flex-shrink-0">
+                      <AvatarImage src={companion.image_url} />
+                      <AvatarFallback className="bg-primary/10 text-xs">{companion.name[0]}</AvatarFallback>
+                    </Avatar>
+                  )}
+                  <div className={`px-4 py-3 rounded-2xl shadow-md transition-all ${
+                    message.sender === 'user'
+                      ? 'bg-gradient-to-br from-primary to-primary/90 text-primary-foreground'
+                      : 'bg-background/80 backdrop-blur-sm border border-primary/10'
                   }`}>
-                    {message.sender === 'companion' && (
-                      <Avatar className="w-8 h-8">
-                        <AvatarImage src={companion.image_url} />
-                        <AvatarFallback>{companion.name[0]}</AvatarFallback>
-                      </Avatar>
-                    )}
-                    <div className={`px-4 py-2 rounded-2xl ${
-                      message.sender === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
+                    <p className="text-sm leading-relaxed">{message.content}</p>
+                    <p className={`text-xs mt-1 ${
+                      message.sender === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground'
                     }`}>
-                      <p className="text-sm">{message.content}</p>
-                      <p className="text-xs opacity-70 mt-1">
-                        {formatTime(message.timestamp)}
-                      </p>
-                    </div>
+                      {formatTime(message.timestamp)}
+                    </p>
                   </div>
                 </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
           </div>
         )}
       </div>
+
+      {/* Bottom input - only when active */}
+      {isChatActive && (
+        <div className="relative z-10 p-4 bg-background/80 backdrop-blur-xl border-t border-primary/10">
+          <div className="max-w-md mx-auto">
+            <div className="flex items-center space-x-2">
+              <div className="flex-1 flex items-center space-x-2 bg-background/50 rounded-full px-4 py-2 border border-primary/10 focus-within:border-primary/30 transition-colors shadow-lg">
+                <Input
+                  placeholder={`Message ${companion.name}...`}
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                  className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50"
+                />
+                <Popover open={isEmojiOpen} onOpenChange={setIsEmojiOpen}>
+                  <PopoverTrigger asChild>
+                    <Button size="sm" variant="ghost" className="rounded-full h-8 w-8 p-0 hover:bg-primary/10">
+                      <Smile className="w-4 h-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-2" side="top">
+                    <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
+                      {emojis.map((emoji, index) => (
+                        <Button
+                          key={index}
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-lg hover:bg-accent"
+                          onClick={() => insertEmoji(emoji)}
+                        >
+                          {emoji}
+                        </Button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setIsRecording(!isRecording)}
+                  className={`rounded-full h-8 w-8 p-0 ${isRecording ? 'bg-red-100 text-red-600 hover:bg-red-200' : 'hover:bg-primary/10'}`}
+                >
+                  {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </Button>
+              </div>
+              <Button 
+                onClick={handleSendMessage} 
+                disabled={!newMessage.trim()}
+                className="rounded-full h-12 w-12 p-0 shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
