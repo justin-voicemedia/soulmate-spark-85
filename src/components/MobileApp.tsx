@@ -756,64 +756,95 @@ const scrollToBottom = () => {
   );
 
   const renderChatMessages = () => (
-    <div className="flex flex-col h-full">
-      {/* Chat Header */}
-      <div className="p-4 border-b bg-card">
+    <div className="relative flex flex-col h-full">
+      {/* Ambient Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-primary/10">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
+      </div>
+
+      {/* Chat Header with Glassmorphism */}
+      <div className="relative z-10 p-4 bg-background/80 backdrop-blur-xl border-b border-primary/10">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Button 
               size="sm" 
               variant="ghost"
               onClick={() => setActiveTab('chat')}
+              className="hover:bg-primary/10"
             >
               ←
             </Button>
-            <Avatar>
-              <AvatarImage src={companion.image_url} />
-              <AvatarFallback>{companion.name[0]}</AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="w-10 h-10 border-2 border-primary/30">
+                <AvatarImage src={companion.image_url} />
+                <AvatarFallback>{companion.name[0]}</AvatarFallback>
+              </Avatar>
+              {/* Online indicator */}
+              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+            </div>
             <div>
-              <h3 className="font-semibold">{companion.name}</h3>
-              <p className="text-sm text-muted-foreground">Online</p>
+              <h3 className="font-semibold text-foreground">{companion.name}</h3>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                Online
+              </p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <Button size="sm" variant="outline" onClick={handleClearChat} title="Clear chat">
+          <div className="flex items-center space-x-1">
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              onClick={handleClearChat} 
+              title="Clear chat"
+              className="hover:bg-primary/10"
+            >
               <Trash2 className="w-4 h-4" />
             </Button>
-            <Button size="sm" variant="outline" onClick={handleVoiceCall}>
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              onClick={handleVoiceCall}
+              className="hover:bg-primary/10"
+            >
               <Phone className="w-4 h-4" />
             </Button>
-            <Button size="sm" variant="outline">
+            <Button 
+              size="sm" 
+              variant="ghost"
+              className="hover:bg-primary/10"
+            >
               <Video className="w-4 h-4" />
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-4">
-        {messages.map((message) => (
+      {/* Messages Area with Custom Styling */}
+      <div className="relative z-10 flex-1 p-4 overflow-y-auto space-y-4">
+        {messages.map((message, index) => (
           <div
             key={message.id}
-            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex animate-fade-in ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            style={{ animationDelay: `${index * 0.05}s` }}
           >
-            <div className={`flex items-end space-x-2 max-w-[80%] ${
+            <div className={`flex items-end space-x-2 max-w-[85%] ${
               message.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''
             }`}>
               {message.sender === 'companion' && (
-                <Avatar className="w-8 h-8">
+                <Avatar className="w-8 h-8 border-2 border-primary/20 shadow-md">
                   <AvatarImage src={companion.image_url} />
-                  <AvatarFallback>{companion.name[0]}</AvatarFallback>
+                  <AvatarFallback className="bg-primary/10">{companion.name[0]}</AvatarFallback>
                 </Avatar>
               )}
-              <div className={`px-4 py-2 rounded-2xl ${
+              <div className={`group relative px-4 py-3 rounded-2xl shadow-md transition-all ${
                 message.sender === 'user'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted'
+                  ? 'bg-gradient-to-br from-primary to-primary/90 text-primary-foreground'
+                  : 'bg-background/80 backdrop-blur-sm border border-primary/10'
               }`}>
-                <p className="text-sm">{message.content}</p>
-                <p className="text-xs opacity-70 mt-1">
+                <p className="text-sm leading-relaxed">{message.content}</p>
+                <p className={`text-xs mt-1 ${
+                  message.sender === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                }`}>
                   {formatTime(message.timestamp)}
                 </p>
               </div>
@@ -823,27 +854,31 @@ const scrollToBottom = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
-      <div className="p-4 border-t">
+      {/* Enhanced Message Input with Glassmorphism */}
+      <div className="relative z-10 p-4 bg-background/80 backdrop-blur-xl border-t border-primary/10">
         <div className="flex items-center space-x-2">
-          <div className="flex-1 flex items-center space-x-2">
+          <div className="flex-1 flex items-center space-x-2 bg-background/50 rounded-full px-4 py-2 border border-primary/10 focus-within:border-primary/30 transition-colors">
             <Input
               placeholder={`Message ${companion.name}...`}
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              className="flex-1"
+              className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/50"
             />
             <Button
               size="sm"
-              variant="outline"
+              variant="ghost"
               onClick={() => setIsRecording(!isRecording)}
-              className={isRecording ? 'bg-red-100 text-red-600' : ''}
+              className={`rounded-full h-8 w-8 p-0 ${isRecording ? 'bg-red-100 text-red-600 hover:bg-red-200' : 'hover:bg-primary/10'}`}
             >
               {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </Button>
           </div>
-          <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
+          <Button 
+            onClick={handleSendMessage} 
+            disabled={!newMessage.trim()}
+            className="rounded-full h-10 w-10 p-0 shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+          >
             <Send className="w-4 h-4" />
           </Button>
         </div>
