@@ -45,6 +45,7 @@ import { RelationshipProgressBar } from "@/components/RelationshipProgressBar";
 import { RelationshipMilestones } from "@/components/RelationshipMilestones";
 import { MoodTrendsChart } from "@/components/MoodTrendsChart";
 import { MoodIndicator } from "@/components/MoodIndicator";
+import { ConversationModeSelector } from "@/components/ConversationModeSelector";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
@@ -99,7 +100,7 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
   const [isRecording, setIsRecording] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [userCompanion, setUserCompanion] = useState<{ id: string; voice_id: string; relationship_type: string } | null>(null);
+  const [userCompanion, setUserCompanion] = useState<{ id: string; voice_id: string; relationship_type: string; conversation_mode: string } | null>(null);
   const [currentCompanion, setCurrentCompanion] = useState(companion);
   const [isMobileApp, setIsMobileApp] = useState(false);
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
@@ -249,7 +250,7 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
       try {
         const { data, error } = await supabase
           .from('user_companions')
-          .select('id, voice_id, relationship_type')
+          .select('id, voice_id, relationship_type, conversation_mode')
           .eq('user_id', user.id)
           .eq('companion_id', currentCompanion.id)
           .maybeSingle();
@@ -259,6 +260,7 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
             id: data.id,
             voice_id: data.voice_id || 'alloy',
             relationship_type: data.relationship_type || 'casual_friend',
+            conversation_mode: data.conversation_mode || 'casual',
           });
           // Fetch relationship progression stats
           fetchStats(data.id);
@@ -422,7 +424,8 @@ const scrollToBottom = () => {
             message: messageText,
             companionId: currentCompanion.id,
             conversationHistory: messages,
-            userMood: detectedMood
+            userMood: detectedMood,
+            conversationMode: userCompanion?.conversation_mode || 'casual'
           }
         });
 
@@ -910,6 +913,18 @@ const scrollToBottom = () => {
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
+
+          {/* Conversation Mode Selector */}
+          {userCompanion && (
+            <div className="mt-3 px-4">
+              <ConversationModeSelector
+                userCompanionId={userCompanion.id}
+                currentMode={userCompanion.conversation_mode}
+                onModeChange={(mode) => setUserCompanion(prev => prev ? { ...prev, conversation_mode: mode } : prev)}
+                compact={true}
+              />
+            </div>
+          )}
         </div>
 
         {/* Messages Area with Scroll */}
@@ -1017,15 +1032,26 @@ const scrollToBottom = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Edit Companion Details</CardTitle>
-          <CardDescription>Configure relationship and voice</CardDescription>
+          <CardTitle>Conversation Settings</CardTitle>
+          <CardDescription>Configure how you chat with {companion.name}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="relationship" className="w-full">
-            <TabsList className="w-full flex">
-              <TabsTrigger value="relationship" className="flex-1">Relationship</TabsTrigger>
-              <TabsTrigger value="voice" className="flex-1">Voice</TabsTrigger>
+          <Tabs defaultValue="mode" className="w-full">
+            <TabsList className="w-full grid grid-cols-3">
+              <TabsTrigger value="mode">Mode</TabsTrigger>
+              <TabsTrigger value="relationship">Relationship</TabsTrigger>
+              <TabsTrigger value="voice">Voice</TabsTrigger>
             </TabsList>
+            <TabsContent value="mode" className="mt-4">
+              {userCompanion && (
+                <ConversationModeSelector
+                  userCompanionId={userCompanion.id}
+                  currentMode={userCompanion.conversation_mode}
+                  onModeChange={(mode) => setUserCompanion(prev => prev ? { ...prev, conversation_mode: mode } : prev)}
+                  compact={false}
+                />
+              )}
+            </TabsContent>
             <TabsContent value="relationship" className="mt-4">
               {userCompanion && (
                 <RelationshipSelector

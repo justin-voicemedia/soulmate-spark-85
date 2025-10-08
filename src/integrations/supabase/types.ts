@@ -170,6 +170,39 @@ export type Database = {
         }
         Relationships: []
       }
+      conversation_modes: {
+        Row: {
+          created_at: string
+          description: string
+          display_name: string
+          icon: string
+          id: string
+          mode_name: string
+          prompt_modifier: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          display_name: string
+          icon: string
+          id?: string
+          mode_name: string
+          prompt_modifier: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          display_name?: string
+          icon?: string
+          id?: string
+          mode_name?: string
+          prompt_modifier?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       conversation_usage: {
         Row: {
           api_type: string | null
@@ -795,6 +828,7 @@ export type Database = {
         Row: {
           companion_id: string
           conversation_history: Json | null
+          conversation_mode: string | null
           created_at: string
           custom_memories: Json | null
           id: string
@@ -814,6 +848,7 @@ export type Database = {
         Insert: {
           companion_id: string
           conversation_history?: Json | null
+          conversation_mode?: string | null
           created_at?: string
           custom_memories?: Json | null
           id?: string
@@ -833,6 +868,7 @@ export type Database = {
         Update: {
           companion_id?: string
           conversation_history?: Json | null
+          conversation_mode?: string | null
           created_at?: string
           custom_memories?: Json | null
           id?: string

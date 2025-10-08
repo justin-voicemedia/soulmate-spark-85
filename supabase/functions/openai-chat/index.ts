@@ -30,7 +30,7 @@ serve(async (req) => {
     const user = userData.user;
     if (!user) throw new Error("User not authenticated");
 
-    const { message, companionId, conversationHistory = [], userMood = null } = await req.json();
+    const { message, companionId, conversationHistory = [], userMood = null, conversationMode = 'casual' } = await req.json();
     if (!message || !companionId) throw new Error("Message and companion ID are required");
 
     // Get companion details
@@ -113,6 +113,19 @@ You're having a genuine conversation with someone who chose to connect with you.
       };
       
       systemPrompt += `\n\nEMOTIONAL CONTEXT: ${moodGuidance[userMood.mood as keyof typeof moodGuidance] || ''} Intensity: ${userMood.intensity}/10. Respond with appropriate emotional intelligence.`;
+    }
+
+    // Add conversation mode context
+    if (conversationMode && conversationMode !== 'casual') {
+      const { data: modeData } = await supabaseClient
+        .from("conversation_modes")
+        .select("prompt_modifier")
+        .eq("mode_name", conversationMode)
+        .maybeSingle();
+      
+      if (modeData?.prompt_modifier) {
+        systemPrompt += `\n\nCONVERSATION MODE: ${modeData.prompt_modifier}`;
+      }
     }
 
     // Build messages array for OpenAI
