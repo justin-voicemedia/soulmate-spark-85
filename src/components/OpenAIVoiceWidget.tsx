@@ -372,24 +372,55 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
       {/* Companion Image - Large and Above Widget */}
       {companionImage && (
         <div className="relative">
+          {/* Animated glow rings when speaking */}
+          {isSpeaking && (
+            <>
+              <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping"></div>
+              <div className="absolute inset-0 rounded-full bg-primary/30 blur-xl animate-pulse"></div>
+            </>
+          )}
+          
+          {/* Main image with transition */}
           <img 
             src={companionImage} 
             alt={companionName}
-            className="w-48 h-48 rounded-full object-contain object-center bg-background border-4 border-primary/30 shadow-lg"
+            className={`w-48 h-48 rounded-full object-contain object-center bg-background border-4 shadow-lg transition-all duration-300 ${
+              isSpeaking 
+                ? 'border-primary shadow-primary/50 shadow-2xl scale-105' 
+                : isListening 
+                ? 'border-green-500 shadow-green-500/30' 
+                : 'border-primary/30'
+            }`}
             onError={(e) => {
               e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${companionName}`;
             }}
           />
-          {(isSpeaking || isListening) && (
-            <div className="absolute inset-0 rounded-full border-4 border-primary animate-pulse shadow-lg"></div>
-          )}
+          
+          {/* Audio wave bars when speaking */}
           {isSpeaking && (
-            <div className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground rounded-full p-2">
+            <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 flex gap-1">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className="w-1 bg-primary rounded-full animate-pulse"
+                  style={{
+                    height: `${12 + (i % 2) * 8}px`,
+                    animationDelay: `${i * 0.1}s`,
+                    animationDuration: `${0.6 + (i % 3) * 0.2}s`
+                  }}
+                />
+              ))}
+            </div>
+          )}
+          
+          {/* Status indicator badges */}
+          {isSpeaking && (
+            <div className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground rounded-full p-2 animate-pulse shadow-lg">
               <Volume2 className="h-4 w-4" />
             </div>
           )}
           {isListening && (
-            <div className="absolute -bottom-2 -right-2 bg-green-500 text-white rounded-full p-2">
+            <div className="absolute -bottom-2 -right-2 bg-green-500 text-white rounded-full p-2 animate-pulse shadow-lg">
               <Mic className="h-4 w-4" />
             </div>
           )}
