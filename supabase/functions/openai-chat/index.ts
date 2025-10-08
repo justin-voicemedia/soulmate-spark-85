@@ -30,7 +30,7 @@ serve(async (req) => {
     const user = userData.user;
     if (!user) throw new Error("User not authenticated");
 
-    const { message, companionId, conversationHistory = [] } = await req.json();
+    const { message, companionId, conversationHistory = [], userMood = null } = await req.json();
     if (!message || !companionId) throw new Error("Message and companion ID are required");
 
     // Get companion details
@@ -96,6 +96,23 @@ You're having a genuine conversation with someone who chose to connect with you.
     // Add relationship-specific prompt if available
     if (relationshipPrompt) {
       systemPrompt += `\n\nRelationship Context: ${relationshipPrompt}`;
+    }
+
+    // Add mood context if detected
+    if (userMood && userMood.mood !== 'neutral') {
+      const moodGuidance = {
+        happy: "They seem happy! Match their positive energy and celebrate with them.",
+        excited: "They're excited about something! Share their enthusiasm and be supportive.",
+        loved: "They're feeling loving and affectionate. Respond warmly and appreciate their feelings.",
+        sad: "They're feeling down. Be gentle, empathetic, and supportive. Ask if they want to talk about it.",
+        lonely: "They're feeling lonely. Be especially warm and let them know you're here for them.",
+        anxious: "They seem anxious or worried. Be calming, reassuring, and supportive. Help them feel safe.",
+        stressed: "They're feeling stressed. Be understanding and offer comfort. Keep your response calm and supportive.",
+        angry: "They're upset or frustrated. Be patient, validate their feelings, and don't take it personally.",
+        calm: "They're in a peaceful state. Match their calm energy and keep the conversation gentle."
+      };
+      
+      systemPrompt += `\n\nEMOTIONAL CONTEXT: ${moodGuidance[userMood.mood as keyof typeof moodGuidance] || ''} Intensity: ${userMood.intensity}/10. Respond with appropriate emotional intelligence.`;
     }
 
     // Build messages array for OpenAI

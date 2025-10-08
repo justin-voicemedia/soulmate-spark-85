@@ -37,11 +37,14 @@ import { useMemoryManager } from '@/hooks/useMemoryManager';
 import { useConversationMemory } from '@/hooks/useConversationMemory';
 import { useTrialStatus } from "@/hooks/useTrialStatus";
 import { useRelationshipProgression } from "@/hooks/useRelationshipProgression";
+import { useMoodTracking } from "@/hooks/useMoodTracking";
 import { OpenAIVoiceWidget } from "@/components/OpenAIVoiceWidget";
 import { RelationshipSelector } from "@/components/RelationshipSelector";
 import { VoiceSelector } from "@/components/VoiceSelector";
 import { RelationshipProgressBar } from "@/components/RelationshipProgressBar";
 import { RelationshipMilestones } from "@/components/RelationshipMilestones";
+import { MoodTrendsChart } from "@/components/MoodTrendsChart";
+import { MoodIndicator } from "@/components/MoodIndicator";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
@@ -87,6 +90,7 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
     companion?.name
   );
   const { stats, fetchStats, awardXP } = useRelationshipProgression();
+  const { detectMoodFromText, trackMood, fetchMoodTrends, moodTrends } = useMoodTracking();
   const [activeTab, setActiveTab] = useState<'chat' | 'profile' | 'settings' | 'voice'>('profile');
   const [isChatActive, setIsChatActive] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -99,6 +103,7 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
   const [currentCompanion, setCurrentCompanion] = useState(companion);
   const [isMobileApp, setIsMobileApp] = useState(false);
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
+  const [currentMood, setCurrentMood] = useState<{ mood: string; intensity: number } | null>(null);
 
   const emojis = [
     '😀', '😃', '😄', '😁', '😊', '😉', '😍', '🥰', '😘', '😗',
@@ -257,13 +262,17 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
           });
           // Fetch relationship progression stats
           fetchStats(data.id);
+          // Fetch mood trends
+          if (user) {
+            fetchMoodTrends(user.id, currentCompanion.id, 7);
+          }
         }
       } catch (e) {
         console.error('Error loading companion settings:', e);
       }
     };
     load();
-  }, [user, companion.id, fetchStats]);
+  }, [user, companion.id, fetchStats, fetchMoodTrends]);
 
   useEffect(() => {
     // Don't auto-start session for chat tab, wait for Start Chat button
@@ -391,13 +400,29 @@ const scrollToBottom = () => {
       // Add user message to memory system
       addToMemory('user', messageText);
 
+      // Detect and track mood
+      const detectedMood = detectMoodFromText(messageText);
+      setCurrentMood(detectedMood);
+      
+      if (user && userCompanion?.id && detectedMood.mood !== 'neutral') {
+        trackMood(
+          user.id,
+          currentCompanion.id,
+          userCompanion.id,
+          detectedMood.mood,
+          detectedMood.intensity,
+          messageText.substring(0, 100) // Store first 100 chars as context
+        );
+      }
+
       try {
-        // Call OpenAI chat function
+        // Call OpenAI chat function with mood context
         const { data, error } = await supabase.functions.invoke('openai-chat', {
           body: {
             message: messageText,
             companionId: currentCompanion.id,
-            conversationHistory: messages
+            conversationHistory: messages,
+            userMood: detectedMood
           }
         });
 
@@ -852,6 +877,16 @@ const scrollToBottom = () => {
             <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
               {companion.name}
             </h2>
+            {currentMood && currentMood.mood !== 'neutral' && (
+              <div className="flex justify-center mt-2">
+                <MoodIndicator 
+                  mood={currentMood.mood as any}
+                  intensity={currentMood.intensity}
+                  size="sm"
+                  showLabel={true}
+                />
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}
@@ -1054,6 +1089,9 @@ const scrollToBottom = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Mood Trends */}
+      <MoodTrendsChart trends={moodTrends} days={7} />
 
       <Card>
         <CardHeader>

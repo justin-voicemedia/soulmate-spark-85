@@ -287,6 +287,60 @@ export type Database = {
         }
         Relationships: []
       }
+      mood_entries: {
+        Row: {
+          companion_id: string
+          created_at: string
+          detected_automatically: boolean | null
+          id: string
+          intensity: number
+          message_context: string | null
+          mood_type: string
+          notes: string | null
+          user_companion_id: string | null
+          user_id: string
+        }
+        Insert: {
+          companion_id: string
+          created_at?: string
+          detected_automatically?: boolean | null
+          id?: string
+          intensity?: number
+          message_context?: string | null
+          mood_type: string
+          notes?: string | null
+          user_companion_id?: string | null
+          user_id: string
+        }
+        Update: {
+          companion_id?: string
+          created_at?: string
+          detected_automatically?: boolean | null
+          id?: string
+          intensity?: number
+          message_context?: string | null
+          mood_type?: string
+          notes?: string | null
+          user_companion_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mood_entries_companion_id_fkey"
+            columns: ["companion_id"]
+            isOneToOne: false
+            referencedRelation: "companions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mood_entries_user_companion_id_fkey"
+            columns: ["user_companion_id"]
+            isOneToOne: false
+            referencedRelation: "user_companions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           created_at: string
@@ -871,6 +925,14 @@ export type Database = {
       generate_ticket_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_mood_trends: {
+        Args: { p_companion_id: string; p_days?: number; p_user_id: string }
+        Returns: {
+          avg_intensity: number
+          count: number
+          mood_type: string
+        }[]
       }
       get_user_profitability_summary: {
         Args: Record<PropertyKey, never>
