@@ -106,7 +106,8 @@ You're having a genuine conversation with someone who chose to connect with you.
     }
 
     // Get enhanced memories for context
-    const { data: memories } = await supabaseClient.rpc('search_memories', {
+    console.log("Fetching memories for user:", user.id, "companion:", companionId);
+    const { data: memories, error: memoryError } = await supabaseClient.rpc('search_memories', {
       p_user_id: user.id,
       p_companion_id: companionId,
       p_search_term: null,
@@ -114,8 +115,15 @@ You're having a genuine conversation with someone who chose to connect with you.
       p_tags: null
     });
 
+    if (memoryError) {
+      console.error("Error fetching memories:", memoryError);
+    } else {
+      console.log(`Found ${memories?.length || 0} memories`);
+    }
+
     if (memories && memories.length > 0) {
       systemPrompt += '\n\n**MEMORY CONTEXT:**\n';
+      console.log("Adding memory context to prompt");
       
       // Group memories by category
       const categorized = memories.reduce((acc: any, memory: any) => {
@@ -144,6 +152,8 @@ You're having a genuine conversation with someone who chose to connect with you.
           p_memory_id: memory.id
         });
       }
+    } else {
+      console.log("No memories found for this companion");
     }
 
     // Add mood context if detected
