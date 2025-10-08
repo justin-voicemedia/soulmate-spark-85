@@ -123,9 +123,42 @@ export const OpenAIVoiceWidget: React.FC<VoiceWidgetProps> = ({ companionId, com
       } catch (e) {
         console.log('Could not fetch user profile name');
       }
+
+      // Get relationship type to determine how to address the user
+      let relationshipType = 'casual_friend';
+      try {
+        const { data: companionData } = await supabase
+          .from('user_companions')
+          .select('relationship_type')
+          .eq('user_id', user.id)
+          .eq('companion_id', companionId)
+          .maybeSingle();
+        
+        if (companionData?.relationship_type) {
+          relationshipType = companionData.relationship_type;
+        }
+      } catch (e) {
+        console.log('Could not fetch relationship type');
+      }
+
+      // Determine how to address the user based on relationship
+      let addressingGuidance = '';
+      if (relationshipType === 'romantic_partner' || relationshipType === 'intimate_companion') {
+        addressingGuidance = `
+- Start conversations by using ${userName ? userName : "their name"}
+- After the initial greeting, use romantic pet names naturally like "baby", "honey", "sweetheart", "love", "babe"
+- Mix between using their name and pet names throughout the conversation to keep it natural and affectionate`;
+      } else {
+        addressingGuidance = `
+- Use ${userName ? userName : "their name"} when addressing them
+- Keep it friendly and casual`;
+      }
       
       // Build enhanced persona prompt with memory context
-      let instructions = `You are ${companionName}, a warm and friendly companion. 
+      let instructions = `You are ${companionName}, a warm and friendly companion talking with ${userName || 'your friend'}.
+
+HOW TO ADDRESS THEM:
+${addressingGuidance}
 
 CONVERSATION STYLE:
 - Keep responses natural and brief (1-2 sentences)
@@ -134,7 +167,7 @@ CONVERSATION STYLE:
 - Let conversations flow naturally wherever they go
 
 STARTING CONVERSATIONS:
-${userName ? `- Greet ${userName} warmly and ask how they are doing` : '- Greet them warmly and ask how they are doing'}
+- Always start by warmly greeting them using their name
 - Show genuine interest in their wellbeing
 - Be open to whatever they want to talk about
 
