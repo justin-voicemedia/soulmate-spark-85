@@ -30,7 +30,9 @@ import {
   BarChart3,
   Trash2,
   ExternalLink,
-  Smile
+  Smile,
+  Flame,
+  Menu
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMemoryManager } from '@/hooks/useMemoryManager';
@@ -38,6 +40,7 @@ import { useConversationMemory } from '@/hooks/useConversationMemory';
 import { useTrialStatus } from "@/hooks/useTrialStatus";
 import { useRelationshipProgression } from "@/hooks/useRelationshipProgression";
 import { useMoodTracking } from "@/hooks/useMoodTracking";
+import { useEngagement } from "@/hooks/useEngagement";
 import { OpenAIVoiceWidget } from "@/components/OpenAIVoiceWidget";
 import { RelationshipSelector } from "@/components/RelationshipSelector";
 import { VoiceSelector } from "@/components/VoiceSelector";
@@ -46,6 +49,8 @@ import { RelationshipMilestones } from "@/components/RelationshipMilestones";
 import { MoodTrendsChart } from "@/components/MoodTrendsChart";
 import { MoodIndicator } from "@/components/MoodIndicator";
 import { ConversationModeSelector } from "@/components/ConversationModeSelector";
+import { DailyPrompt } from "@/components/DailyPrompt";
+import { StreakDisplay } from "@/components/StreakDisplay";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
@@ -92,6 +97,12 @@ export const MobileApp = ({ companion, onBack, onUpgrade, onEditCompanion, onVie
   );
   const { stats, fetchStats, awardXP } = useRelationshipProgression();
   const { detectMoodFromText, trackMood, fetchMoodTrends, moodTrends } = useMoodTracking();
+  const {
+    dailyPrompt,
+    streakData,
+    fetchDailyPrompt,
+    updateStreak
+  } = useEngagement(user?.id, companion?.id);
   const [activeTab, setActiveTab] = useState<'chat' | 'profile' | 'settings' | 'voice'>('profile');
   const [isChatActive, setIsChatActive] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
@@ -416,6 +427,9 @@ const scrollToBottom = () => {
           messageText.substring(0, 100) // Store first 100 chars as context
         );
       }
+
+      // Update streak on first message of the day
+      await updateStreak();
 
       try {
         // Call OpenAI chat function with mood context
@@ -927,9 +941,29 @@ const scrollToBottom = () => {
           )}
         </div>
 
+        {/* Engagement Features */}
+        <div className="flex-shrink-0 px-4 pb-2 space-y-3">
+          {streakData && (
+            <StreakDisplay
+              currentStreak={streakData.current_streak}
+              longestStreak={streakData.longest_streak}
+              totalDays={streakData.total_days_active}
+            />
+          )}
+          
+          {dailyPrompt && (
+            <DailyPrompt
+              prompt={dailyPrompt}
+              onRefresh={fetchDailyPrompt}
+              onUsePrompt={(promptText) => {
+                setNewMessage(promptText);
+              }}
+            />
+          )}
+        </div>
+
         {/* Messages Area with Scroll */}
-        <div className="flex-1 px-4 overflow-y-auto space-y-3 pb-4">
-          {messages.map((message, index) => (
+        <div className="flex-1 px-4 overflow-y-auto space-y-3 pb-4">{messages.map((message, index) => (
             <div
               key={message.id}
               className={`flex animate-fade-in ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}

@@ -254,6 +254,39 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_prompts: {
+        Row: {
+          category: string
+          created_at: string
+          difficulty_level: string
+          id: string
+          prompt_text: string
+          tags: string[] | null
+          updated_at: string
+          usage_count: number | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          difficulty_level?: string
+          id?: string
+          prompt_text: string
+          tags?: string[] | null
+          updated_at?: string
+          usage_count?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          difficulty_level?: string
+          id?: string
+          prompt_text?: string
+          tags?: string[] | null
+          updated_at?: string
+          usage_count?: number | null
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount_due_cents: number
@@ -608,6 +641,45 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_checkins: {
+        Row: {
+          check_in_message: string | null
+          check_in_time: string
+          companion_id: string
+          created_at: string
+          frequency: string
+          id: string
+          is_enabled: boolean | null
+          last_sent_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          check_in_message?: string | null
+          check_in_time?: string
+          companion_id: string
+          created_at?: string
+          frequency?: string
+          id?: string
+          is_enabled?: boolean | null
+          last_sent_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          check_in_message?: string | null
+          check_in_time?: string
+          companion_id?: string
+          created_at?: string
+          frequency?: string
+          id?: string
+          is_enabled?: boolean | null
+          last_sent_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscribers: {
         Row: {
           account_status: string | null
@@ -916,6 +988,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_streaks: {
+        Row: {
+          companion_id: string
+          created_at: string
+          current_streak: number | null
+          id: string
+          last_interaction_date: string | null
+          longest_streak: number | null
+          total_days_active: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          companion_id: string
+          created_at?: string
+          current_streak?: number | null
+          id?: string
+          last_interaction_date?: string | null
+          longest_streak?: number | null
+          total_days_active?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          companion_id?: string
+          created_at?: string
+          current_streak?: number | null
+          id?: string
+          last_interaction_date?: string | null
+          longest_streak?: number | null
+          total_days_active?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       user_cost_analytics: {
@@ -993,6 +1101,15 @@ export type Database = {
       has_unlimited_access: {
         Args: { user_uuid: string }
         Returns: boolean
+      }
+      update_user_streak: {
+        Args: { p_companion_id: string; p_user_id: string }
+        Returns: {
+          current_streak: number
+          longest_streak: number
+          new_record: boolean
+          streak_broken: boolean
+        }[]
       }
     }
     Enums: {
