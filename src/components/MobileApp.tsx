@@ -1033,7 +1033,7 @@ const scrollToBottom = () => {
   );
 
   const renderSettings = () => (
-    <div className="p-4 space-y-6">
+    <div className="h-full overflow-y-auto p-4 space-y-6 pb-24">
       <div className="text-center">
         <div className="relative inline-block">
           <Avatar className="w-20 h-20 mx-auto mb-4">
