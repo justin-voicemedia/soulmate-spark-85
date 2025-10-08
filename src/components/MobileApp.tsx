@@ -452,6 +452,11 @@ const scrollToBottom = () => {
           console.log('AI Response:', data.response);
           console.log('Conversation History:', data.conversationHistory);
           
+          // Validate response isn't empty
+          if (!data.response || data.response.trim().length === 0) {
+            throw new Error('Received empty response from AI');
+          }
+          
           // Add assistant response to memory system
           addToMemory('assistant', data.response);
           

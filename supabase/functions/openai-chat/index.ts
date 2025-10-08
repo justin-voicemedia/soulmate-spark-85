@@ -209,11 +209,25 @@ You're having a genuine conversation with someone who chose to connect with you.
 
     const openaiData = await openaiResponse.json();
     const aiRawResponse = openaiData.choices[0].message.content;
+    
     // Sanitize to avoid dashes/bullets for human-like chat
-    const aiResponse = aiRawResponse
+    let aiResponse = aiRawResponse
       .replace(/^[\s]*[-–—•·]\s+/gm, '')
       .replace(/[–—]/g, ', ')
-      .replace(/\s-\s/g, ', ');
+      .replace(/\s-\s/g, ', ')
+      .trim();
+    
+    // Validate response isn't empty after sanitization
+    if (!aiResponse || aiResponse.length === 0) {
+      console.warn("Response was empty after sanitization, using raw response");
+      aiResponse = aiRawResponse.trim();
+    }
+    
+    // Final validation - if still empty, use a fallback
+    if (!aiResponse || aiResponse.length === 0) {
+      console.error("Empty response from OpenAI");
+      throw new Error("Received empty response from AI");
+    }
  
     console.log("OpenAI response received:", aiResponse);
 
