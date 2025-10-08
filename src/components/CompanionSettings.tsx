@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Settings, Volume2, Heart, Brain } from 'lucide-react';
+import { ArrowLeft, Settings, Volume2, Heart, Brain, Image } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useTrialStatus } from '@/hooks/useTrialStatus';
@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { VoiceSelector } from './VoiceSelector';
 import { RelationshipSelector } from './RelationshipSelector';
 import { MemoryManager } from './MemoryManager';
+import { CompanionPhotoGallery } from './CompanionPhotoGallery';
 
 interface CompanionSettingsProps {
   companionId: string;
@@ -30,12 +31,31 @@ export const CompanionSettings = ({ companionId, companionName, onBack }: Compan
   const { user } = useAuth();
   const { trialStatus } = useTrialStatus();
   const [userCompanion, setUserCompanion] = useState<UserCompanion | null>(null);
+  const [companion, setCompanion] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showMemoryManager, setShowMemoryManager] = useState(false);
 
   useEffect(() => {
     loadUserCompanion();
+    loadCompanion();
   }, [companionId, user]);
+
+  const loadCompanion = async () => {
+    if (!companionId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('companions')
+        .select('*')
+        .eq('id', companionId)
+        .single();
+
+      if (error) throw error;
+      setCompanion(data);
+    } catch (error) {
+      console.error('Error loading companion:', error);
+    }
+  };
 
   const loadUserCompanion = async () => {
     if (!user || !companionId) return;
@@ -107,6 +127,12 @@ export const CompanionSettings = ({ companionId, companionName, onBack }: Compan
     }
   };
 
+  const handlePhotoUpdate = (newImageUrl: string) => {
+    if (companion) {
+      setCompanion({ ...companion, image_url: newImageUrl });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-secondary p-4">
@@ -139,8 +165,12 @@ export const CompanionSettings = ({ companionId, companionName, onBack }: Compan
         </div>
 
         {/* Settings Tabs */}
-        <Tabs defaultValue="relationship" className="w-full">
-          <TabsList className="w-full grid grid-cols-3">
+        <Tabs defaultValue="photos" className="w-full">
+          <TabsList className="w-full grid grid-cols-4">
+            <TabsTrigger value="photos" className="flex items-center gap-2">
+              <Image className="h-4 w-4" />
+              Photos
+            </TabsTrigger>
             <TabsTrigger value="relationship" className="flex items-center gap-2">
               <Heart className="h-4 w-4" />
               Relationship
@@ -154,6 +184,15 @@ export const CompanionSettings = ({ companionId, companionName, onBack }: Compan
               Memory
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="photos" className="mt-6">
+            {companion && (
+              <CompanionPhotoGallery
+                companion={companion}
+                onPhotoUpdate={handlePhotoUpdate}
+              />
+            )}
+          </TabsContent>
 
           <TabsContent value="relationship" className="mt-6">
             {userCompanion && (

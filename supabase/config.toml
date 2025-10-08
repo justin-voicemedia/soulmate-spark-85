@@ -12,6 +12,9 @@ verify_jwt = false
 [functions.generate-companion-image]
 verify_jwt = false
 
+[functions.generate-companion-photo]
+verify_jwt = false
+
 [functions.track-usage]
 verify_jwt = false
 
