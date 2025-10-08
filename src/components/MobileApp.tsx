@@ -1136,16 +1136,12 @@ const scrollToBottom = () => {
           >
             <div className={`relative ${activeTab === 'profile' ? 'scale-110' : ''} transition-transform duration-300`}>
               {/* Icon container with gradient background */}
-              <div className={`relative rounded-full p-2 ${
+              <div className={`relative rounded-full p-2 transition-all duration-300 ${
                 activeTab === 'profile'
                   ? 'bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg shadow-purple-500/50'
-                  : 'bg-muted/30'
+                  : 'bg-gradient-to-br from-purple-500/40 to-purple-600/30'
               }`}>
-                <User className={`w-5 h-5 ${
-                  activeTab === 'profile' 
-                    ? 'text-white' 
-                    : 'text-muted-foreground'
-                }`} strokeWidth={2.5} />
+                <User className="w-5 h-5 text-white" strokeWidth={2.5} />
               </div>
               {activeTab === 'profile' && (
                 <div className="absolute inset-0 bg-purple-500/30 blur-xl rounded-full" />
@@ -1171,16 +1167,12 @@ const scrollToBottom = () => {
             }`}
           >
             <div className={`relative ${activeTab === 'chat' ? 'scale-110' : ''} transition-transform duration-300`}>
-              <div className={`relative rounded-full p-2 ${
+              <div className={`relative rounded-full p-2 transition-all duration-300 ${
                 activeTab === 'chat'
                   ? 'bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/50'
-                  : 'bg-muted/30'
+                  : 'bg-gradient-to-br from-blue-500/40 to-blue-600/30'
               }`}>
-                <MessageCircle className={`w-5 h-5 ${
-                  activeTab === 'chat' 
-                    ? 'text-white' 
-                    : 'text-muted-foreground'
-                }`} strokeWidth={2.5} fill={activeTab === 'chat' ? 'currentColor' : 'none'} />
+                <MessageCircle className="w-5 h-5 text-white" strokeWidth={2.5} fill={activeTab === 'chat' ? 'currentColor' : 'none'} />
               </div>
               {activeTab === 'chat' && (
                 <div className="absolute inset-0 bg-blue-500/30 blur-xl rounded-full" />
@@ -1206,16 +1198,12 @@ const scrollToBottom = () => {
             }`}
           >
             <div className={`relative ${activeTab === 'voice' ? 'scale-110' : ''} transition-transform duration-300`}>
-              <div className={`relative rounded-full p-2 ${
+              <div className={`relative rounded-full p-2 transition-all duration-300 ${
                 activeTab === 'voice'
                   ? 'bg-gradient-to-br from-green-500 to-green-600 shadow-lg shadow-green-500/50'
-                  : 'bg-muted/30'
+                  : 'bg-gradient-to-br from-green-500/40 to-green-600/30'
               }`}>
-                <Mic className={`w-5 h-5 ${
-                  activeTab === 'voice' 
-                    ? 'text-white' 
-                    : 'text-muted-foreground'
-                }`} strokeWidth={2.5} fill={activeTab === 'voice' ? 'currentColor' : 'none'} />
+                <Mic className="w-5 h-5 text-white" strokeWidth={2.5} fill={activeTab === 'voice' ? 'currentColor' : 'none'} />
               </div>
               {activeTab === 'voice' && (
                 <div className="absolute inset-0 bg-green-500/30 blur-xl rounded-full" />
@@ -1240,16 +1228,12 @@ const scrollToBottom = () => {
             }`}
           >
             <div className={`relative ${activeTab === 'settings' ? 'scale-110' : ''} transition-transform duration-300`}>
-              <div className={`relative rounded-full p-2 ${
+              <div className={`relative rounded-full p-2 transition-all duration-300 ${
                 activeTab === 'settings'
                   ? 'bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg shadow-orange-500/50'
-                  : 'bg-muted/30'
+                  : 'bg-gradient-to-br from-orange-500/40 to-orange-600/30'
               }`}>
-                <Settings className={`w-5 h-5 ${
-                  activeTab === 'settings' 
-                    ? 'text-white' 
-                    : 'text-muted-foreground'
-                }`} strokeWidth={2.5} />
+                <Settings className="w-5 h-5 text-white" strokeWidth={2.5} />
               </div>
               {activeTab === 'settings' && (
                 <div className="absolute inset-0 bg-orange-500/30 blur-xl rounded-full" />
