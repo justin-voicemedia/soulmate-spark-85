@@ -17,9 +17,19 @@ export const useTrialStatus = () => {
   const { user, session } = useAuth();
   const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
   const [loading, setLoading] = useState(false);
+  const [lastCheckTime, setLastCheckTime] = useState<number>(0);
 
-  const checkTrialStatus = async () => {
+  const checkTrialStatus = async (force: boolean = false) => {
     if (!user || !session) return;
+    
+    // Cache for 5 minutes to avoid rate limits
+    const CACHE_DURATION = 5 * 60 * 1000;
+    const now = Date.now();
+    
+    if (!force && now - lastCheckTime < CACHE_DURATION && trialStatus) {
+      console.log('Using cached subscription status');
+      return;
+    }
     
     setLoading(true);
     try {
@@ -35,6 +45,7 @@ export const useTrialStatus = () => {
       }
 
       setTrialStatus(data);
+      setLastCheckTime(now);
     } catch (error) {
       console.error('Error checking trial status:', error);
     } finally {
@@ -63,8 +74,9 @@ export const useTrialStatus = () => {
         return;
       }
 
-      // Refresh trial status after tracking usage
-      await checkTrialStatus();
+      // Only refresh trial status occasionally to avoid rate limits
+      // Don't await it - let it happen in background
+      checkTrialStatus(false);
       
       return data;
     } catch (error) {
@@ -91,7 +103,7 @@ export const useTrialStatus = () => {
   };
 
   useEffect(() => {
-    checkTrialStatus();
+    checkTrialStatus(true); // Force check on mount/user change
   }, [user, session]);
 
   return {
