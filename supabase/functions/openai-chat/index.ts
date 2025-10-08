@@ -73,7 +73,14 @@ serve(async (req) => {
     }
 
     // Use conversation history from database or fallback to provided history
-    const existingHistory = userCompanion?.conversation_history || conversationHistory;
+    let existingHistory = userCompanion?.conversation_history || conversationHistory;
+    
+    // Limit conversation history to last 30 messages to avoid token limits
+    // Keep more recent context for better conversation flow
+    if (existingHistory.length > 30) {
+      console.log(`Trimming conversation history from ${existingHistory.length} to 30 messages`);
+      existingHistory = existingHistory.slice(-30);
+    }
 
     // Create system prompt based on companion and relationship
     let systemPrompt = `You are ${companion.name}, a ${companion.age}-year-old ${companion.gender} from ${companion.location || "unknown location"}. 
@@ -203,11 +210,12 @@ You're having a genuine conversation with someone who chose to connect with you.
 
     if (!openaiResponse.ok) {
       const errorText = await openaiResponse.text();
-      console.error("OpenAI API error:", errorText);
+      console.error("OpenAI API error:", openaiResponse.status, errorText);
       throw new Error(`OpenAI API error: ${errorText}`);
     }
 
     const openaiData = await openaiResponse.json();
+    console.log("Raw OpenAI response:", JSON.stringify(openaiData, null, 2));
     const rawContent = openaiData?.choices?.[0]?.message?.content;
 
     // Normalize OpenAI content which can be string or array of parts
@@ -241,10 +249,10 @@ You're having a genuine conversation with someone who chose to connect with you.
       aiResponse = aiRawResponse.trim();
     }
     
-    // Final validation - if still empty, use a graceful fallback instead of erroring
+    // Final validation - if still empty, throw error to debug
     if (!aiResponse || aiResponse.length === 0) {
-      console.warn("OpenAI returned empty content; using graceful fallback message");
-      aiResponse = "I'm here with you. Could you say that again in a different way?";
+      console.error("OpenAI returned empty content. Raw data:", JSON.stringify(openaiData));
+      throw new Error("Received empty response from OpenAI - please check logs");
     }
  
     console.log("OpenAI response received:", aiResponse);
