@@ -745,7 +745,13 @@ export type Database = {
           custom_memories: Json | null
           id: string
           is_active: boolean | null
+          last_interaction_at: string | null
+          relationship_level: number | null
+          relationship_milestones: Json | null
           relationship_type: string | null
+          relationship_xp: number | null
+          relationship_xp_to_next_level: number | null
+          total_interactions: number | null
           updated_at: string
           user_id: string
           vapi_agent_id: string | null
@@ -758,7 +764,13 @@ export type Database = {
           custom_memories?: Json | null
           id?: string
           is_active?: boolean | null
+          last_interaction_at?: string | null
+          relationship_level?: number | null
+          relationship_milestones?: Json | null
           relationship_type?: string | null
+          relationship_xp?: number | null
+          relationship_xp_to_next_level?: number | null
+          total_interactions?: number | null
           updated_at?: string
           user_id: string
           vapi_agent_id?: string | null
@@ -771,7 +783,13 @@ export type Database = {
           custom_memories?: Json | null
           id?: string
           is_active?: boolean | null
+          last_interaction_at?: string | null
+          relationship_level?: number | null
+          relationship_milestones?: Json | null
           relationship_type?: string | null
+          relationship_xp?: number | null
+          relationship_xp_to_next_level?: number | null
+          total_interactions?: number | null
           updated_at?: string
           user_id?: string
           vapi_agent_id?: string | null
@@ -838,6 +856,18 @@ export type Database = {
       }
     }
     Functions: {
+      add_relationship_xp: {
+        Args: { p_user_companion_id: string; p_xp_amount: number }
+        Returns: {
+          leveled_up: boolean
+          new_level: number
+          new_xp: number
+        }[]
+      }
+      calculate_xp_for_level: {
+        Args: { level: number }
+        Returns: number
+      }
       generate_ticket_number: {
         Args: Record<PropertyKey, never>
         Returns: string
