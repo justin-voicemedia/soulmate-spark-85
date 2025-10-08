@@ -62,6 +62,51 @@ export type Database = {
         }
         Relationships: []
       }
+      achievements: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          is_secret: boolean | null
+          name: string
+          points: number
+          rarity: string
+          requirement_type: string
+          requirement_value: number
+          title: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          icon: string
+          id?: string
+          is_secret?: boolean | null
+          name: string
+          points?: number
+          rarity?: string
+          requirement_type: string
+          requirement_value?: number
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          is_secret?: boolean | null
+          name?: string
+          points?: number
+          rarity?: string
+          requirement_type?: string
+          requirement_value?: number
+          title?: string
+        }
+        Relationships: []
+      }
       billing_info: {
         Row: {
           billing_address: Json | null
@@ -1051,6 +1096,44 @@ export type Database = {
         }
         Relationships: []
       }
+      user_achievements: {
+        Row: {
+          achievement_id: string
+          companion_id: string | null
+          id: string
+          is_notified: boolean | null
+          progress: number | null
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          companion_id?: string | null
+          id?: string
+          is_notified?: boolean | null
+          progress?: number | null
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          companion_id?: string | null
+          id?: string
+          is_notified?: boolean | null
+          progress?: number | null
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_companions: {
         Row: {
           companion_id: string
@@ -1220,6 +1303,12 @@ export type Database = {
       calculate_xp_for_level: {
         Args: { level: number }
         Returns: number
+      }
+      check_achievements: {
+        Args: { p_companion_id?: string; p_user_id: string }
+        Returns: {
+          newly_unlocked: Json
+        }[]
       }
       generate_ticket_number: {
         Args: Record<PropertyKey, never>

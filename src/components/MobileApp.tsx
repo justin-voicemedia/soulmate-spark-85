@@ -51,6 +51,7 @@ import { MoodIndicator } from "@/components/MoodIndicator";
 import { ConversationModeSelector } from "@/components/ConversationModeSelector";
 import { DailyPrompt } from "@/components/DailyPrompt";
 import { StreakDisplay } from "@/components/StreakDisplay";
+import { GamificationHub } from "@/components/GamificationHub";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
@@ -1149,6 +1150,20 @@ const scrollToBottom = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Gamification Hub */}
+      {user && (
+        <GamificationHub
+          userId={user.id}
+          companionId={companion.id}
+          companionName={companion.name}
+          onStartChallenge={(prompt) => {
+            setActiveTab('chat');
+            setIsChatActive(true);
+            setNewMessage(prompt);
+          }}
+        />
+      )}
 
       {/* Mood Trends */}
       <MoodTrendsChart trends={moodTrends} days={7} />
